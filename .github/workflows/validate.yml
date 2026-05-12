@@ -1,0 +1,104 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-skills:
+    name: Skill frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/validate_skills.py
+
+  skill-size-budgets:
+    name: Skill size budgets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/check_skill_size_budgets.py
+
+  check-links:
+    name: Markdown links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --verbose --exclude-loopback './**/*.md'
+          fail: true
+
+  smoke-install:
+    name: install.sh integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/test_install.sh
+
+  release-bump:
+    name: Release bump script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/test_bump_version.sh
+
+  symlink-integrity:
+    name: Shared format doc symlinks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify per-skill auxiliaries are symlinks to .beislid masters
+        run: |
+          required='skills/setup/workflow-md-format.md
+          skills/setup/probe-semantics.md
+          skills/doctor/workflow-md-format.md
+          skills/doctor/probe-semantics.md
+          skills/doctor/output-templates.md
+          skills/doctor/doctor-templates.md
+          skills/ready-for-review/workflow-md-format.md
+          skills/ready-for-review/probe-semantics.md
+          skills/ready-for-review/output-templates.md
+          skills/ready-for-review/ready-for-review-templates.md
+          skills/kickoff/workflow-md-format.md
+          skills/kickoff/probe-semantics.md
+          skills/kickoff/output-templates.md
+          skills/kickoff/kickoff-templates.md
+          skills/review-response/workflow-md-format.md
+          skills/review-response/probe-semantics.md
+          skills/review-response/output-templates.md
+          skills/review-response/review-response-templates.md'
+
+          missing_or_not_symlink=$(printf '%s\n' "$required" | while read -r path; do
+            [ -L "$path" ] || echo "$path"
+          done)
+          if [ -n "$missing_or_not_symlink" ]; then
+            echo "Missing or non-symlink required aux files:"
+            echo "$missing_or_not_symlink"
+            echo ""
+            echo "Re-link them as: ln -sf ../../.beislid/<name>.md skills/<skill>/<name>.md"
+            exit 1
+          fi
+
+          stray_regular=$(find skills \( -name 'probe-semantics.md' \
+                                -o -name 'workflow-md-format.md' \
+                                -o -name 'output-templates.md' \
+                                -o -name 'doctor-templates.md' \
+                                -o -name 'ready-for-review-templates.md' \
+                                -o -name 'kickoff-templates.md' \
+                                -o -name 'review-response-templates.md' \) \
+                    | xargs -I{} sh -c '[ -L "{}" ] || echo "{}"')
+          if [ -n "$stray_regular" ]; then
+            echo "Found per-skill aux files that should be symlinks but are regular files:"
+            echo "$stray_regular"
+            exit 1
+          fi
+          echo "ok: all required aux files are present symlinks"

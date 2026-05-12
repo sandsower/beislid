@@ -1,0 +1,8 @@
+{
+  "name": "walk-the-diff",
+  "description": "Verbose walk-the-diff pacing flow that stops after the first chunk gate.",
+  "prompt": "Run the installed walk-the-diff skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Use main as the base branch. Gather context, plan a source-first tour, and present only the first chunk for src/calculator.py with a fenced diff. Do not present the tests or README diff yet. After the first chunk, show the three gate options Move on / I have questions / Flag for follow-up and stop there. Do not edit fixture files, do not write a feedback doc, and do not load the wrap phase. In the final response, include a smoke summary naming base branch main and the source-first tour plan before the first chunk gate. FINAL RESPONSE REQUIREMENT: include these three lines verbatim after you have read the matching aux files: `✓ walk-the-diff/phase-1-context v1 loaded`, `✓ walk-the-diff/phase-2-tour-plan v1 loaded`, `✓ walk-the-diff/phase-3-present v1 loaded`.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}

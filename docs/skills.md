@@ -1,0 +1,66 @@
+# Beislið skills
+
+This is the full skill catalog. For first-run guidance, start with [How to use Beislið](./how-to-use.md). For lifecycle diagrams, see [Workflows](./workflows.md).
+
+## Plan
+
+- `kickoff`: fetch a ticket and route to the right workflow.
+- `spec`: brainstorm and shape lightweight product specs; may write approved spec artifacts when configured.
+- `break-spec`: break large specs into vertical implementation phases.
+- `blueprint`: design before implementation; may write approved design artifacts when configured.
+- `poke-holes`: adversarial plan stress-test.
+
+## Execute
+
+- `implement`: TDD-first file-level implementation plan.
+- `debug`: no fix without root cause.
+- `handoff`: paste-ready context packet for another agent/session/worktree.
+
+## Check
+
+- `verify`: no success claims without evidence.
+- `review`: side-effect-free local/supplied diff review with a readiness verdict.
+- `fresh-eyes`: side-effect-free final whole-diff pass for consistency and drift.
+- `rinse`: review/fix/verify loop around the `review` contract.
+- `pr-patrol`: inbound PR review with approved-only comment posting.
+- `show-me`: manually create a polished local HTML evidence/explanation deck.
+
+## Deliver
+
+- `walk-the-diff`: interactive walkthrough of your own diff for a human reviewer.
+- `ready-for-review`: review-ready PR flow driven by `workflow.md`; runs `review` and `fresh-eyes` before new PR creation.
+- `review-response`: handle PR/QA feedback after someone reviews or tests your work.
+
+## Manage
+
+- `setup`: configure `.beislid/workflow.md` interactively or run `setup update` for installed Beislið updates.
+- `doctor`: audit `.beislid/workflow.md` and probe each configured capability.
+
+## Skill reference
+
+| Skill           | Category                    | Use when                                                                                                                  | Usually followed by                                           |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec writing; runs configured spec artifact actions after approval           | `break-spec` or `blueprint`                                   |
+| `break-spec`    | Product decomposition       | A spec is too large for one coherent PR                                                                                   | `blueprint` for one phase                                     |
+| `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`                                         | `spec`, `break-spec`, or `blueprint`                          |
+| `blueprint`     | Implementation design gate  | Desired behavior is known; code approach is not; runs configured design artifact actions after approval                    | `implement`                                                   |
+| `implement`     | Execution planning          | Implementation design is approved                                                                                         | code changes + `verify`                                       |
+| `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |
+| `debug`         | Debugging gate              | Bug, failing test, or unexpected behavior                                                                                 | fix + `verify`                                                |
+| `review`        | Review primitive            | Local or supplied diff needs first-pass findings and a readiness verdict                                                  | caller decides: fix, post, loop, or submit                      |
+| `fresh-eyes`    | Review primitive            | Post-fix whole diff needs a final consistency/drift pass                                                                  | caller decides: fix, accept risk, or submit                     |
+| `rinse`         | Review orchestrator         | You want an approved review/fix/verify loop                                                                               | `fresh-eyes` or `ready-for-review`                                     |
+| `pr-patrol`     | Inbound PR review           | You are reviewing someone else's PR and may post approved comments                                                        | posted review or draft comments                               |
+| `ready-for-review`       | Review handoff flow               | Branch is ready for a new PR or an existing PR update; reads `<repo>/.beislid/workflow.md` and probes capabilities lazily | new PR or pushed update                                       |
+| `review-response`    | Feedback loop               | PR review or QA feedback needs handling from workflow.md-configured sources                                               | push/reply                                                    |
+| `poke-holes`    | Pressure tool               | You want a design or plan challenged                                                                                      | revised design/plan                                           |
+| `walk-the-diff` | Review walkthrough          | You want to tour local changes interactively                                                                              | feedback doc                                                  |
+| `handoff`       | Parallel work utility       | You want to hand a scoped slice to another agent/session/worktree                                                         | paste into the receiving session                              |
+| `show-me`       | Visual evidence/explanation | You want a local HTML deck for proof, review, demos, docs, or understanding                                               | local `index.html` artifact                                   |
+| `setup`         | Project config / updates    | First-time wiring of `workflow.md`, changing config sections, or running `setup update` for installed Beislið updates     | config writes or installer update output                      |
+| `doctor`        | Config audit                | You edited `workflow.md` or want a capability check before running orchestrators                                          | refreshed probe cache plus prose audit                        |
+
+## Optional integrations
+
+- `credential_guard` hook: blocks bash commands that dump secrets. Claude Code-specific; the skills themselves are portable markdown. See [Credential guard](./credential-guard.md).
+- `show-me` Pi extension: typed deck-builder tools, command evidence capture, asset ingestion, browser screenshots when Playwright is installed, and `/show-me doctor|list|open|clean`. The portable skill still works without Pi. See [Show Me](./show-me.md).

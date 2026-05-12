@@ -1,0 +1,20 @@
+command: python3 scripts/validate_skills.py
+cwd: /home/vic/Personal/beislid
+startedAt: 2026-04-27T17:55:01.693Z
+finishedAt: 2026-04-27T17:55:01.718Z
+exitCode: 0
+timedOut: false
+stdoutBytes: 24
+stderrBytes: 0
+stdoutTruncated: false
+stderrTruncated: false
+redactions: {"total":0,"byRule":{}}
+
+--- stdout ---
+ok: 17 skills validated
+
+
+
+--- stderr ---
+
+

@@ -1,0 +1,91 @@
+name: release
+
+# Auto-bumps version on merge to main based on the merged PR's labels:
+#
+#   release:major  -> 1.2.3 -> 2.0.0
+#   release:minor  -> 1.2.3 -> 1.3.0
+#   release:none   -> skip (no bump, no tag)
+#   (no label)     -> patch (1.2.3 -> 1.2.4)
+#
+# Bumps both package.json and .claude-plugin/plugin.json atomically, commits
+# the bump as "chore: release vX.Y.Z", and pushes the tag.
+#
+# Requires: branch protection on main must allow the actions bot to push.
+# If main is protected with required reviews, swap GITHUB_TOKEN for a PAT or
+# GitHub App token with bypass rights. Release commits are skipped by message
+# as well as actor so PAT/App pushes do not recurse.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  bump:
+    # Skip release commits by actor and by message (covers PAT/App fallback).
+    if: "${{ github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: release v') }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve PR labels
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          labels=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$GH_REPO/commits/$COMMIT_SHA/pulls" \
+            --jq 'if length == 0 then empty else .[0].labels[].name end')
+          {
+            echo "labels<<EOF"
+            echo "$labels"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Decide bump kind
+        id: kind
+        env:
+          LABELS: ${{ steps.pr.outputs.labels }}
+        run: |
+          if grep -qx 'release:none' <<<"$LABELS"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "release:none label present — skipping" >&2
+            exit 0
+          fi
+          if grep -qx 'release:major' <<<"$LABELS"; then
+            kind=major
+          elif grep -qx 'release:minor' <<<"$LABELS"; then
+            kind=minor
+          else
+            kind=patch
+          fi
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version
+        if: steps.kind.outputs.skip != 'true'
+        id: bump
+        env:
+          BUMP_KIND: ${{ steps.kind.outputs.kind }}
+        run: |
+          new=$(./scripts/bump-version.sh "$BUMP_KIND")
+          echo "version=$new" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and tag
+        if: steps.kind.outputs.skip != 'true'
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json .claude-plugin/plugin.json
+          git commit -m "chore: release v$NEW_VERSION"
+          git tag -a "v$NEW_VERSION" -m "v$NEW_VERSION"
+          git push origin main --follow-tags

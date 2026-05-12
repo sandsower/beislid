@@ -1,0 +1,135 @@
+# Beislið probe semantics
+
+Beislið uses these probe techniques to test whether a configured capability resolves in the current session. Doctor and orchestrators consume this file at runtime via a per-skill auxiliary symlink.
+
+Capability fenced blocks declare a `type` field that selects the probe kind. This file documents the probe technique for each kind, what each status means, and how `probe_supported` is computed.
+
+## Probe kinds
+
+### mcp
+
+Capability declares one MCP tool name (e.g. `tool: mcp__plugin_linear_linear__get_issue`) or a logical set of related MCP tools (e.g. `ticket_update.comment_tool` + optional `issue_tool`).
+
+**Probe:** ask the host agent for its tool registry and check whether every configured tool for the logical capability is registered in this session.
+
+| Status | Condition |
+|---|---|
+| `ok` | Every configured tool is registered and callable. `probe_supported: true`. |
+| `missing` | One or more configured tools are not registered in the session. `probe_supported: true`. Reason names the missing tools, e.g. `"tools 'mcp__x__comment', 'mcp__x__issue' not registered in this session"`. |
+| `failed` | Tool registry lookup raised. `probe_supported: true`. Reason captures the error. |
+
+If the host has no MCP tool registry mechanism at all, status is `failed` with `probe_supported: false` and reason `"host has no MCP tool registry"`.
+
+Known multi-tool logical MCP capabilities:
+
+- `ticket_update` (`comment_tool`, optional `issue_tool`)
+- future PR review MCP providers, when added to the grammar
+
+### cli
+
+Capability declares one shell command (e.g. `command: 'gh issue view {id}'`) or a logical set of related commands (e.g. `pr_review_source.summary_command` + `threads_command`).
+
+**Probe:** run `command -v <first-word>` via Bash. The first whitespace-separated word of each command is the binary name. For multi-command capabilities, probe every unique binary and record one logical capability result.
+
+| Status | Condition |
+|---|---|
+| `ok` | Every required binary exits 0 from `command -v`. `probe_supported: true`. |
+| `missing` | One or more binaries exit ≠ 0. `probe_supported: true`. Reason names the missing binaries, e.g. `"gh, glab not on PATH"`. |
+| `failed` | Bash unavailable. `probe_supported: false`. Reason: `"host has no Bash mechanism"`. |
+
+Known multi-command logical capabilities:
+
+- `pr_review_source` (`summary_command`, optional `threads_command`)
+- `pr_review_update` (`reply_command`, optional `rerequest_command`)
+- `ticket_update` when `comment_command` is configured, with optional `issue_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`) is performed by setup/orchestrators before execution.
+- `lifecycle_actions.<event>` for P0 CLI actions under one event's `actions[]` list. Probe every unique first binary from that event's `type: cli` action commands and record one logical capability. Orchestrators probe only events they execute, e.g. kickoff probes `lifecycle_actions.kickoff_start`; future events must not block current-event execution. Non-CLI providers such as `mcp` are reserved for CLI lifecycle events; orchestrators must not execute unsupported providers.
+
+### path
+
+Capability declares a filesystem path (e.g. `path: knowledge-base/`).
+
+**Probe:** resolve the path against the git repo root, run `test -d <resolved>` for directories or `test -f <resolved>` for files. Defaults to `-d` unless the capability specifies `kind: file`.
+
+| Status | Condition |
+|---|---|
+| `ok` | `test` exits 0. `probe_supported: true`. |
+| `missing` | `test` exits 1. `probe_supported: true`. Reason: `"path '<resolved>' does not exist"`. |
+| `failed` | Bash unavailable. `probe_supported: false`. |
+
+### skill
+
+Capability declares a Beislið skill name (e.g. `formatter_skill: tone`).
+
+**Probe:** check host skill discovery if available. Otherwise look for `<skills-dir>/<name>/SKILL.md` or `<skills-dir>/<name>.md` under `$BEISLID_SKILLS_DIRS` if set, else under `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`.
+
+| Status | Condition |
+|---|---|
+| `ok` | Skill found at any candidate location. `probe_supported: true`. |
+| `missing` | Skill not found at any candidate. `probe_supported: true`. Reason: `"skill '<name>' not found in any skills directory"`. |
+| `failed` | Filesystem read raised. `probe_supported: true`. Reason captures the error. |
+
+Kickoff's `explore.skill` uses this probe kind.
+
+### subagent
+
+Capability declares a subagent name (e.g. `agent: researcher`).
+
+**Probe:** if the host has a subagent/delegation mechanism, query it for the named subagent.
+
+| Status | Condition |
+|---|---|
+| `ok` | Subagent is registered. `probe_supported: true`. |
+| `missing` | Host has subagents but the named one isn't registered. `probe_supported: true`. Reason: `"subagent '<name>' not registered"`. |
+| `failed` | Host has no subagent mechanism. `probe_supported: false`. Reason: `"host has no subagent mechanism"`. |
+
+`probe_supported: false` here is the canonical case. Orchestrators that depend on `domain_expert.agent` treat this as a host limitation and skip the dependent step without prompting the user.
+
+## Special cases
+
+### type=paste
+
+The capability has no probe to run; the user supplies the value at orchestrator runtime. Doctor records `status: ok`, `probe_supported: true`, with `value: "(paste at runtime)"`. This applies to `ticket_source.type: paste` and `pr_review_source.type: paste`.
+
+### type=manual
+
+The capability intentionally has no automated write path. Doctor records `status: ok`, `probe_supported: true`, with `value: "(manual at runtime)"`. This applies to `pr_review_update.type: manual`; review-response prints reply/re-request instructions instead of posting.
+
+### type=artifact lifecycle actions
+
+Artifact actions under `lifecycle_actions.spec_approved` and `lifecycle_actions.blueprint_approved` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:
+
+```json
+"lifecycle_actions.spec_approved": {
+  "status": "ok",
+  "probe_supported": true,
+  "value": "(prompted artifact at runtime)"
+}
+```
+
+Use `"(auto/prompt artifact at runtime)"` or similarly concise value text when the event mixes `approval: auto` and prompted actions. Doctor validates shape instead of probing: action `name` is required; `approval` may be `prompt`, `auto`, or omitted; `path` may be omitted; configured paths must be relative `.md` file templates, must not contain `..` segments or be absolute, and may only use `{feature}`, `{kind}`, and `{ticket_id}` placeholders. Omitted `approval` means `prompt`. Omitted `path` means the event default path. Invalid artifact action shape records the event capability as `failed` with `probe_supported: true` and a concise reason.
+
+Artifact actions on unsupported events, and non-artifact actions under `spec_approved` / `blueprint_approved`, are reserved. Doctor should surface them as unsupported/reserved; skills skip them.
+
+### type=file (file glob)
+
+The capability declares a glob (e.g. `file_glob: '.scratch/<feature>/*.md'`). Probe via `ls <glob>` succeeds with at least one match.
+
+| Status | Condition |
+|---|---|
+| `ok` | Glob expands to ≥1 file. `probe_supported: true`. |
+| `missing` | Glob expands to nothing. `probe_supported: true`. Reason captures the glob string. |
+| `failed` | Bash unavailable. `probe_supported: false`. |
+
+## The `disabled` status
+
+`disabled` is never the result of a probe. It's determined by workflow.md content: when a section's prose explicitly says "Disabled for this project" or similar, and the section has no fenced block, doctor records the capability as `disabled` without probing. Cache stores `status: disabled` with no `reason`. `probe_supported` is not set on disabled entries.
+
+## Paired capabilities
+
+Some capabilities are useful only together (e.g. `domain_expert.agent` + `knowledge_store.path`). Doctor probes each independently and records each status separately, then surfaces a `paired-half-missing` warning in prose when exactly one half is configured. The warning is non-blocking; orchestrators that depend on the pair skip the dependent step.
+
+Today's known paired sets:
+
+- `domain_expert.agent` ↔ `knowledge_store.path` (Phase 4d of ready-for-review: agent records findings into the store)
+
+PR review source/update is a soft pair, not a hard paired capability. `pr_review_source` alone is useful for reading feedback and printing manual replies. `pr_review_update` without `pr_review_source` gets a doctor warning because review-response can only use it after pasted PR feedback.

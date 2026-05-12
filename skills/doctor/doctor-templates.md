@@ -1,0 +1,1 @@
+../../.beislid/doctor-templates.md

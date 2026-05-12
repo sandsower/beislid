@@ -1,0 +1,131 @@
+---
+name: spec
+description: "Trigger immediately when the user says any of: 'spec it out', 'spec this out', 'before you build', 'before we build', 'before implementation', 'let's discuss before building', 'discuss and spec', 'PRD this', 'shape this', 'product spec', 'lightweight spec'. Also use for brainstorming, vague tickets, product shaping, or writing a lightweight product spec/PRD when the problem, scope, desired behavior, or success criteria are unclear. Do not skip this skill and answer conversationally yourself — if a trigger phrase appears, route here even if the request seems clear or auto mode is active. Do not use for implementation design when requirements are already clear; use blueprint instead."
+---
+
+# Spec
+
+Shape an idea, vague ticket, or open product question into a lightweight product spec. This is the product/requirements gate, not the implementation-design gate.
+
+Use this for:
+- Open-ended brainstorming
+- Vague tickets that are not ready for implementation design
+- Product behavior, scope, and acceptance criteria discovery
+- Writing a lightweight spec/PRD before `blueprint`
+
+Do not use this for:
+- Implementation design when the requirement is already clear — use `blueprint`
+- Breaking an approved spec into implementation phases — use `break-spec`
+- Writing code or scaffolding
+
+<HARD-GATE>
+Do NOT design implementation details, invoke `implement`, write code, or scaffold until the product behavior and scope are approved or the user explicitly routes to `blueprint`.
+</HARD-GATE>
+
+You may skip steps if the current conversation or `kickoff` already supplied enough context.
+
+## Step 1: Load context
+
+Collect any supplied context:
+- User idea or prompt
+- Ticket title/body/comments
+- Codebase findings from `kickoff`, if provided
+- Existing plans/specs in `plans/`
+- Relevant docs or recent commits
+
+If working inside a repo, do light codebase exploration before asking detailed questions. Search for existing patterns, data models, API boundaries, and test coverage that affect the product decision. Record facts, not opinions.
+
+## Step 2: Identify unknowns
+
+Write down 5–10 targeted questions about what you do not know. Frame them as questions, not statements. Focus on:
+- The problem and who feels it
+- Desired behavior
+- Success criteria
+- Scope boundaries
+- Constraints and risks
+- Product decisions that block implementation design
+
+## Step 3: Interview the user
+
+Ask questions one at a time. Prefer multiple choice when possible. If a question can be answered by the codebase or supplied ticket context, answer it from evidence instead of asking.
+
+For each unresolved question, present:
+- What the codebase/ticket suggests
+- Your recommended answer
+- What decision remains for the user
+
+## Step 4: Propose product directions
+
+When there are multiple plausible interpretations or solutions, propose 2–3 product directions with trade-offs and your recommendation. Keep this at the product behavior level. Do not choose file-level implementation details here.
+
+If the requirement is already obvious and only minor details were clarified, this can be a short paragraph.
+
+## Step 5: Present the spec for approval
+
+Before writing an artifact, present the proposed spec in concise sections and ask for approval or corrections:
+- Problem statement
+- Current state
+- Desired state
+- User stories / acceptance outcomes
+- Key decisions
+- Out of scope
+
+Do not proceed until the user approves the product direction.
+
+## Step 6: Finalize the approved spec
+
+Use this template for the approved spec text. Do NOT include exact file paths or code snippets unless the user explicitly wants an implementation-adjacent note; those belong in `blueprint`.
+
+<spec-template>
+# [Feature Name]
+
+## Problem Statement
+What's broken or missing. Who it affects.
+
+## Current State
+How things work today. What patterns exist.
+
+## Desired State
+What the world looks like after this is released.
+
+## User Stories
+- As a [role], I want [thing] so that [outcome]
+
+## Key Decisions
+Decisions already resolved during the interview, with rationale.
+
+## Out of Scope
+What this spec explicitly does not cover.
+</spec-template>
+
+The approved spec text is the source for any artifact. Do not add implementation details while writing an artifact.
+
+## Step 7: Run `spec_approved` artifact actions
+
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.spec_approved.actions[]` entries. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-spec.md` after explicit approval. If a workflow exists but no `spec_approved` artifact action is configured, do not ask for ad-hoc tracker/local destinations; workflow config controls artifacts.
+
+Supported P0 action shape:
+
+```yaml
+- name: write-spec-artifact
+  type: artifact
+  approval: prompt # optional; prompt when omitted, auto creates missing target
+  path: 'plans/{feature}-spec.md' # optional default
+```
+
+Execute only `type: artifact` under `spec_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block routing.
+
+Default path: `plans/{feature}-spec.md`. Supported placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
+
+Artifact content must be the approved spec as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related artifact status. Do not alter approved decisions.
+
+Record artifact results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths when available.
+
+## Step 8: Output and route
+
+Print the approved spec summary, artifact status/path list, and routing recommendation.
+
+Then route:
+- If the spec is too large for one coherent PR, hand off to `break-spec` with the approved spec and any artifact path written in this session.
+- If the spec is implementation-ready and scoped, hand off to `blueprint` with the approved spec and any artifact path written in this session.
+- If invoked by `kickoff`, return the approved spec, artifact status/path, and routing recommendation to `kickoff`.

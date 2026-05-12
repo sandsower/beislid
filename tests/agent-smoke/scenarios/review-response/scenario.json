@@ -1,0 +1,8 @@
+{
+  "name": "review-response",
+  "description": "Verbose PR-review feedback flow with mocked review source and JSON-file reply update.",
+  "prompt": "Run the installed review-response skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Handle PR review feedback only. Use the mocked gh on PATH for PR detection, the configured mocked pr-review-source commands to fetch review feedback, and the configured mocked pr-review-update command to post the approved reply through a JSON file. For this smoke, the user selects PR review mode, categorizes the single comment as a clear fix, approves the fast path, and approves posting the clear-fix reply. Fix the reviewed source file, run the configured gate, commit, push, and post a PR reply. Do not use real network and do not edit files outside the fixture repo. FINAL RESPONSE REQUIREMENT: include these three lines verbatim after you have read the matching aux files: `✓ review-response/phase-1-detect v1 loaded`, `✓ review-response/phase-2-fix v1 loaded`, `✓ review-response/phase-3-push v1 loaded`.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}

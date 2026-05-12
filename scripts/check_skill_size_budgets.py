@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Enforce hard size budgets for prompt-heavy skill files.
+
+Phase 4 of the v0.2 migration keeps ready-for-review lightweight by splitting phase
+protocols into JIT-loaded auxiliary files. This script enforces only hard caps;
+soft targets live in the planning docs.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import sys
+
+
+# Hard caps are byte counts, not token estimates. Byte counts are deterministic
+# across platforms and good enough to prevent context bloat regressions.
+BUDGETS = {
+    "skills/ready-for-review/SKILL.md": 10_000,
+    "skills/ready-for-review/phase-1-detect.md": 5_000,
+    "skills/ready-for-review/phase-2-gates.md": 7_000,
+    "skills/ready-for-review/phase-3-review.md": 5_000,
+    "skills/ready-for-review/phase-4-submit.md": 7_000,
+    "skills/kickoff/SKILL.md": 7_000,
+    "skills/kickoff/step-1-ticket.md": 4_000,
+    "skills/kickoff/step-2-context.md": 4_000,
+    "skills/kickoff/step-3-team-guidance.md": 4_000,
+    "skills/kickoff/step-4-readiness.md": 4_000,
+    "skills/kickoff/step-5-scope.md": 4_000,
+    "skills/kickoff/step-6-blueprint.md": 4_000,
+    "skills/kickoff/step-7-discoveries.md": 4_000,
+    "skills/kickoff/step-8-ticket-update.md": 4_000,
+    "skills/review-response/SKILL.md": 7_000,
+    "skills/review-response/phase-1-detect.md": 6_000,
+    "skills/review-response/phase-2-fix.md": 5_000,
+    "skills/review-response/phase-3-push.md": 5_000,
+    "skills/walk-the-diff/SKILL.md": 6_000,
+    "skills/walk-the-diff/phase-1-context.md": 4_000,
+    "skills/walk-the-diff/phase-2-tour-plan.md": 4_000,
+    "skills/walk-the-diff/phase-3-present.md": 4_000,
+    "skills/walk-the-diff/phase-4-wrap.md": 4_000,
+}
+
+PHASE_AUX_HEADINGS = {
+    "skills/ready-for-review/phase-1-detect.md": "# ready-for-review phase 1 detect v1",
+    "skills/ready-for-review/phase-2-gates.md": "# ready-for-review phase 2 gates v1",
+    "skills/ready-for-review/phase-3-review.md": "# ready-for-review phase 3 review v1",
+    "skills/ready-for-review/phase-4-submit.md": "# ready-for-review phase 4 submit v1",
+    "skills/kickoff/step-1-ticket.md": "# kickoff step 1 ticket v1",
+    "skills/kickoff/step-2-context.md": "# kickoff step 2 context v1",
+    "skills/kickoff/step-3-team-guidance.md": "# kickoff step 3 team guidance v1",
+    "skills/kickoff/step-4-readiness.md": "# kickoff step 4 readiness v1",
+    "skills/kickoff/step-5-scope.md": "# kickoff step 5 scope v1",
+    "skills/kickoff/step-6-blueprint.md": "# kickoff step 6 blueprint v1",
+    "skills/kickoff/step-7-discoveries.md": "# kickoff step 7 discoveries v1",
+    "skills/kickoff/step-8-ticket-update.md": "# kickoff step 8 ticket update v1",
+    "skills/review-response/phase-1-detect.md": "# review-response phase 1 detect v1",
+    "skills/review-response/phase-2-fix.md": "# review-response phase 2 fix v1",
+    "skills/review-response/phase-3-push.md": "# review-response phase 3 push v1",
+    "skills/walk-the-diff/phase-1-context.md": "# walk-the-diff phase 1 context v1",
+    "skills/walk-the-diff/phase-2-tour-plan.md": "# walk-the-diff phase 2 tour plan v1",
+    "skills/walk-the-diff/phase-3-present.md": "# walk-the-diff phase 3 present v1",
+    "skills/walk-the-diff/phase-4-wrap.md": "# walk-the-diff phase 4 wrap v1",
+}
+
+PHASE_AUX_FILES = set(PHASE_AUX_HEADINGS)
+
+
+def main() -> int:
+    root = pathlib.Path(__file__).resolve().parent.parent
+    errors: list[str] = []
+
+    for rel, max_bytes in BUDGETS.items():
+        path = root / rel
+        if not path.exists():
+            errors.append(f"{rel}: missing required file")
+            continue
+        if rel in PHASE_AUX_FILES and path.is_symlink():
+            errors.append(f"{rel}: must be a regular file, not a symlink")
+            continue
+        if not path.is_file():
+            errors.append(f"{rel}: expected regular file")
+            continue
+
+        if rel in PHASE_AUX_HEADINGS:
+            first_line = path.read_text(encoding="utf-8").splitlines()[0] if path.stat().st_size else ""
+            expected = PHASE_AUX_HEADINGS[rel]
+            if first_line != expected:
+                errors.append(f"{rel}: first heading must be `{expected}`, got `{first_line}`")
+
+        size = path.stat().st_size
+        if size > max_bytes:
+            errors.append(f"{rel}: {size} bytes exceeds hard cap {max_bytes}")
+
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 1
+
+    checked = ", ".join(f"{rel}≤{max_bytes}" for rel, max_bytes in BUDGETS.items())
+    print(f"ok: skill size budgets satisfied ({checked})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

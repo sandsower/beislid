@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+# Thin Beislið command dispatcher.
+
+set -euo pipefail
+
+_resolve_self() {
+  local source="$1"
+  while [[ -L "$source" ]]; do
+    local dir target
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    target="$(readlink "$source")"
+    case "$target" in
+      /*) source="$target" ;;
+      *) source="$dir/$target" ;;
+    esac
+  done
+  cd -P "$(dirname "$source")" && pwd
+}
+
+BEISLID_BIN_SELF_DIR="$(_resolve_self "${BASH_SOURCE[0]}")"
+BEISLID_ROOT="$(cd "$BEISLID_BIN_SELF_DIR/.." && pwd)"
+if [[ -n "${BEISLID_HOME:-}" ]] && \
+   { [[ ! -f "$BEISLID_ROOT/scripts/install_lib.sh" ]] || \
+     [[ ! -d "$BEISLID_ROOT/skills" ]] || \
+     [[ ! -f "$BEISLID_ROOT/install.sh" ]]; }; then
+  if [[ -d "$BEISLID_HOME" ]]; then
+    BEISLID_ROOT="$(cd "$BEISLID_HOME" && pwd)"
+  else
+    BEISLID_ROOT="$BEISLID_HOME"
+  fi
+fi
+
+_validate_runtime_layout() {
+  local root="$1"
+  local missing=()
+  [[ -f "$root/scripts/install_lib.sh" ]] || missing+=("scripts/install_lib.sh")
+  [[ -d "$root/skills" ]] || missing+=("skills/")
+  [[ -f "$root/install.sh" ]] || missing+=("install.sh")
+
+  if (( ${#missing[@]} > 0 )); then
+    echo "error: Beislið runtime layout is incomplete at $root" >&2
+    local item
+    for item in "${missing[@]}"; do
+      echo "       missing: $item" >&2
+    done
+    echo "       Set BEISLID_HOME to the Beislið runtime root if this is a packaged install." >&2
+    exit 1
+  fi
+}
+
+_validate_runtime_layout "$BEISLID_ROOT"
+export BEISLID_HOME="$BEISLID_ROOT"
+
+# shellcheck source=../scripts/install_lib.sh
+source "$BEISLID_ROOT/scripts/install_lib.sh"
+
+_usage() {
+  cat <<'USAGE'
+Beislið CLI
+
+Usage:
+  beislid install user [--with-security-hooks] [--with-pi-show-me] [--force]
+  beislid install project [path] [--copy] [--write-gitignore] [--force]
+  beislid status [project [path]]
+  beislid update [--force]
+  beislid migrate v0.2 [--with-security-hooks] [--with-pi-show-me] [--force]
+  beislid help
+USAGE
+}
+
+_legacy_guidance() {
+  case "$1" in
+    --status)
+      echo "Use: beislid status" >&2
+      ;;
+    --update)
+      echo "Use: beislid update" >&2
+      ;;
+    --project)
+      echo "Use: beislid install project [path]" >&2
+      ;;
+    *)
+      echo "Unknown flag: $1" >&2
+      _usage >&2
+      ;;
+  esac
+  exit 2
+}
+
+_parse_user_install_flags() {
+  while (($#)); do
+    case "$1" in
+      --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
+      --with-pi-show-me) WITH_PI_SHOW_ME=1 ;;
+      --force|--repoint) FORCE=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      --project|--status|--update)
+        _legacy_guidance "$1"
+        ;;
+      *)
+        echo "Unknown install user flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+_parse_project_install_flags() {
+  PROJECT_PATH=""
+  while (($#)); do
+    case "$1" in
+      --force|--repoint) FORCE=1 ;;
+      --copy) PROJECT_MODE="copy" ;;
+      --write-gitignore) PROJECT_WRITE_GITIGNORE=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      --*)
+        echo "Unknown install project flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        if [[ -n "$PROJECT_PATH" ]]; then
+          echo "install project accepts at most one path" >&2
+          _usage >&2
+          exit 2
+        fi
+        PROJECT_PATH="$1"
+        ;;
+    esac
+    shift
+  done
+}
+
+_parse_update_flags() {
+  while (($#)); do
+    case "$1" in
+      --force|--repoint) FORCE=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      *)
+        echo "Unknown update flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+_parse_migrate_flags() {
+  while (($#)); do
+    case "$1" in
+      --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
+      --with-pi-show-me) WITH_PI_SHOW_ME=1 ;;
+      --force|--repoint) FORCE=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      *)
+        echo "Unknown migrate flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+  help|-h|--help)
+    _usage
+    ;;
+  --status|--update|--project)
+    _legacy_guidance "$cmd"
+    ;;
+  status)
+    shift
+    if (($# == 0)); then
+      beislid_status
+    elif [[ "${1:-}" == "project" ]]; then
+      shift
+      if (($# > 1)); then
+        echo "beislid status project accepts at most one path" >&2
+        _usage >&2
+        exit 2
+      fi
+      beislid_status_project "${1:-}"
+    else
+      echo "Unknown status target: $1" >&2
+      _usage >&2
+      exit 2
+    fi
+    ;;
+  update)
+    shift
+    _parse_update_flags "$@"
+    beislid_update_repo
+    ;;
+  migrate)
+    shift
+    target="${1:-}"
+    case "$target" in
+      v0.2|v0.2.0|0.2|0.2.0)
+        shift
+        _parse_migrate_flags "$@"
+        beislid_migrate_v0_2
+        ;;
+      ""|-h|--help)
+        _usage
+        ;;
+      *)
+        echo "Unknown migration target: $target" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  install)
+    shift
+    subcmd="${1:-}"
+    case "$subcmd" in
+      user)
+        shift
+        _parse_user_install_flags "$@"
+        beislid_install_user
+        ;;
+      project)
+        shift
+        _parse_project_install_flags "$@"
+        beislid_install_project "$PROJECT_PATH"
+        ;;
+      "")
+        echo "Missing install target." >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        echo "Unknown install target: $subcmd" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    _usage >&2
+    exit 2
+    ;;
+esac

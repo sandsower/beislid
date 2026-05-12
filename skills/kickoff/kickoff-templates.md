@@ -1,0 +1,1 @@
+../../.beislid/kickoff-templates.md

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+log=${LIFECYCLE_ACTION_LOG:-}
+if [[ -z "$log" ]]; then
+  echo "LIFECYCLE_ACTION_LOG must be set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$log")"
+printf '%s\tcwd=%s\tlifecycle-action' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" >> "$log"
+for arg in "$@"; do printf ' %q' "$arg" >> "$log"; done
+printf '\n' >> "$log"
+
+if [[ $# -ne 4 ]]; then
+  echo "lifecycle-action requires: <ticket_id> <id_alias> <branch> <event>" >&2
+  exit 40
+fi
+if [[ "$1" != "123" || "$2" != "123" ]]; then
+  echo "lifecycle-action expected ticket placeholders to be 123/123, got $1/$2" >&2
+  exit 41
+fi
+if [[ "$3" != "123-kickoff-smoke" ]]; then
+  echo "lifecycle-action expected branch 123-kickoff-smoke, got $3" >&2
+  exit 42
+fi
+if [[ "$4" != "kickoff_start" ]]; then
+  echo "lifecycle-action expected event kickoff_start, got $4" >&2
+  exit 43
+fi
+echo "ok: lifecycle action ran"

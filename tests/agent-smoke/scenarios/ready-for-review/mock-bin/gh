@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log=${GH_MOCK_LOG:-}
+if [[ -z "$log" ]]; then
+  echo "GH_MOCK_LOG is not set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$log")"
+printf '%s\tcwd=%s\tgh' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" >> "$log"
+for arg in "$@"; do printf ' %q' "$arg" >> "$log"; done
+printf '\n' >> "$log"
+
+cmd=${1:-}
+sub=${2:-}
+
+if [[ "$cmd $sub" == "pr view" ]]; then
+  exit 1
+fi
+
+if [[ "$cmd $sub" == "pr create" ]]; then
+  expected=${GH_MOCK_EXPECT_HEAD:-}
+  head_value=""
+  title_value=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --head)
+        shift
+        head_value=${1:-}
+        ;;
+      --title)
+        shift
+        title_value=${1:-}
+        ;;
+    esac
+    shift || true
+  done
+  if [[ -z "$head_value" ]]; then
+    echo "mock gh: pr create requires --head <branch>" >&2
+    exit 44
+  fi
+  if [[ -n "$expected" && "$head_value" != "$expected" ]]; then
+    echo "mock gh: expected --head $expected, got $head_value" >&2
+    exit 47
+  fi
+  if [[ "${title_value,,}" == none:* ]]; then
+    echo "mock gh: no-ticket PR title must not start with 'none:'" >&2
+    exit 48
+  fi
+  url=${GH_MOCK_PR_URL:-https://example.invalid/beislid-smoke/pull/1}
+  echo "$url"
+  echo "$url" > "$(dirname "$log")/pr-url.txt"
+  exit 0
+fi
+
+if [[ "$cmd $sub" == "auth status" ]]; then
+  cat <<'OUT'
+github.com
+  ✓ Logged in to github.com account smoke (mock)
+  - Git operations protocol: ssh
+  - Token scopes: 'repo', 'workflow'
+OUT
+  exit 0
+fi
+
+if [[ "$cmd" == "issue" ]]; then
+  echo "mock gh: issue lookup/list disabled for no-ticket smoke" >&2
+  exit 45
+fi
+
+if [[ "$cmd $sub" == "pr ready" ]]; then
+  echo "https://example.invalid/beislid-smoke/pull/1"
+  exit 0
+fi
+
+echo "mock gh: unsupported command: $*" >&2
+exit 46

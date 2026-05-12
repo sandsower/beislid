@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "deckId": "2026-04-27T17-54-37-498Z-esdap7",
+  "title": "Show Me in Action",
+  "mode": "understanding",
+  "status": "EXPLANATORY",
+  "createdAt": "2026-04-27T17:54:37.498Z",
+  "updatedAt": "2026-04-27T18:03:00.193Z",
+  "paths": {
+    "root": "/home/vic/.local/state/beislid/show-me/beislid/2026-04-27T17-54-37-498Z-esdap7",
+    "indexHtml": "/home/vic/.local/state/beislid/show-me/beislid/2026-04-27T17-54-37-498Z-esdap7/index.html",
+    "showMeJson": "/home/vic/.local/state/beislid/show-me/beislid/2026-04-27T17-54-37-498Z-esdap7/show-me.json",
+    "manifestJson": "/home/vic/.local/state/beislid/show-me/beislid/2026-04-27T17-54-37-498Z-esdap7/manifest.json"
+  },
+  "provenance": {
+    "cwd": "/home/vic/Personal/beislid",
+    "repoRoot": "/home/vic/Personal/beislid",
+    "branch": "release/agent-agnostic-audit-formatters",
+    "commit": "0d4c1b6e8ecd3ff8b43ad1953b9ca90f17ea9b5e",
+    "dirty": false,
+    "createdBy": "beislid show-me pi extension",
+    "redactions": {
+      "total": 0,
+      "byRule": {}
+    },
+    "commands": [
+      {
+        "id": "cmd-1777312501718-hicvpk",
+        "command": "python3 scripts/validate_skills.py",
+        "cwd": "/home/vic/Personal/beislid",
+        "startedAt": "2026-04-27T17:55:01.693Z",
+        "finishedAt": "2026-04-27T17:55:01.718Z",
+        "exitCode": 0,
+        "timedOut": false,
+        "path": "logs/commands/cmd-1777312501718-hicvpk.txt"
+      }
+    ],
+    "assets": [
+      {
+        "id": "asset-1777312975115-8empab",
+        "type": "video",
+        "path": "assets/videos/asset-1777312975115-8empab-show-me-example-walkthrough.webm",
+        "originalPath": "/tmp/show-me-example-walkthrough.webm",
+        "hash": "sha256:2966eaaa814d9cbd53666b21e6c56eb9b309611ea12f7321e4fe6ad8a6f5b4af",
+        "bytes": 2246067,
+        "caption": "Human-paced browser walkthrough: opening the deck, clicking each section from the sidebar, scrolling through content, and ending at provenance.",
+        "alt": "Screen recording of the Show Me example deck walkthrough",
+        "sensitivity": "Local browser recording of a generated deck; inspect before sharing externally."
+      }
+    ]
+  }
+}

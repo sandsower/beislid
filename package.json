@@ -1,0 +1,33 @@
+{
+  "name": "beislid",
+  "version": "0.2.2",
+  "private": true,
+  "description": "Opinionated, agent-agnostic workflow skills. Hard gates, not suggestions.",
+  "keywords": [
+    "pi-package",
+    "agent-skills",
+    "skills",
+    "workflow",
+    "spec",
+    "blueprint",
+    "verification"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Vic Valenzuela",
+    "url": "https://github.com/sandsower"
+  },
+  "repository": "https://github.com/sandsower/beislid",
+  "pi": {
+    "extensions": [
+      "extensions/show-me"
+    ],
+    "skills": [
+      "skills"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "typebox": "*"
+  }
+}

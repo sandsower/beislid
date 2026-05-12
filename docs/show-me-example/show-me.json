@@ -1,0 +1,199 @@
+{
+  "id": "2026-04-27T17-54-37-498Z-esdap7",
+  "title": "Show Me in Action",
+  "subtitle": "A visual example deck for Beislið show-me",
+  "mode": "understanding",
+  "status": "EXPLANATORY",
+  "summary": "This deck demonstrates what show-me is for: turning a code/workflow change into a browsable visual artifact with decisions, evidence, missing-capture markers, and provenance.",
+  "createdAt": "2026-04-27T17:54:37.498Z",
+  "updatedAt": "2026-04-27T18:03:00.193Z",
+  "sections": [
+    {
+      "id": "section-1-0ishy8",
+      "title": "Why this exists",
+      "purpose": "Frame the situation where show-me is better than chat or terminal output.",
+      "blocks": [
+        {
+          "type": "markdown",
+          "markdown": "# Don't tell me. Show me.\n\nA normal agent answer is fine for short claims. `show-me` is for work that needs a durable artifact someone can inspect later.\n\n- **Verification:** prove commands passed and preserve the logs.\n- **Review:** explain a diff in a browsable way.\n- **Understanding:** turn a subsystem or product decision into cards, comparisons, and decision points.\n- **Demos:** collect screenshots, videos, GIFs, and command evidence in one place.",
+          "id": "block-1-nj2iqw"
+        }
+      ]
+    },
+    {
+      "id": "section-2-z7jyak",
+      "title": "What the deck captures",
+      "purpose": "Show the reusable evidence model.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            "Artifact part",
+            "What it proves",
+            "Why it helps"
+          ],
+          "rows": [
+            [
+              "Command logs",
+              "Exact command, cwd, exit code, timestamps, redacted stdout/stderr",
+              "A reviewer can audit the claim without rerunning everything"
+            ],
+            [
+              "Media assets",
+              "Copied screenshots/videos/GIFs/SVGs with hashes and captions",
+              "UI behavior or visual state is inspectable, not just described"
+            ],
+            [
+              "NEEDS_CAPTURE blocks",
+              "What evidence is missing and why",
+              "The deck is honest when tooling or context is unavailable"
+            ],
+            [
+              "Provenance",
+              "Repo, branch, commit, dirty state, asset/log metadata",
+              "The deck remains understandable after the chat scrolls away"
+            ]
+          ],
+          "id": "block-1-1ni1fx"
+        }
+      ]
+    },
+    {
+      "id": "section-3-1fsybj",
+      "title": "Live evidence",
+      "purpose": "Capture a real command as deck evidence.",
+      "blocks": [
+        {
+          "type": "command-log",
+          "logId": "cmd-1777312501718-hicvpk",
+          "title": "Skill validation evidence",
+          "command": "python3 scripts/validate_skills.py",
+          "cwd": "/home/vic/Personal/beislid",
+          "startedAt": "2026-04-27T17:55:01.693Z",
+          "finishedAt": "2026-04-27T17:55:01.718Z",
+          "exitCode": 0,
+          "timedOut": false,
+          "stdoutPreview": "ok: 17 skills validated\n",
+          "logPath": "logs/commands/cmd-1777312501718-hicvpk.txt",
+          "stdoutTruncated": false,
+          "stderrTruncated": false,
+          "id": "block-1-bszr94"
+        }
+      ]
+    },
+    {
+      "id": "section-4-uc2fat",
+      "title": "Honest gaps",
+      "purpose": "Show how missing visual evidence is represented instead of hidden.",
+      "blocks": [
+        {
+          "type": "needs-capture",
+          "title": "Browser screenshot not included in this demo",
+          "reason": "This example is focused on deck structure and command evidence. A UI deck would add screenshots or videos using Playwright or asset ingestion.",
+          "request": "For UI work, capture the page state or add an existing screenshot with show_me_add_asset.",
+          "status": "NEEDS CAPTURE",
+          "id": "block-1-f4a26c"
+        }
+      ]
+    },
+    {
+      "id": "section-5-5uv3jj",
+      "title": "When to use it",
+      "purpose": "Give concrete trigger examples.",
+      "blocks": [
+        {
+          "type": "markdown",
+          "markdown": "# Good prompts\n\n- Make a proof deck for this PR.\n- Show me this feature works.\n- Make a visual walkthrough of this diff.\n- Document this subsystem as an HTML deck.\n- Turn this product decision into comparison cards.\n\n# Bad fit\n\n- Tiny one-line answer.\n- Work that should stay in chat.\n- Anything that would imply proof without fresh evidence.",
+          "id": "block-1-ll9ab7"
+        }
+      ]
+    },
+    {
+      "id": "section-6-8wxt8k",
+      "title": "Recorded walkthrough",
+      "purpose": "A human-paced browser recording of the deck being reviewed section by section.",
+      "blocks": [
+        {
+          "type": "video",
+          "assetId": "asset-1777312975115-8empab",
+          "path": "assets/videos/asset-1777312975115-8empab-show-me-example-walkthrough.webm",
+          "caption": "Human-paced browser walkthrough: opening the deck, clicking each section from the sidebar, scrolling through content, and ending at provenance.",
+          "alt": "Screen recording of the Show Me example deck walkthrough",
+          "sensitivity": "Local browser recording of a generated deck; inspect before sharing externally.",
+          "id": "block-1-nammz1"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset-1777312975115-8empab",
+      "type": "video",
+      "path": "assets/videos/asset-1777312975115-8empab-show-me-example-walkthrough.webm",
+      "originalPath": "/tmp/show-me-example-walkthrough.webm",
+      "caption": "Human-paced browser walkthrough: opening the deck, clicking each section from the sidebar, scrolling through content, and ending at provenance.",
+      "alt": "Screen recording of the Show Me example deck walkthrough",
+      "hash": "sha256:2966eaaa814d9cbd53666b21e6c56eb9b309611ea12f7321e4fe6ad8a6f5b4af",
+      "bytes": 2246067,
+      "createdAt": "2026-04-27T18:02:55.122Z",
+      "sensitivity": "Local browser recording of a generated deck; inspect before sharing externally."
+    }
+  ],
+  "logs": [
+    {
+      "id": "cmd-1777312501718-hicvpk",
+      "path": "logs/commands/cmd-1777312501718-hicvpk.txt",
+      "command": "python3 scripts/validate_skills.py",
+      "cwd": "/home/vic/Personal/beislid",
+      "startedAt": "2026-04-27T17:55:01.693Z",
+      "finishedAt": "2026-04-27T17:55:01.718Z",
+      "exitCode": 0,
+      "timedOut": false,
+      "stdoutBytes": 24,
+      "stderrBytes": 0,
+      "stdoutTruncated": false,
+      "stderrTruncated": false,
+      "redactions": {
+        "total": 0,
+        "byRule": {}
+      }
+    }
+  ],
+  "provenance": {
+    "cwd": "/home/vic/Personal/beislid",
+    "repoRoot": "/home/vic/Personal/beislid",
+    "branch": "release/agent-agnostic-audit-formatters",
+    "commit": "0d4c1b6e8ecd3ff8b43ad1953b9ca90f17ea9b5e",
+    "dirty": false,
+    "createdBy": "beislid show-me pi extension",
+    "redactions": {
+      "total": 0,
+      "byRule": {}
+    },
+    "commands": [
+      {
+        "id": "cmd-1777312501718-hicvpk",
+        "command": "python3 scripts/validate_skills.py",
+        "cwd": "/home/vic/Personal/beislid",
+        "startedAt": "2026-04-27T17:55:01.693Z",
+        "finishedAt": "2026-04-27T17:55:01.718Z",
+        "exitCode": 0,
+        "timedOut": false,
+        "path": "logs/commands/cmd-1777312501718-hicvpk.txt"
+      }
+    ],
+    "assets": [
+      {
+        "id": "asset-1777312975115-8empab",
+        "type": "video",
+        "path": "assets/videos/asset-1777312975115-8empab-show-me-example-walkthrough.webm",
+        "originalPath": "/tmp/show-me-example-walkthrough.webm",
+        "hash": "sha256:2966eaaa814d9cbd53666b21e6c56eb9b309611ea12f7321e4fe6ad8a6f5b4af",
+        "bytes": 2246067,
+        "caption": "Human-paced browser walkthrough: opening the deck, clicking each section from the sidebar, scrolling through content, and ending at provenance.",
+        "alt": "Screen recording of the Show Me example deck walkthrough",
+        "sensitivity": "Local browser recording of a generated deck; inspect before sharing externally."
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+log=${TICKET_COMMENT_LOG:-}
+out=${TICKET_COMMENT_BODY_COPY:-}
+if [[ -z "$log" || -z "$out" ]]; then
+  echo "TICKET_COMMENT_LOG and TICKET_COMMENT_BODY_COPY must be set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$log")" "$(dirname "$out")"
+printf '%s\tcwd=%s\tticket-comment' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" >> "$log"
+for arg in "$@"; do printf ' %q' "$arg" >> "$log"; done
+printf '\n' >> "$log"
+if [[ $# -ne 2 ]]; then
+  echo "ticket-comment requires exactly: <id> <body_file>" >&2
+  exit 40
+fi
+id=$1
+body_file=$2
+if [[ "$id" != "123" && "$id" != "#123" ]]; then
+  echo "ticket-comment expected id 123, got $id" >&2
+  exit 41
+fi
+if [[ ! -f "$body_file" ]]; then
+  echo "ticket-comment expected a real body_file path, got $body_file" >&2
+  exit 42
+fi
+case "$body_file" in
+  *$'\n'*)
+    echo "ticket-comment got raw-looking body instead of path" >&2
+    exit 43
+    ;;
+esac
+cp "$body_file" "$out"
+echo "ok: ticket comment posted for $id"

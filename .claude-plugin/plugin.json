@@ -1,0 +1,21 @@
+{
+  "name": "beislid",
+  "version": "0.2.2",
+  "description": "Opinionated workflow skills. Hard gates, not suggestions. Spec through blueprint, implementation, verification, and shipping -- the skills refuse to let you skip steps.",
+  "author": {
+    "name": "Vic Valenzuela",
+    "url": "https://github.com/sandsower"
+  },
+  "repository": "https://github.com/sandsower/beislid",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "workflow",
+    "spec",
+    "blueprint",
+    "tdd",
+    "debugging",
+    "planning"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "walk-the-diff-wrap",
+  "description": "Verbose walk-the-diff full lifecycle flow with scripted smoke reviewer decisions and feedback doc.",
+  "prompt": "Run the installed walk-the-diff skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Use main as the base branch. Gather context, plan a source-first tour, present the src/calculator.py chunk first with a fenced diff, then for smoke purposes treat the reviewer as selecting Move on. Present the tests/README chunk next with fenced diff content, then for smoke purposes treat the reviewer as selecting Move on. At wrap, treat the reviewer as comfortable overall with no open items. Save the feedback doc under BEISLID_STATE_DIR and stop. Do not edit fixture files and do not write feedback inside the repo. In the final response, include a smoke summary naming base branch main, the src/calculator.py chunk, the tests/README chunk, the scripted Move on decisions, and the feedback doc path. Do not merely summarize the diffs: include literal fenced diff snippets for the presented chunks containing these exact added-line markers: `+def add_tax`, `+def receipt_total`, `+from src.calculator import receipt_total, subtotal`, `+def test_receipt_total_includes_tax`, and `+Tax receipts now include a smoke-covered example.`. FINAL RESPONSE REQUIREMENT: include these four lines verbatim after you have read the matching aux files: `✓ walk-the-diff/phase-1-context v1 loaded`, `✓ walk-the-diff/phase-2-tour-plan v1 loaded`, `✓ walk-the-diff/phase-3-present v1 loaded`, `✓ walk-the-diff/phase-4-wrap v1 loaded`.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}

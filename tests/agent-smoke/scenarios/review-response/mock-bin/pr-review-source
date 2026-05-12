@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+log=${PR_REVIEW_SOURCE_LOG:-}
+if [[ -z "$log" ]]; then
+  echo "PR_REVIEW_SOURCE_LOG is not set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$log")"
+printf '%s\tcwd=%s\tpr-review-source' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" >> "$log"
+for arg in "$@"; do printf ' %q' "$arg" >> "$log"; done
+printf '\n' >> "$log"
+
+cmd=${1:-}
+expected_owner=sandsower
+expected_repo=review-response-smoke
+expected_number=7
+expected_url=https://example.invalid/sandsower/review-response-smoke/pull/7
+if [[ $# -ne 5 || "${2:-}" != "$expected_owner" || "${3:-}" != "$expected_repo" || "${4:-}" != "$expected_number" || "${5:-}" != "$expected_url" ]]; then
+  echo "mock pr-review-source: expected <summary|threads> $expected_owner $expected_repo $expected_number $expected_url, got: $*" >&2
+  exit 46
+fi
+case "$cmd" in
+  summary)
+    cat <<'JSON'
+{"url":"https://example.invalid/sandsower/review-response-smoke/pull/7","number":7,"reviewDecision":"CHANGES_REQUESTED","comments":[],"reviews":[{"author":{"login":"review-responder"},"state":"CHANGES_REQUESTED","body":"One inline thread is unresolved."}]}
+JSON
+    ;;
+  threads)
+    cat <<'JSON'
+[
+  {
+    "id": 7001,
+    "path": "src/reply.py",
+    "line": 2,
+    "body": "Please return `hello reviewer` instead of the casual `heya reviewer`.",
+    "user": {"login": "review-responder"},
+    "html_url": "https://example.invalid/sandsower/review-response-smoke/pull/7#discussion_r7001"
+  }
+]
+JSON
+    ;;
+  *)
+    echo "mock pr-review-source: unsupported command: $*" >&2
+    exit 45
+    ;;
+esac

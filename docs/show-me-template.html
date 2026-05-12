@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Show Me — Reference Template</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --panel: #101b2d;
+      --panel-2: #16243a;
+      --text: #eef5ff;
+      --muted: #9fb0c8;
+      --line: #26364e;
+      --accent: #7c9cff;
+      --good: #44d7a8;
+      --warn: #f7c873;
+      --bad: #ff7a90;
+      --code: #07101d;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124, 156, 255, 0.22), transparent 28rem),
+        radial-gradient(circle at 80% 10%, rgba(68, 215, 168, 0.12), transparent 24rem),
+        var(--bg);
+    }
+
+    a { color: inherit; }
+    code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 18rem minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 2rem 1.25rem;
+      border-right: 1px solid var(--line);
+      background: rgba(8, 17, 31, 0.72);
+      backdrop-filter: blur(18px);
+      overflow-y: auto;
+    }
+
+    .brand {
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      background: linear-gradient(180deg, rgba(22, 36, 58, 0.9), rgba(16, 27, 45, 0.72));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.4rem;
+      color: #7fb2ff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
+
+    .brand p {
+      margin: 0.75rem 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .toc {
+      margin: 1.5rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .toc a {
+      display: block;
+      padding: 0.65rem 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 0.8rem;
+    }
+
+    .toc a:hover {
+      color: var(--text);
+      background: rgba(124, 156, 255, 0.12);
+    }
+
+    main {
+      width: min(100%, 76rem);
+      padding: 3rem clamp(1.25rem, 4vw, 4rem) 5rem;
+    }
+
+    .hero {
+      padding: clamp(2rem, 5vw, 4rem);
+      border: 1px solid var(--line);
+      border-radius: 2rem;
+      background: linear-gradient(135deg, rgba(22, 36, 58, 0.92), rgba(16, 27, 45, 0.72));
+      box-shadow: var(--shadow);
+    }
+
+    .hero h2 {
+      max-width: 14ch;
+      margin: 0.35rem 0;
+      font-size: clamp(2.5rem, 8vw, 5.8rem);
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .summary {
+      max-width: 62rem;
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 1.25rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .badge.good { color: var(--good); }
+    .badge.warn { color: var(--warn); }
+    .badge.bad { color: var(--bad); }
+
+    section {
+      margin-top: 2rem;
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border: 1px solid var(--line);
+      border-radius: 1.5rem;
+      background: rgba(16, 27, 45, 0.86);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+    }
+
+    section h3 {
+      margin: 0 0 0.45rem;
+      font-size: clamp(1.6rem, 4vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .section-purpose {
+      margin: 0 0 1.25rem;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .card h4 {
+      margin: 0 0 0.45rem;
+      font-size: 1rem;
+    }
+
+    .card p { margin: 0; color: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 1rem;
+      background: var(--panel-2);
+    }
+
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    pre {
+      margin: 1rem 0 0;
+      padding: 1rem;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      color: #d8e6ff;
+      background: var(--code);
+    }
+
+    .command {
+      border: 1px solid #24415f;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #050b14;
+    }
+
+    .command-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #24415f;
+      color: var(--muted);
+      background: #0d1726;
+      font-size: 0.82rem;
+    }
+
+    .media {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 1.2rem;
+      background: #050b14;
+    }
+
+    .media .placeholder {
+      display: grid;
+      place-items: center;
+      min-height: 16rem;
+      color: var(--muted);
+      background: linear-gradient(135deg, rgba(124, 156, 255, 0.14), rgba(68, 215, 168, 0.08));
+    }
+
+    .caption {
+      padding: 0.8rem 1rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+
+    .callout {
+      padding: 1rem;
+      border: 1px solid rgba(247, 200, 115, 0.32);
+      border-radius: 1rem;
+      color: #ffe6aa;
+      background: rgba(247, 200, 115, 0.08);
+    }
+
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 840px) {
+      .shell { grid-template-columns: 1fr; }
+      nav {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      main { padding-top: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav aria-label="Deck navigation">
+      <div class="brand">
+        <p class="eyebrow">Show Me Deck</p>
+        <h1>Reference Template</h1>
+        <p>A static visual contract for future generated reports.</p>
+      </div>
+      <ol class="toc">
+        <li><a href="#overview">01 Overview</a></li>
+        <li><a href="#walkthrough">02 Walkthrough</a></li>
+        <li><a href="#evidence">03 Evidence</a></li>
+        <li><a href="#media">04 Media</a></li>
+        <li><a href="#provenance">05 Provenance</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Visual evidence portfolio</p>
+        <h2>Don’t tell me. Show me.</h2>
+        <p class="summary">This template demonstrates the expected shape of a polished local HTML artifact: summary up front, navigable sections, evidence blocks, media panels, command logs, and provenance.</p>
+        <div class="badges">
+          <span class="badge good">● PASS / EXPLANATORY</span>
+          <span class="badge">Mode: mixed</span>
+          <span class="badge warn">Media may contain sensitive data</span>
+        </div>
+      </header>
+
+      <section id="overview">
+        <p class="eyebrow">01 Overview</p>
+        <h3>What this deck proves or explains</h3>
+        <p class="section-purpose">Start with the human decision this artifact supports. Keep it direct.</p>
+        <div class="grid">
+          <div class="card"><h4>Subject</h4><p>The change, subsystem, document set, or behavior being shown.</p></div>
+          <div class="card"><h4>Status</h4><p>PASS, FAIL, INCOMPLETE, EXPLANATORY, or another explicit status.</p></div>
+          <div class="card"><h4>Evidence</h4><p>Commands, diffs, media, citations, and asset references included below.</p></div>
+        </div>
+      </section>
+
+      <section id="walkthrough">
+        <p class="eyebrow">02 Walkthrough</p>
+        <h3>File roles and rationale</h3>
+        <p class="section-purpose">Code-only decks should read like a durable walkthrough: what changed, why it changed, and where to scrutinize.</p>
+        <table>
+          <thead><tr><th>Area</th><th>Primary files</th><th>Role</th><th>Observation</th></tr></thead>
+          <tbody>
+            <tr><td>Skill</td><td><code>skills/show-me/SKILL.md</code></td><td>Behavioral contract</td><td><span class="badge good">Manual only</span></td></tr>
+            <tr><td>Docs</td><td><code>docs/show-me.md</code></td><td>User-facing usage</td><td><span class="badge">Portable</span></td></tr>
+            <tr><td>Template</td><td><code>docs/show-me-template.html</code></td><td>Visual reference</td><td><span class="badge warn">Static seed</span></td></tr>
+          </tbody>
+        </table>
+        <pre><code>diff --git a/example b/example
++ show the meaningful hunk
+- omit irrelevant noise when possible</code></pre>
+      </section>
+
+      <section id="evidence">
+        <p class="eyebrow">03 Evidence</p>
+        <h3>Command output belongs in the artifact</h3>
+        <p class="section-purpose">Every command block should include command, cwd, timestamp, exit status, and a path to the full log when available.</p>
+        <div class="command">
+          <div class="command-header"><span>$ python3 scripts/validate_skills.py</span><span>exit 0 · cwd /repo</span></div>
+          <pre><code>ok: 17 skills validated</code></pre>
+        </div>
+      </section>
+
+      <section id="media">
+        <p class="eyebrow">04 Media</p>
+        <h3>Screenshots, video, GIFs, and diagrams</h3>
+        <p class="section-purpose">Use media when behavior is easier to inspect visually than to read in prose.</p>
+        <div class="media">
+          <div class="placeholder">Image/video/GIF panel</div>
+          <div class="caption">Caption: what to notice, source/capture method, and sensitivity warning.</div>
+        </div>
+      </section>
+
+      <section id="provenance">
+        <p class="eyebrow">05 Provenance</p>
+        <h3>Make the artifact auditable</h3>
+        <p class="section-purpose">Record enough metadata to understand where the deck came from without dumping the full chat transcript.</p>
+        <div class="callout">Redaction note: text logs should be scanned for likely secrets. Media is not considered redacted unless explicitly processed by a redaction tool.</div>
+        <pre><code>{
+  "repo": "/path/to/repo",
+  "branch": "feature/show-me",
+  "commit": "abc123",
+  "dirty": true,
+  "createdAt": "2026-04-27T00:00:00Z"
+}</code></pre>
+      </section>
+
+      <footer>
+        Generated artifacts should stay local by default. This file is a static reference template, not an example generated deck.
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
