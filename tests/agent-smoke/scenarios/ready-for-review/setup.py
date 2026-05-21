@@ -62,6 +62,11 @@ id_pattern: '^#?\\d+$'
   parallel_safe: true
 ```
 
+```beislid:fresh_eyes
+type: command
+command: 'python3 scripts/fresh_eyes_check.py "$FRESH_EYES_LOG"'
+```
+
 ```beislid:probe_cache
 ttl_hours: 1
 ```
@@ -72,6 +77,20 @@ assert Path('docs/smoke.md').exists(), 'docs/smoke.md missing'
 print('ok: fixture validated')
 """)
     os.chmod(repo / "scripts" / "validate_fixture.py", 0o755)
+    write(repo / "scripts" / "fresh_eyes_check.py", """#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+log = Path(sys.argv[1] if len(sys.argv) > 1 else os.environ['FRESH_EYES_LOG'])
+log.parent.mkdir(parents=True, exist_ok=True)
+log.write_text('fresh_eyes.command invoked\\n', encoding='utf-8')
+gh_log = os.environ.get('GH_MOCK_LOG')
+if gh_log:
+    with Path(gh_log).open('a', encoding='utf-8') as fh:
+        fh.write('fresh_eyes.command invoked\\n')
+print('ok: fresh_eyes command final-check passed')
+""")
+    os.chmod(repo / "scripts" / "fresh_eyes_check.py", 0o755)
     write(repo / "docs" / "smoke.md", "# Smoke fixture\n\nInitial text.\n")
     run(["git", "add", "."], cwd=repo)
     run(["git", "commit", "-m", "Initial smoke fixture"], cwd=repo)
@@ -90,6 +109,7 @@ print('ok: fixture validated')
         "repo": str(repo),
         "state_dir": str(state_dir),
         "gh_log": str(gh_log),
+        "fresh_eyes_log": str(run_dir / "fresh-eyes.log"),
         "origin": str(origin),
         "branch": branch,
         "base": "main",
@@ -102,6 +122,7 @@ print('ok: fixture validated')
             "GH_MOCK_LOG": str(gh_log),
             "GH_MOCK_PR_URL": "https://example.invalid/beislid-smoke/pull/1",
             "GH_MOCK_EXPECT_HEAD": branch,
+            "FRESH_EYES_LOG": str(run_dir / "fresh-eyes.log"),
         },
         "path_prepend": [str(mock_bin)],
     }

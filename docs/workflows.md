@@ -21,7 +21,7 @@ flowchart LR
   G --> H["verify<br/>Evidence before claims"]
   H --> K{"Want pre-PR<br/>hardening loop?"}
   K -- "yes" --> L["rinse<br/>Review / fix / verify"]
-  K -- "no" --> J["ready-for-review<br/>review + fresh-eyes + PR"]
+  K -- "no" --> J["ready-for-review<br/>review + final check + PR"]
   L --> J
 ```
 
@@ -35,7 +35,7 @@ Routing rules:
 - When configured, `spec` and `blueprint` write local planning artifacts after approval through lifecycle actions; default `plans/` paths feed downstream skills.
 - Use `verify` before any done/fixed/passing claim.
 - Use `rinse` when you want an approved review/fix/verify loop before PR handoff.
-- Use `ready-for-review` when a branch is ready to go through quality gates, review, `fresh-eyes`, push, and PR creation.
+- Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, push, and PR creation.
 
 ## Ticket flow
 

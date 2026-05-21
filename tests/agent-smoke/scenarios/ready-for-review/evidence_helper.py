@@ -194,7 +194,7 @@ def self_test() -> int:
             pr_title="Smoke",
             phase_path="new-pr-fast-path",
             gates="parallel validate-fixture ok",
-            review="combined review/fresh-eyes complete",
+            review="combined review/final-check complete",
             accepted_risk=[],
             reduced_review_coverage="none",
             domain_capture="not configured",

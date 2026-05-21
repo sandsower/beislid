@@ -12,11 +12,11 @@ Beislið has multiple review-oriented skills because "review" can mean different
 | You want to review someone else's PR                            | `pr-patrol`     | Fetches PR context/diff, runs the review contract, drafts comments, and posts only approved comments.                                                 |
 | You want to explain your own diff to a human                    | `walk-the-diff` | Runs an interactive walkthrough and saves feedback notes.                                                                                             |
 | Someone already left PR comments or QA feedback on your work    | `review-response`    | Fetches/categorizes feedback, helps fix or push back, verifies, then pushes/replies.                                                                  |
-| A new branch is ready for review                                   | `ready-for-review`       | Runs quality gates, invokes `review` then `fresh-eyes`, and handles PR creation. Existing-PR updates take the fast path.                              |
+| A new branch is ready for review                                   | `ready-for-review`       | Runs quality gates, invokes `review` then the configured final check, and handles PR creation. Existing-PR updates take the fast path.                 |
 
 ## Review primitives
 
-`review` is the first-pass primitive. `fresh-eyes` is the final-pass primitive.
+`review` is the first-pass primitive. `fresh-eyes` is the default final-pass primitive; `workflow.md` may replace or disable that final pass for `ready-for-review`.
 
 Both may read files and inspect diffs. Neither may:
 

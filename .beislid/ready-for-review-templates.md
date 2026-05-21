@@ -52,8 +52,8 @@ What now? fix / retry / accept risk / abort.
 
 **Phase 3 — Review:**
 ```
-🔄 Phase 3: Review — invoking review then fresh-eyes against <base>.
-🔄 Phase 3: Fast-path review — one combined review/fresh-eyes pass against <base>.
+🔄 Phase 3: Review — invoking review then final whole-diff check against <base>.
+🔄 Phase 3: Fast-path review — one combined review/final-check pass against <base>.
 ✓ Phase 3: <N> findings addressed; no blocking issues remaining.
 ⚡ Phase 3: combined review complete; no blocking issues remaining.
 ```

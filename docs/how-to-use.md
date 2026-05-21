@@ -112,7 +112,7 @@ Use `debug` before proposing fixes. Root cause first. Guessing is rejected.
 verify → ready-for-review
 ```
 
-Use `ready-for-review` when the branch is ready for review. New PRs run configured gates, local review, `fresh-eyes`, push, and PR creation. Small safe diffs may use fast-path: preloaded protocol files, parallel safe gates, and combined review/fresh-eyes. Existing PR updates take a faster path: gates, push, and report the PR URL.
+Use `ready-for-review` when the branch is ready for review. New PRs run configured gates, local review, the configured final check, push, and PR creation. Small safe diffs may use fast-path: preloaded protocol files, parallel safe gates, and combined review/final-check. Existing PR updates take a faster path: gates, push, and report the PR URL.
 
 ### Feedback came back
 

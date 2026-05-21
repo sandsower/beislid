@@ -22,7 +22,7 @@ REQUIRED_TRANSCRIPT_PATTERNS = [
     ("Phase 3 marker", r"phase\s*3"),
     ("Phase 4 marker", r"phase\s*4"),
     ("fast-path marker", r"fast[- ]path"),
-    ("combined review marker", r"combined review|combined review/fresh-eyes"),
+    ("combined review marker", r"combined review|combined review/final-check|combined review/fresh-eyes"),
     ("fixture gate evidence", r"validate-fixture|ok:\s*fixture validated"),
     ("push side effect", r"\bpush(?:ed)?\b|git push"),
     ("PR creation side effect", r"pr create|PR opened|Opened PR|pull/1"),
@@ -150,6 +150,7 @@ def verify(run_dir: Path) -> list[str]:
     errors: list[str] = []
     metadata = load_metadata(run_dir)
     gh_log = Path(metadata["gh_log"])
+    fresh_eyes_log = Path(metadata["fresh_eyes_log"])
     state_dir = Path(metadata["state_dir"])
     branch = metadata["branch"]
     repo = Path(metadata["repo"])
@@ -161,9 +162,16 @@ def verify(run_dir: Path) -> list[str]:
     else:
         gh_text = gh_log.read_text(encoding="utf-8", errors="replace")
 
-    pr_create_lines = [line for line in gh_text.splitlines() if "gh pr create" in line]
+    gh_lines = gh_text.splitlines()
+    pr_create_lines = [line for line in gh_lines if "gh pr create" in line]
     if not pr_create_lines:
         fail(errors, "mock gh did not record `gh pr create`")
+    fresh_eyes_events = [i for i, line in enumerate(gh_lines) if "fresh_eyes.command invoked" in line]
+    pr_create_events = [i for i, line in enumerate(gh_lines) if "gh pr create" in line]
+    if not fresh_eyes_events:
+        fail(errors, "mock event log did not record fresh_eyes.command before PR creation")
+    elif pr_create_events and min(fresh_eyes_events) > min(pr_create_events):
+        fail(errors, "configured fresh_eyes command ran after PR creation; final check must block handoff")
     for line in pr_create_lines:
         if f"cwd={repo}" not in line:
             fail(errors, f"`gh pr create` did not run from fixture repo cwd: {line}")
@@ -175,6 +183,10 @@ def verify(run_dir: Path) -> list[str]:
             fail(errors, f"no-ticket PR title incorrectly uses `none:` prefix: {line}")
     if "gh issue " in gh_text:
         fail(errors, "no-ticket smoke called `gh issue`; ticket association was guessed or fetched")
+    if not fresh_eyes_log.exists():
+        fail(errors, f"configured fresh_eyes command did not run; missing log: {fresh_eyes_log}")
+    elif "fresh_eyes.command invoked" not in fresh_eyes_log.read_text(encoding="utf-8", errors="replace"):
+        fail(errors, "configured fresh_eyes command log did not contain invocation marker")
     if not (run_dir / "pr-url.txt").exists():
         fail(errors, "fake PR URL was not produced")
 
@@ -239,6 +251,7 @@ def self_test() -> int:
             "repo": str(run_dir / "repo"),
             "state_dir": str(state),
             "gh_log": str(log),
+            "fresh_eyes_log": str(run_dir / "fresh-eyes.log"),
             "origin": str(run_dir / "origin.git"),
             "branch": "agent-smoke/no-ticket-verbose",
             "base": "main",
@@ -255,8 +268,9 @@ def self_test() -> int:
         subprocess.run(["git", "branch", "-M", "agent-smoke/no-ticket-verbose"], cwd=repo, check=True)
         subprocess.run(["git", "remote", "add", "origin", str(run_dir / "origin.git")], cwd=repo, check=True)
         subprocess.run(["git", "push", "origin", "agent-smoke/no-ticket-verbose"], cwd=repo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-        write(log, f"2026-01-01T00:00:00Z\tcwd={repo}\tgh pr view\n2026-01-01T00:00:01Z\tcwd={repo}\tgh pr create --head agent-smoke/no-ticket-verbose --title Smoke\n")
+        write(log, f"2026-01-01T00:00:00Z\tcwd={repo}\tgh pr view\nfresh_eyes.command invoked\n2026-01-01T00:00:01Z\tcwd={repo}\tgh pr create --head agent-smoke/no-ticket-verbose --title Smoke\n")
         write(run_dir / "pr-url.txt", "https://example.invalid/beislid-smoke/pull/1\n")
+        write(run_dir / "fresh-eyes.log", "fresh_eyes.command invoked\n")
         transcript = state / "runs" / "ready-for-review" / "abc123" / "20260101T000000Z" / "transcript.md"
         write(transcript, """# ready-for-review verbose transcript
 phase-1-detect
@@ -269,7 +283,7 @@ phase 3 entry
 phase 4 entry
 fast-path eligible
 parallel safe gate validate-fixture
-combined review/fresh-eyes complete
+combined review/final-check complete
 ok: fixture validated
 ticket_id: `none`
 git push completed
@@ -288,7 +302,7 @@ kind: ready-for-review-session-memory-v1
     "loaded_aux_files": ["phase-1-detect", "phase-2-gates", "phase-3-review", "phase-4-submit"],
     "transcript": "TRANSCRIPT_PLACEHOLDER",
     "gates": "parallel validate-fixture ok",
-    "review": "combined review/fresh-eyes complete"
+    "review": "combined review/final-check complete"
   }
 }
 ```
@@ -312,7 +326,7 @@ kind: ready-for-review-session-memory-v1
                     "loaded_aux_files": REQUIRED_LOADED_AUX,
                     "transcript": str(transcript),
                     "gates": "parallel validate-fixture ok",
-                    "review": "combined review/fresh-eyes complete",
+                    "review": "combined review/final-check complete",
                 },
             },
         }))

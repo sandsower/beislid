@@ -41,6 +41,7 @@ Known multi-command logical capabilities:
 
 - `pr_review_source` (`summary_command`, optional `threads_command`)
 - `pr_review_update` (`reply_command`, optional `rerequest_command`)
+- `fresh_eyes.command` when `beislid:fresh_eyes` uses `type: command`; probe the command's first binary. `enabled: false` has no probe and records an explicit policy value.
 - `ticket_update` when `comment_command` is configured, with optional `issue_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`) is performed by setup/orchestrators before execution.
 - `lifecycle_actions.<event>` for P0 CLI actions under one event's `actions[]` list. Probe every unique first binary from that event's `type: cli` action commands and record one logical capability. Orchestrators probe only events they execute, e.g. kickoff probes `lifecycle_actions.kickoff_start`; future events must not block current-event execution. Non-CLI providers such as `mcp` are reserved for CLI lifecycle events; orchestrators must not execute unsupported providers.
 
@@ -93,6 +94,10 @@ The capability has no probe to run; the user supplies the value at orchestrator 
 ### type=manual
 
 The capability intentionally has no automated write path. Doctor records `status: ok`, `probe_supported: true`, with `value: "(manual at runtime)"`. This applies to `pr_review_update.type: manual`; review-response prints reply/re-request instructions instead of posting.
+
+### fresh_eyes.enabled=false
+
+This is explicit ready-for-review project policy, not a probe. Doctor records `fresh_eyes` as `status: ok`, `probe_supported: true`, with `value: "(built-in fresh-eyes disabled by workflow)"`.
 
 ### type=artifact lifecycle actions
 
