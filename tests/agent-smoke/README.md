@@ -2,25 +2,25 @@
 
 This harness runs Beislið skill smoke scenarios in isolated fixture repos while temporarily pointing a host's Beislið skill symlinks at the worktree under test.
 
-Current host support: Claude and Codex. Pi support is intentionally left for a later phase because Pi uses package/session configuration rather than a simple skills directory.
+Current gate host support: Codex. Claude support is temporarily unavailable for gate runs; restore Claude examples when that support returns. Pi support is intentionally left for a later phase because Pi uses package/session configuration rather than a simple skills directory.
 
 ## Run a scenario non-interactively
 
-For local PR handoff gates, run hosts AFK with broad fixture permissions. This is budgeted, broad-permission work: do not run it from `ready-for-review` unless the user explicitly answered yes to the workflow prompt. When possible, launch it in a background subagent/task so the main session can continue side-effect-free review or PR-body work, then join before any push/PR creation. The harness creates run dirs, points host skill symlinks at the worktree under test, passes the scenario prompt directly to each host, captures logs, verifies, and restores symlinks. Multiple hosts run in parallel by default:
+For local PR handoff gates, run hosts AFK with broad fixture permissions. This is budgeted, broad-permission work: do not run it from `ready-for-review` unless the user explicitly answered yes to the workflow prompt. When possible, launch it in a background subagent/task so the main session can continue side-effect-free review or PR-body work, then join before any push/PR creation. The harness creates run dirs, points host skill symlinks at the worktree under test, passes the scenario prompt directly to each host, captures logs, verifies, and restores symlinks. While Claude gate support is unavailable, run Codex only:
 
 ```bash
-python3 tests/agent-smoke/run.py gate ready-for-review --hosts claude,codex --timeout 900
-python3 tests/agent-smoke/run.py gate walk-the-diff --hosts claude,codex --timeout 900
-python3 tests/agent-smoke/run.py gate walk-the-diff-wrap --hosts claude,codex --timeout 900
+python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900
+python3 tests/agent-smoke/run.py gate walk-the-diff --hosts codex --timeout 900
+python3 tests/agent-smoke/run.py gate walk-the-diff-wrap --hosts codex --timeout 900
 ```
 
 Use `--changed-only` from the Beislið workflow prompt to skip unless Beislið skill/smoke files changed:
 
 ```bash
-python3 tests/agent-smoke/run.py gate ready-for-review --hosts claude,codex --timeout 900 --changed-only
+python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
 ```
 
-Broad permissions are host-specific and intended only for isolated fixture repos: Claude uses non-interactive `--dangerously-skip-permissions`; Codex uses `exec --dangerously-bypass-approvals-and-sandbox`. The fixture mocks expected external commands, but this is still a local authenticated model run, not CI-safe.
+Broad permissions are host-specific and intended only for isolated fixture repos; Codex uses `exec --dangerously-bypass-approvals-and-sandbox`. The fixture mocks expected external commands, but this is still a local authenticated model run, not CI-safe.
 
 Pass `--serial` only when debugging host interactions one at a time. Run one host directly:
 
@@ -34,7 +34,7 @@ Default launch behavior creates a run dir and tries to open a new terminal for t
 
 ```bash
 python3 tests/agent-smoke/run.py ready-for-review --host codex
-python3 tests/agent-smoke/run.py ready-for-review --host claude
+# Claude support is temporarily unavailable for gate runs.
 ```
 
 The command prints machine-readable lines:
