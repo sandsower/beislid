@@ -61,12 +61,12 @@ Capability declares a filesystem path (e.g. `path: knowledge-base/`).
 
 Capability declares a Beislið skill name (e.g. `formatter_skill: tone`).
 
-**Probe:** check host skill discovery if available. Otherwise look for `<skills-dir>/<name>/SKILL.md` or `<skills-dir>/<name>.md` under `$BEISLID_SKILLS_DIRS` if set, else under `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`.
+**Probe:** resolve Beislið-controlled skill paths before host/global fallbacks. Look for `<skills-dir>/<name>/SKILL.md` or `<skills-dir>/<name>.md` in this order: repo-local `.beislid/skills/` (resolved from the git repo root), `$BEISLID_SKILLS_DIRS` if set, then `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`. Host skill discovery may be used only when it can preserve this precedence.
 
 | Status | Condition |
 |---|---|
 | `ok` | Skill found at any candidate location. `probe_supported: true`. |
-| `missing` | Skill not found at any candidate. `probe_supported: true`. Reason: `"skill '<name>' not found in any skills directory"`. |
+| `missing` | Skill not found at any candidate. `probe_supported: true`. Reason: `"skill '<name>' not found in repo-local .beislid/skills or any configured/global skills directory"`. |
 | `failed` | Filesystem read raised. `probe_supported: true`. Reason captures the error. |
 
 Kickoff's `explore.skill` uses this probe kind.

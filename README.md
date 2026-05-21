@@ -154,7 +154,7 @@ Symlinks land in:
 - `~/.codex/skills/<name>`
 - `${BEISLID_BIN_DIR:-~/.local/bin}/beislid`
 
-Edit the repo to edit the skills.
+Edit the repo to edit the skills. When Beislið probes for a named project skill, repo-local `.beislid/skills/<name>` takes priority, then `$BEISLID_SKILLS_DIRS`, then the global host skill dirs above.
 
 CLI commands available now:
 

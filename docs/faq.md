@@ -81,13 +81,13 @@ Beislið helps agents run the checks your project expects and gather evidence be
 
 ## Which coding agents does Beislið support?
 
-Right now there is official support for Claude Code, Codex and Pi but the skills and framework are agent agnostic. The installer links skills into:
+Right now there is official support for Claude Code, Codex and Pi but the skills and framework are agent agnostic. The installer links global skills into:
 
 - `~/.agents/skills`
 - `~/.claude/skills`
 - `~/.codex/skills`
 
-The skills are portable Markdown. Coding agent behavior still varies, especially around invocation syntax, natural-language triggers, tool names, and optional extensions.
+Project-specific skill probes prefer repo-local `.beislid/skills/<name>` before `$BEISLID_SKILLS_DIRS` and those global host directories. The skills are portable Markdown. Coding agent behavior still varies, especially around invocation syntax, natural-language triggers, tool names, and optional extensions.
 
 ## Why so many gates?
 
