@@ -241,7 +241,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Explore skill** — *Let kickoff Step 2 run a project skill as an exploration enhancer or replacement before design.*
 - **Translation sync** — *Run a translation-sync skill during quality gates whenever paths under your trigger globs are touched.*
 - **Browser compatibility** — *Run an advisory browser compatibility skill during quality gates whenever paths under your trigger globs are touched. Doesn't block PR handoff.*
-- **Domain capture** — *After PR handoff, spawn a subagent to record findings into a knowledge store. Both the agent name and the store path are required.*
+- **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
 - **PR description formatter** — *Pass drafted PR descriptions through a formatter skill before showing them for approval.*
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*

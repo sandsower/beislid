@@ -97,7 +97,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `fresh_eyes` — optional replacement/disable for the final `fresh-eyes` pass only. Fields: `enabled` (optional bool, defaults true); when enabled and replacing built-in behavior, `type: command` plus `command` are required. `enabled: false` is explicit project policy to skip the final whole-diff pass; the primary `review` pass still runs.
 
 **Paired (Phase 4d of ready-for-review):**
-- `domain_expert.agent` — subagent name (paired with `knowledge_store.path`)
+- `domain_expert.agent` — domain expert name (paired with `knowledge_store.path`); kickoff resolves it as a subagent first and, on hosts without a subagent mechanism, may fall back to an installed Beislið skill with the same name
 - `knowledge_store.path` — repo-relative path (paired with `domain_expert.agent`)
 
 **Walkthrough thresholds:**

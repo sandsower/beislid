@@ -83,7 +83,9 @@ Capability declares a subagent name (e.g. `agent: researcher`).
 | `missing` | Host has subagents but the named one isn't registered. `probe_supported: true`. Reason: `"subagent '<name>' not registered"`. |
 | `failed` | Host has no subagent mechanism. `probe_supported: false`. Reason: `"host has no subagent mechanism"`. |
 
-`probe_supported: false` here is the canonical case. Orchestrators that depend on `domain_expert.agent` treat this as a host limitation and skip the dependent step without prompting the user.
+`probe_supported: false` here is the canonical case. Orchestrators that depend on ordinary subagent-only capabilities treat this as a host limitation and skip the dependent step without prompting the user.
+
+Kickoff has one hybrid special case: `domain_expert.agent` probes as a subagent first for backwards compatibility, but when the subagent probe returns `failed` with `probe_supported: false`, kickoff falls back to probing the same configured name as a `skill` capability. If that skill probe succeeds, kickoff invokes the skill inline in the current conversation and carries `domain_expert_resolution: skill` through Step 2 and Step 7 as run-local context. Kickoff must not write that skill-fallback success as the generic cached `domain_expert.agent` result, because future runs still need to start with the subagent-first resolution path. If the host supports subagents and the configured subagent is merely missing, kickoff does not fall back to skill discovery; that remains a missing configured subagent.
 
 ## Special cases
 
@@ -135,6 +137,6 @@ Some capabilities are useful only together (e.g. `domain_expert.agent` + `knowle
 
 Today's known paired sets:
 
-- `domain_expert.agent` ↔ `knowledge_store.path` (Phase 4d of ready-for-review: agent records findings into the store)
+- `domain_expert.agent` ↔ `knowledge_store.path` (kickoff Step 7 and ready-for-review Phase 4d: agent records findings into the store; kickoff may resolve `domain_expert.agent` as either a subagent or a skill per the hybrid special case above)
 
 PR review source/update is a soft pair, not a hard paired capability. `pr_review_source` alone is useful for reading feedback and printing manual replies. `pr_review_update` without `pr_review_source` gets a doctor warning because review-response can only use it after pasted PR feedback.
