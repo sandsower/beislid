@@ -244,6 +244,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Domain capture** — *After PR handoff, spawn a subagent to record findings into a knowledge store. Both the agent name and the store path are required.*
 - **PR description formatter** — *Pass drafted PR descriptions through a formatter skill before showing them for approval.*
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
+- **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
 - **Lifecycle actions** — *Run configured side effects at Beislið workflow events, such as assigning or moving a ticket when kickoff starts.*
@@ -328,6 +329,32 @@ For `enhance` or `replace`, ask for the skill name. Explain that `enhance` keeps
 skill: <skill-name>
 mode: enhance
 ```
+
+### Fresh-eyes final review
+
+Configure the canonical `fresh_eyes` block under `Ready-for-review` or `Skill-specific overrides`. Explain this affects only the final whole-diff `fresh-eyes` pass; the primary `review` pass still runs.
+
+Ask:
+
+```text
+Configure final fresh-eyes behavior? (built-in / command / disable)
+```
+
+For `built-in`, remove any existing `fresh_eyes` block. For `command`, ask for the command; it must be a repo-root command whose exit status signals blocking findings. Write:
+
+```beislid:fresh_eyes
+type: command
+command: '<user command>'
+```
+
+For `disable`, ask for a short reason and write:
+
+```beislid:fresh_eyes
+enabled: false
+reason: '<reason>'
+```
+
+Never create duplicate `beislid:fresh_eyes` blocks; update or remove the existing one.
 
 ### Ticket updates
 

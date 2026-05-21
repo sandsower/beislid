@@ -10,7 +10,7 @@ Inputs: `base`, full diff against `base`, ticket/spec/design context, Phase 2 ga
 
 ## Long-running review policy
 
-Apply this policy to `review`, `fresh-eyes`, and fast-path combined review invocations:
+Apply this policy to `review`, enabled final checks, and fast-path combined review invocations:
 
 - Announce the review start and that progress will be reported every 60s.
 - Poll/report every 60s while the host supports it.
@@ -42,24 +42,24 @@ If rerun gates fail, use Phase 2 failure handling before resuming Phase 3.
 
 The normal review loop converges only when no blocking review findings remain, when remaining Important items are explicitly accepted risks, or when the user explicitly accepts reduced coverage after cancel-and-salvage.
 
-## 3b. Fresh-eyes final pass / fast-path combined review
+## 3b. Final whole-diff review
 
-If `fast_path_eligible=true`, do one combined review instead of separate `review` + `fresh-eyes`: invoke a reviewer with the review contract plus the fresh-eyes whole-diff checklist (cross-file consistency, config drift, stale docs, limits, unused code, baseline compatibility). Label the result `combined review`; it is full coverage for fast-path, not reduced coverage.
+Read optional `beislid:fresh_eyes`. Absent block, or `enabled: true` with no `type`, uses built-in `fresh-eyes`; `enabled: false` skips this final pass as explicit project policy, not per-run reduced coverage. `type: command` with `enabled` absent/true replaces built-in `fresh-eyes`: `probe(fresh_eyes.command)`, run it from repo root with full diff/ticket/spec/design/gate context available, and treat nonzero/unclear output as blocking unless evidence disproves it.
 
-Otherwise, after the normal review loop converges, invoke `fresh-eyes` with the full diff against `base`, ticket/spec/design context, verification already run, and review findings fixed or explicitly accepted.
+If `fast_path_eligible=true`, use one combined review: primary review contract plus the selected final whole-diff check. Label built-in mode `combined review`; label custom mode `combined review + fresh_eyes.command`.
 
-Handle findings with the same severity and long-running policies. Push back on incorrect findings with code/test evidence. If fixes touch functional code, rerun applicable Phase 2 gates before exiting Phase 3.
+Otherwise, after normal review converges, run the selected final check unless disabled. Handle findings with the same severity and long-running policies. If fixes touch functional code, rerun applicable Phase 2 gates before exiting Phase 3.
 
 ## Exit / outputs
 
-Phase 3 may exit only when review plus fresh-eyes, or fast-path combined review, has no blocking findings; remaining Important items are explicitly accepted risks; or incomplete/cancelled coverage has explicit reduced-coverage acceptance.
+Phase 3 may exit only when review plus enabled final check, fast-path combined review, or explicit `fresh_eyes.enabled: false` policy has no blocking findings; remaining Important items are accepted risks; or incomplete/cancelled coverage has explicit reduced-coverage acceptance.
 
-Print the Phase 3 exit one-liner from `ready-for-review-templates.md`, filling `<N>` with findings addressed across review/fresh-eyes or combined review. In verbose mode, append the Phase 3 exit check and transcript boundary.
+Print the Phase 3 exit one-liner from `ready-for-review-templates.md`, filling `<N>` with findings addressed across review/final-check or combined review. In verbose mode, append the Phase 3 exit check and transcript boundary.
 
-Outputs to Phase 4: review mode, findings-addressed count, accepted-risk notes, reduced-coverage notes if any, confirmation that no unaccepted blocking findings remain, and confirmation that applicable gates reran after functional review/fresh-eyes/combined-review fixes.
+Outputs to Phase 4: review mode, final-check mode (`built-in`, `command`, or `disabled-by-workflow`), findings count, accepted/reduced-coverage notes, no unaccepted blockers, and confirmation applicable gates reran after functional review/final-check fixes.
 
 ## Phase-local tripwires
 
-- Do not skip `fresh-eyes` after normal review converges on the normal new-PR path; only fast-path may replace it with combined review.
+- Do not skip the final whole-diff check unless `fresh_eyes.enabled: false` is explicitly configured.
 - Do not proceed with Critical findings; Important findings require fixes or explicit user risk acceptance.
 - Cancelled/incomplete review requires explicit reduced-coverage acceptance before Phase 4.

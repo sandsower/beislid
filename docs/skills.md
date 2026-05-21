@@ -28,7 +28,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 ## Deliver
 
 - `walk-the-diff`: interactive walkthrough of your own diff for a human reviewer.
-- `ready-for-review`: review-ready PR flow driven by `workflow.md`; runs `review` and `fresh-eyes` before new PR creation.
+- `ready-for-review`: review-ready PR flow driven by `workflow.md`; runs `review` and the configured final check before new PR creation.
 - `review-response`: handle PR/QA feedback after someone reviews or tests your work.
 
 ## Manage

@@ -93,6 +93,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `browser_compat.skill`, `browser_compat.trigger_paths`
 - `pr_description.formatter_skill`, `pr_description.formatter_args` (optional map)
 
+**Ready-for-review final review:**
+- `fresh_eyes` — optional replacement/disable for the final `fresh-eyes` pass only. Fields: `enabled` (optional bool, defaults true); when enabled and replacing built-in behavior, `type: command` plus `command` are required. `enabled: false` is explicit project policy to skip the final whole-diff pass; the primary `review` pass still runs.
+
 **Paired (Phase 4d of ready-for-review):**
 - `domain_expert.agent` — subagent name (paired with `knowledge_store.path`)
 - `knowledge_store.path` — repo-relative path (paired with `domain_expert.agent`)
@@ -104,6 +107,34 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `probe_cache` — fields: `ttl_hours` (integer; defaults to 24 when absent)
 
 Capabilities not in this list are unknown — doctor reports them with a `💭` inline note and continues.
+
+## Fresh-eyes replacement shape
+
+`ready-for-review` always runs the primary `review` pass on the normal new-PR path. Configure `fresh_eyes` only to change the final whole-diff `fresh-eyes` pass.
+
+Use a custom command replacement:
+
+````markdown
+## Ready-for-review
+
+```beislid:fresh_eyes
+type: command
+command: 'node tools/codex-companion.mjs adversarial-review --wait --scope branch'
+```
+````
+
+Or explicitly disable the final pass as project policy:
+
+````markdown
+## Ready-for-review
+
+```beislid:fresh_eyes
+enabled: false
+reason: 'Final review is enforced by an external required check.'
+```
+````
+
+The command is probed like a CLI capability by checking its first binary. It should exit nonzero for blocking findings; ambiguous output is treated as blocking until the user provides evidence or accepts risk.
 
 ## Gate object shape
 

@@ -230,6 +230,34 @@ Artifact results use the same status vocabulary in skill output and same-session
 
 Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work.
 
+## Ready-for-review final review
+
+`ready-for-review` runs a primary `review` pass and then a final whole-diff `fresh-eyes` pass. Configure `fresh_eyes` only when you want to replace or explicitly disable that final pass; the primary review still runs.
+
+Use a command replacement:
+
+````markdown
+## Ready-for-review
+
+```beislid:fresh_eyes
+type: command
+command: 'node tools/codex-companion.mjs adversarial-review --wait --scope branch'
+```
+````
+
+Or disable the final pass by project policy:
+
+````markdown
+## Ready-for-review
+
+```beislid:fresh_eyes
+enabled: false
+reason: 'Final review is enforced by a required external check.'
+```
+````
+
+Absent config keeps the built-in `fresh-eyes` behavior.
+
 ## Kickoff explore skills
 
 Kickoff can use a project skill during Step 2 exploration. Put the block under a recognized Kickoff/Skill-specific overrides section:
@@ -250,7 +278,7 @@ mode: enhance
 These skills read `workflow.md`:
 
 - `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks.
-- `ready-for-review`: PR target, quality gates, scopes, review flow, PR description formatting, triggered checks.
+- `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks.
 - `review-response`: PR review source/update path, ticket update path, feedback handling.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events.
 - `doctor`: all configured capabilities.
