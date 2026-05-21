@@ -260,7 +260,7 @@ Absent config keeps the built-in `fresh-eyes` behavior.
 
 ## Kickoff explore skills
 
-Kickoff can use a project skill during Step 2 exploration. Put the block under a recognized Kickoff/Skill-specific overrides section:
+Kickoff can use a project skill during Step 2 exploration. Skill probes search repo-local `.beislid/skills/<name>` first, then `$BEISLID_SKILLS_DIRS`, then global host skill directories (`~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`). Put the block under a recognized Kickoff/Skill-specific overrides section:
 
 ````markdown
 ## Kickoff
