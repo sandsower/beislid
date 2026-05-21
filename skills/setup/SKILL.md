@@ -458,7 +458,7 @@ Configure kickoff_start lifecycle actions? (cli / skip)
 
 For `cli`, collect one or more ordered actions. For each action ask: action name, command, and approval (`auto` / `prompt`). Commands may use `{ticket_id}`, `{id}`, `{branch}`, and `{event}` placeholders; explain that orchestrators argv-pass or shell-quote placeholder values before execution. Explain that `auto` runs once configured and prompts only on failure; `prompt` asks before running. If the command includes raw user-authored body/title placeholders, redirect the user to `ticket_update` or a future file-based lifecycle action instead.
 
-If a `lifecycle_actions` block already exists, merge kickoff actions into the existing block and preserve `spec_approved` / `blueprint_approved` artifact actions. Never create duplicate `beislid:lifecycle_actions` blocks.
+If a `lifecycle_actions` block already exists, merge kickoff actions into the existing block and preserve all existing events/actions, including planning and checkpoint artifact actions. Never create duplicate `beislid:lifecycle_actions` blocks.
 
 ```beislid:lifecycle_actions
 events:

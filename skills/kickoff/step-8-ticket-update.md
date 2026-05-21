@@ -18,7 +18,7 @@ Compose a concise implementation-plan update:
 - key files/modules expected to change
 - tests/verification planned
 - risks/open questions
-- planning artifact paths/status when useful, labeled as local repo files rather than external links
+- planning and checkpoint artifact paths/status when useful, labeled as local repo files rather than external links
 
 If `ticket_update` is not configured, print the update for manual posting using `kickoff-templates.md` copy.
 
@@ -33,7 +33,7 @@ Show the exact body and wait for user approval before posting. On probe failure 
 
 ### 8b. Transition to implementation
 
-Once the update is posted or printed, invoke `implement` with the approved design, any design artifact path returned by blueprint, and gathered context. `implement` handles task decomposition, TDD rhythm, task tracking, and parallel batching.
+Once the update is posted or printed, invoke `implement` with the approved design, any design artifact path returned by blueprint, any checkpoint artifact path/status from Step 4b, and gathered context. `implement` handles task decomposition, TDD rhythm, task tracking, and parallel batching.
 
 ## Exit
 

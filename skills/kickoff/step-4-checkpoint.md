@@ -27,9 +27,9 @@ Execute only `type: artifact`; skip other providers as reserved. Use the same ar
 
 Default path: `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Supported placeholders are `{event}` (`kickoff_context_ready`), `{feature}`, `{kind}` (`checkpoint`), and `{ticket_id}`. Derive `{feature}` from ticket title, then branch; ask if none. Paths must be relative repo-local `.md` files with no `..`.
 
-Checkpoint content is human-readable Markdown with stable sections: metadata, state summary, key context, decisions, next step, risks/questions, and optional related artifacts. Include ticket, branch, source skill `kickoff`, event, readiness route, acceptance criteria, attachments, codebase findings, domain/team status, and uncertainties. Do not add unapproved implementation decisions.
+Checkpoint content is human-readable Markdown with stable sections: `Checkpoint Metadata`, `State Summary`, `Key Context`, `Decisions`, `Next Step`, `Open Risks / Questions`, and optional `Related Artifacts`. Include ticket, branch, source skill `kickoff`, event, readiness route, acceptance criteria, attachments, codebase findings, domain/team status, uncertainties, and approved spec summary/artifact status when spec ran. Do not add unapproved implementation decisions.
 
-After a checkpoint write, update `.beislid/checkpoints/latest.json` with replaceable latest-pointer metadata: event, path, ticket, branch, source skill, and timestamp when available. This is convenience rediscovery state only: no run ID, history, gate logs, or resume state machine. Report pointer update failures without changing the artifact result.
+After a checkpoint write, update `.beislid/checkpoints/latest.json` with replaceable latest-pointer metadata: event, path, `ticket: {id, title}` when known, branch, source skill, and timestamp when available. This is convenience rediscovery state only: no run ID, history, gate logs, or resume state machine. Report pointer update failures without changing the artifact result.
 
 When a checkpoint is written, print host-neutral fresh-context guidance and pause: this is a safe point to run `/clear` or `/new`; after restarting, say `continue this ticket` or `continue from checkpoint`. Do not invoke `/clear` or `/new` automatically.
 
