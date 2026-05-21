@@ -69,7 +69,7 @@ Execute only `type: artifact` under `blueprint_approved`; skip other providers a
 
 Default path: `plans/{feature}-design.md`. Supported placeholders are `{feature}`, `{kind}` (`design`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved design title, then spec artifact title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-Artifact content must be the approved design as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, spec artifact path, and related artifact status. Do not add unapproved design decisions.
+Artifact content must be the approved design as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, spec artifact path, and related artifact status. Do not add unapproved design decisions. Treat written design artifacts as checkpoint-compatible state seeds for fresh-context handoff into `implement`.
 
 Record artifact results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths when available. Pass written artifact paths in handoff context so `implement` can read custom paths in the same session.
 

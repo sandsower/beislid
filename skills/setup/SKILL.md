@@ -384,7 +384,7 @@ issue_command: '... {title_file} ... {body_file} ...'
 
 ### Planning artifacts
 
-Configure approved spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key.
+Configure approved spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key. Also mention that checkpoint artifacts use the same `lifecycle_actions` block but are configured separately for different workflow events such as `kickoff_context_ready` and `implementation_plan_created`.
 
 Ask:
 
@@ -418,9 +418,37 @@ events:
         path: 'plans/{feature}-design.md'
 ```
 
+### Checkpoint artifacts
+
+When the user asks for clear-context, Rondo-style, or checkpoint workflow support, configure checkpoint artifact actions inside the canonical `lifecycle_actions` block. Explain that this is a lightweight workflow option, not the durable run ledger: skills write human-readable Markdown checkpoints and update `.beislid/checkpoints/latest.json` for rediscovery, but do not create run IDs, event history, gate logs, or automatic resume state.
+
+P0 executable checkpoint events are `kickoff_context_ready` and `implementation_plan_created`. Reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be kept as workflow intent but no P0 skill executes them yet. For each selected executable event, ask whether to use the default path or customize it. Defaults are `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{event}`, `{feature}`, `{kind}`, and `{ticket_id}`. Then ask:
+
+```text
+Ask each time, or auto-create when missing? (prompt / auto)
+```
+
+Default to `prompt`. Explain that `auto` creates a missing checkpoint without another prompt, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. If a `lifecycle_actions` block already exists, merge checkpoint events into that block and preserve existing events/actions. Never create duplicate `beislid:lifecycle_actions` blocks.
+
+```beislid:lifecycle_actions
+events:
+  kickoff_context_ready:
+    actions:
+      - name: write-kickoff-context-checkpoint
+        type: artifact
+        approval: prompt
+        path: 'checkpoints/{event}-{ticket_id}.md'
+  implementation_plan_created:
+    actions:
+      - name: write-implementation-plan-checkpoint
+        type: artifact
+        approval: prompt
+        path: 'checkpoints/{event}-{ticket_id}.md'
+```
+
 ### Lifecycle actions
 
-Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, plus artifact actions for `spec_approved` and `blueprint_approved` through the Planning artifacts preset. This interview configures kickoff CLI actions; use the preset for planning artifacts.
+Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, artifact actions for `spec_approved` and `blueprint_approved` through the Planning artifacts preset, and checkpoint artifact actions through the Checkpoint artifacts preset. This interview configures kickoff CLI actions; use the presets for planning/checkpoint artifacts.
 
 Ask:
 
@@ -430,7 +458,7 @@ Configure kickoff_start lifecycle actions? (cli / skip)
 
 For `cli`, collect one or more ordered actions. For each action ask: action name, command, and approval (`auto` / `prompt`). Commands may use `{ticket_id}`, `{id}`, `{branch}`, and `{event}` placeholders; explain that orchestrators argv-pass or shell-quote placeholder values before execution. Explain that `auto` runs once configured and prompts only on failure; `prompt` asks before running. If the command includes raw user-authored body/title placeholders, redirect the user to `ticket_update` or a future file-based lifecycle action instead.
 
-If a `lifecycle_actions` block already exists, merge kickoff actions into the existing block and preserve `spec_approved` / `blueprint_approved` artifact actions. Never create duplicate `beislid:lifecycle_actions` blocks.
+If a `lifecycle_actions` block already exists, merge kickoff actions into the existing block and preserve all existing events/actions, including planning and checkpoint artifact actions. Never create duplicate `beislid:lifecycle_actions` blocks.
 
 ```beislid:lifecycle_actions
 events:

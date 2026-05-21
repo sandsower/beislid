@@ -118,7 +118,16 @@ For each fenced block with info string `beislid:<key>`:
 
 3. **Disabled-state check.** If the section's prose says "Disabled for this project" (or similar) AND no fenced block follows, record `status: disabled`, `probe_supported` not set, no probe run.
 
-4. **Probe/validate.** Otherwise, dispatch on `type` or the key's canonical probe kind per `probe-semantics.md`. For `gates` and `scopes[*].gates`, validate both legacy flat gates and rich staged gates: `name` and `command` are required for executable P0 gates; missing or non-string values are warnings/failures tied to the gate path. Legacy flat gates are valid and default to `stage: pre-pr`, `kind: sensor`, `execution: computational`, `mutates: false`. Rich gate metadata may include `stage`, `kind`, `execution`, `timeout_seconds`, `cost`, `mutates`, `accepts_files`, `required_tools`, `changed_file_selector` or `selector`, `output`, `failure`, `autofix`, and `parallel_safe`. Unknown stage values or unsupported execution values are warnings; do not mark older flat gates invalid. Doctor should summarize staged gate counts and note that P0 ready-for-review/review-response only execute legacy/`pre-pr` command gates. For `fresh_eyes`, `enabled: false` records ok policy, absent/true with no type uses built-in behavior, and `type: command` requires/probes `command` as `fresh_eyes.command`; other types are reserved warnings. Expand `lifecycle_actions.events.<event>` into event-scoped logical capabilities such as `lifecycle_actions.kickoff_start`, `lifecycle_actions.spec_approved`, and `lifecycle_actions.blueprint_approved`. P0 probes supported CLI actions for `kickoff_start`. P0 validates artifact actions for `spec_approved` and `blueprint_approved` without touching the filesystem: `name` required; `approval` may be `prompt`, `auto`, or omitted; `path` may be omitted but, when present, must be a relative `.md` file template with no `..` segments and only `{feature}`, `{kind}`, `{ticket_id}` placeholders. Artifact actions record `status: ok`, `probe_supported: true`, and a value such as `(auto/prompt artifact at runtime)`. Unsupported events/providers are noted as reserved and not executed. Record the result in the cache schema below.
+4. **Probe/validate.** Otherwise, dispatch on `type` or the key's canonical probe kind per `probe-semantics.md`:
+
+   - For `gates` and `scopes[*].gates`, validate both legacy flat gates and rich staged gates. `name` and `command` are required for executable P0 gates; missing or non-string values are warnings/failures tied to the gate path. Legacy flat gates default to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. Rich gate metadata may include `stage`, `kind`, `execution`, `timeout_seconds`, `cost`, `mutates`, `accepts_files`, `required_tools`, `changed_file_selector` or `selector`, `output`, `failure`, `autofix`, and `parallel_safe`. Unknown stage values or unsupported execution values are warnings. Doctor should summarize staged gate counts and note that P0 ready-for-review/review-response only execute legacy/`pre-pr` command gates.
+   - For `fresh_eyes`, `enabled: false` records ok policy, absent/true with no type uses built-in behavior, and `type: command` requires/probes `command` as `fresh_eyes.command`; other types are reserved warnings.
+   - For `lifecycle_actions.events.<event>`, expand into event-scoped logical capabilities such as `lifecycle_actions.kickoff_start`, `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created`.
+     - P0 probes supported CLI actions for `kickoff_start`.
+     - P0 validates artifact actions for `spec_approved`, `blueprint_approved`, `kickoff_context_ready`, and `implementation_plan_created` without touching the filesystem: `name` required; `approval` may be `prompt`, `auto`, or omitted; `path` may be omitted but, when present, must be a relative `.md` file template with no `..` segments and only placeholders documented for that event (`{feature}`, `{kind}`, `{ticket_id}` for planning artifacts; plus `{event}` for checkpoint artifacts). Artifact actions record `status: ok`, `probe_supported: true`, and a value such as `(auto/prompt artifact at runtime)`.
+     - `review_feedback_loaded` and `ready_for_review_pre_submit` artifact actions are valid reserved checkpoint intent and should be narrated as reserved/not executed rather than invalid. Unsupported events/providers are noted as reserved and not executed.
+
+   Record the result in the cache schema below.
 
 5. **Parse failure.** If the YAML inside the fenced block doesn't parse, run `grep -n '^\`\`\`beislid:<key>' .beislid/workflow.md` to find the block start line, add the YAML parse-error offset within the block to compute the file line, and surface in prose:
 
@@ -146,10 +155,11 @@ Also check gate soft constraints:
 
 Also check lifecycle action soft constraints:
 
-- `spec_approved` and `blueprint_approved` support only `type: artifact` in P0. Non-artifact actions under those events are reserved; warn that skills will skip them.
-- `artifact` actions under unsupported events are reserved; warn that no skill executes them yet.
+- `spec_approved`, `blueprint_approved`, `kickoff_context_ready`, and `implementation_plan_created` support only `type: artifact` in P0. Non-artifact actions under those events are reserved; warn that skills will skip them.
+- `review_feedback_loaded` and `ready_for_review_pre_submit` are reserved checkpoint artifact events; warn that no P0 skill executes them yet, but do not mark valid artifact action shape as failed.
+- `artifact` actions under other unsupported events are reserved; warn that no skill executes them yet.
 - `approval` omitted for artifact actions is valid and means `prompt`. `approval: auto` is valid and means create a missing target without prompting; existing targets still prompt at runtime.
-- Doctor never creates artifact directories or files.
+- Doctor never creates artifact directories, files, or `.beislid/checkpoints/latest.json`; runtime skills own writes.
 
 Also check ready-for-review final-review policy:
 

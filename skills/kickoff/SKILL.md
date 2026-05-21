@@ -36,6 +36,8 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
+If the user is resuming with phrases such as `continue this ticket` or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present before Step 1. Prefer a `kickoff_context_ready` entry matching the current branch and ticket ID when known; otherwise ask the user to choose among matching latest entries. Use the referenced checkpoint artifact as primary planning context, not as a replacement for live validation: still fetch or confirm current ticket context through Steps 1–4 before side effects. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then continue with normal kickoff.
+
 ## Internal: probe(<cap>)
 
 Reusable lazy-probe contract. Do not re-probe within a run; the in-memory probe state is authoritative.
@@ -73,6 +75,7 @@ When `BEISLID_VERBOSE=1`, print one aux load stamp after successfully reading a 
 2. **Context** — read `step-2-context.md`. Outputs: relevant files/patterns/tests/docs, domain context status, open uncertainties.
 3. **Team guidance** — read `step-3-team-guidance.md`. Outputs: team config status and constraints.
 4. **Readiness** — read `step-4-readiness.md`. Outputs: route to `spec` or blueprint path, with rationale.
+4b. **Checkpoint** — read `step-4-checkpoint.md`. Outputs: `kickoff_context_ready` checkpoint artifact/pointer status when configured.
 5. **Scope** — read `step-5-scope.md`. Outputs: `single PR` or `needs breakdown`, with selected phase if any.
 6. **Blueprint** — read `step-6-blueprint.md`. Outputs: approved design summary, expected files/modules, tests, risks/open questions.
 7. **Discoveries** — read `step-7-discoveries.md`. Outputs: discovery status and any durable notes recorded.

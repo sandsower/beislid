@@ -8,8 +8,10 @@ __pycache__/
 .playwright-cli/
 .beislid/show-me/
 .beislid/artifacts/
+/.beislid/checkpoints/
 .beislid/project-install.json
 plans/
+/checkpoints/
 logos/
 docs/*
 !docs/*.md

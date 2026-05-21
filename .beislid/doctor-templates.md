@@ -100,6 +100,27 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "manual",
       "value": "(manual at runtime)"
+    },
+    "lifecycle_actions.kickoff_context_ready": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(prompted artifact at runtime)"
+    },
+    "lifecycle_actions.implementation_plan_created": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(auto artifact at runtime)"
+    },
+    "lifecycle_actions.review_feedback_loaded": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(reserved checkpoint artifact; not executed by P0 skills)"
     }
   }
 }
@@ -112,7 +133,7 @@ Field rules:
 - `project_name` — basename of `git rev-parse --show-toplevel`.
 - `cache_ttl_hours` — read from `beislid:probe_cache.ttl_hours` in workflow.md; defaults to `24`.
 - `probe_supported` — `false` only when the host literally cannot probe the kind (e.g., subagent probe on a host without subagents). Capability-not-found-in-session uses `probe_supported: true` with `status: missing`.
-- `value` — what was probed (tool name, command binary, path, etc.). Omitted on `disabled` entries.
+- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, etc.). Omitted on `disabled` entries. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them.
 - `reason` — only on `missing` and `failed`. Always omitted on `ok` and `disabled`.
 - `probed_at`, `probe_kind`, `value` — omitted on `disabled` entries (no probe was run).
 
@@ -136,6 +157,9 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 — knowledge_store    not configured
 ✓ pr_review_source cli:gh                                  ok (probed <ISO-8601>)
 ✓ pr_review_update manual                                  ok (manual at runtime)
+✓ lifecycle_actions.kickoff_context_ready artifact          ok (prompted artifact at runtime)
+✓ lifecycle_actions.implementation_plan_created artifact    ok (auto artifact at runtime)
+✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
 cache file:        <path>
 cache valid until: <ISO-8601>
 workflow_hash:     <hash>

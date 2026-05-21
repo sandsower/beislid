@@ -228,7 +228,59 @@ events:
 
 Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
 
-Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work.
+Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work. Planning artifacts are also checkpoint-compatible state seeds: a fresh context may use an approved spec/design artifact as its primary input when it captures enough context for the next skill.
+
+P0 also supports boundary checkpoint artifact events as a thin workflow-configured slice of the future durable run ledger. These events are useful when a workflow wants operational resume metadata around a boundary, not just the approved planning deliverable. Current executable events are `kickoff_context_ready` and `implementation_plan_created`; reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be documented in config but are not executed by P0 skills yet.
+
+````markdown
+## Lifecycle actions
+
+```beislid:lifecycle_actions
+events:
+  kickoff_context_ready:
+    actions:
+      - name: write-kickoff-context-checkpoint
+        type: artifact
+        approval: prompt
+        path: 'checkpoints/{event}-{ticket_id}.md'
+  implementation_plan_created:
+    actions:
+      - name: write-implementation-plan-checkpoint
+        type: artifact
+        approval: auto
+        path: 'checkpoints/{event}-{ticket_id}.md'
+```
+````
+
+Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated checkpoint artifacts are written to `checkpoints/` by default, while `.beislid/checkpoints/latest.json` stores the lightweight pointer index; both `checkpoints/` and `.beislid/checkpoints/` are local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the executing skill updates `.beislid/checkpoints/latest.json` so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
+
+Example pointer shape:
+
+```json
+{
+  "version": 1,
+  "latest": {
+    "kickoff_context_ready": {
+      "event": "kickoff_context_ready",
+      "path": "checkpoints/kickoff_context_ready-41.md",
+      "ticket": {"id": "41", "title": "Add explicit checkpoint artifact actions for orchestrator skills"},
+      "branch": "victor/41-checkpoint-artifacts",
+      "source_skill": "kickoff",
+      "written_at": "2026-05-21T22:30:00Z"
+    },
+    "implementation_plan_created": {
+      "event": "implementation_plan_created",
+      "path": "checkpoints/implementation_plan_created-41.md",
+      "ticket": {"id": "41", "title": "Add explicit checkpoint artifact actions for orchestrator skills"},
+      "branch": "victor/41-checkpoint-artifacts",
+      "source_skill": "implement",
+      "written_at": "2026-05-21T22:45:00Z"
+    }
+  }
+}
+```
+
+The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. The `latest` pointer schema keeps one entry per event key; skills should verify the entry's branch and ticket metadata before rediscovering context. If metadata is missing or does not match the current context, ask the user to confirm or provide a checkpoint path. The broader #15-style run ledger remains future work and may later index these artifacts.
 
 ## Ready-for-review final review
 

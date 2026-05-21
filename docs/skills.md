@@ -4,7 +4,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 ## Plan
 
-- `kickoff`: fetch a ticket and route to the right workflow.
+- `kickoff`: fetch a ticket and route to the right workflow; may write a configured context checkpoint.
 - `spec`: brainstorm and shape lightweight product specs; may write approved spec artifacts when configured.
 - `break-spec`: break large specs into vertical implementation phases.
 - `blueprint`: design before implementation; may write approved design artifacts when configured.
@@ -12,7 +12,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 ## Execute
 
-- `implement`: TDD-first file-level implementation plan.
+- `implement`: TDD-first file-level implementation plan; may write a configured pre-code checkpoint.
 - `debug`: no fix without root cause.
 - `handoff`: paste-ready context packet for another agent/session/worktree.
 
@@ -42,9 +42,9 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec writing; runs configured spec artifact actions after approval           | `break-spec` or `blueprint`                                   |
 | `break-spec`    | Product decomposition       | A spec is too large for one coherent PR                                                                                   | `blueprint` for one phase                                     |
-| `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`                                         | `spec`, `break-spec`, or `blueprint`                          |
+| `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
 | `blueprint`     | Implementation design gate  | Desired behavior is known; code approach is not; runs configured design artifact actions after approval                    | `implement`                                                   |
-| `implement`     | Execution planning          | Implementation design is approved                                                                                         | code changes + `verify`                                       |
+| `implement`     | Execution planning          | Implementation design is approved; may write configured implementation-plan checkpoints                                    | code changes + `verify`                                       |
 | `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |
 | `debug`         | Debugging gate              | Bug, failing test, or unexpected behavior                                                                                 | fix + `verify`                                                |
 | `review`        | Review primitive            | Local or supplied diff needs first-pass findings and a readiness verdict                                                  | caller decides: fix, post, loop, or submit                      |
