@@ -252,7 +252,7 @@ events:
 ```
 ````
 
-Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated `checkpoints/` and `.beislid/checkpoints/` state is local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the skill updates `.beislid/checkpoints/latest.json` as a lightweight latest-pointer index so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
+Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated checkpoint artifacts are written to `checkpoints/` by default, while `.beislid/checkpoints/latest.json` stores the lightweight pointer index; both `checkpoints/` and `.beislid/checkpoints/` are local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the executing skill updates `.beislid/checkpoints/latest.json` so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
 
 Example pointer shape:
 
@@ -280,7 +280,7 @@ Example pointer shape:
 }
 ```
 
-The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. Skills should prefer entries matching the current branch and ticket when rediscovering context; if multiple entries match or metadata is missing, they ask the user to choose. The broader #15-style run ledger remains future work and may later index these artifacts.
+The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. The `latest` pointer schema keeps one entry per event key; skills should verify the entry's branch and ticket metadata before rediscovering context. If metadata is missing or does not match the current context, ask the user to confirm or provide a checkpoint path. The broader #15-style run ledger remains future work and may later index these artifacts.
 
 ## Ready-for-review final review
 

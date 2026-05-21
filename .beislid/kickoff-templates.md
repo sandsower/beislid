@@ -39,7 +39,7 @@ Exit:
 ✓ Step 2: Context gathered — <N> files, explore <default|replace|enhance>, domain <used|skipped>.
 ✓ Step 3: Team guidance <found|not configured>.
 ✓ Step 4: Readiness decided — <spec|blueprint>.
-✓ Step 4b: Checkpoint <written|skipped|not configured>.
+✓ Step 4b: Checkpoint <status>.
 ✓ Step 5: Scope decided — <single PR|needs breakdown>.
 ✓ Step 6: Blueprint approved.
 ✓ Step 7: Discoveries <recorded|skipped>.

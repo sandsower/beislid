@@ -20,9 +20,7 @@ Route to `spec` when any of these are unclear:
 
 If using `spec`, carry ticket text, acceptance criteria, attachments, codebase findings, domain context, and team config into it. When spec returns, retain the approved spec plus any artifact status/path it reports for downstream scope, break-spec, blueprint, and ticket-update context. Do not design implementation details before spec approval.
 
-If requirements are clear, continue toward Step 5 via the checkpoint step.
-
-After readiness is decided, continue to the checkpoint step before Step 5 scope. The checkpoint step owns any `kickoff_context_ready` side effects.
+After readiness is decided, continue to the checkpoint step (Step 4b) before Step 5 scope. The checkpoint step owns any `kickoff_context_ready` side effects.
 
 ## Exit
 

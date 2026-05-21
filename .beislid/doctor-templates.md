@@ -133,7 +133,7 @@ Field rules:
 - `project_name` — basename of `git rev-parse --show-toplevel`.
 - `cache_ttl_hours` — read from `beislid:probe_cache.ttl_hours` in workflow.md; defaults to `24`.
 - `probe_supported` — `false` only when the host literally cannot probe the kind (e.g., subagent probe on a host without subagents). Capability-not-found-in-session uses `probe_supported: true` with `status: missing`.
-- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, etc.). Omitted on `disabled` entries. Reserved checkpoint artifact events may record an ok validation value such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them.
+- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, etc.). Omitted on `disabled` entries. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them.
 - `reason` — only on `missing` and `failed`. Always omitted on `ok` and `disabled`.
 - `probed_at`, `probe_kind`, `value` — omitted on `disabled` entries (no probe was run).
 

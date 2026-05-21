@@ -9,7 +9,7 @@ Creates a structured plan, tracks it with the host agent's todo/task mechanism, 
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
-If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing or unreadable latest pointers are non-blocking.
+If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then ignore the pointer and fall back to a matching checkpoint artifact or conversation context.
 
 ## Phase 1: Write the Plan
 
@@ -57,14 +57,14 @@ Batch 3 (after batch 2): Task F (integration)
 
 ### Checkpoint before code changes
 
-If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.implementation_plan_created.actions[]` entries after the implementation plan is written and before Phase 2 task tracking / Phase 3 code changes. If no workflow exists, do not write a checkpoint automatically; preserve standalone behavior by printing the plan in chat.
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.implementation_plan_created.actions[]` entries after the implementation plan is written and before Phase 2 task tracking / Phase 3 code changes. If workflow.md is missing, the block is absent, or the lifecycle YAML is malformed, warn and skip automatic checkpoint handling; preserve standalone behavior by printing the plan in chat.
 
 Supported P0 action shape:
 
 ```yaml
 - name: write-implementation-plan-checkpoint
   type: artifact
-  approval: prompt # optional; prompt when omitted, auto creates missing target
+  approval: prompt # optional; defaults to prompt when omitted
   path: 'checkpoints/{event}-{ticket_id}.md' # optional default
 ```
 
@@ -72,7 +72,7 @@ Execute only `type: artifact`; skip other providers as reserved. Multiple artifa
 
 Default path: `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Supported placeholders are `{event}` (`implementation_plan_created`), `{feature}`, `{kind}` (`checkpoint`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the implementation goal, then approved design title/path, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root, contain no `..`, and end in `.md`.
 
-Checkpoint content must be human-readable Markdown with stable sections: `Checkpoint Metadata`, `State Summary`, `Key Context`, `Decisions`, `Next Step`, `Open Risks / Questions`, and optional `Related Artifacts`. Include ticket id/title when known, branch, source skill `implement`, event name, approved design source/path, goal, architecture, files touched, task decomposition, batches/dependencies, verification plan, and open risks. Do not add unapproved implementation decisions.
+Checkpoint content must be human-readable Markdown with stable sections: `Checkpoint Metadata`, `State Summary`, `Key Context`, `Decisions`, `Next Step`, `Open Risks / Questions`, and optional `Related Artifacts`. Include ticket id/title when known, branch, source skill `implement`, event name, approved design source/path, goal, architecture, files touched, task decomposition, batches/dependencies, verification plan, and open risks. Summarize architecture, tasks, and approach only when they match the approved design or implementation plan; do not introduce new implementation decisions.
 
 After a checkpoint artifact is written, update `.beislid/checkpoints/latest.json` with a replaceable latest-pointer entry containing event, path, `ticket: {id, title}` when known, branch, source skill, and written timestamp when available. This pointer is convenience state for fresh-context rediscovery only: no run ID, no event history, no gate logs, and no resume state machine. If the pointer update fails, report it but keep the artifact result.
 

@@ -36,7 +36,7 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
-If the user is resuming with phrases such as `continue this ticket` or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present before Step 1. Prefer a `kickoff_context_ready` entry matching the current branch and ticket ID when known; otherwise ask the user to choose among matching latest entries. Use the referenced checkpoint artifact as primary context for downstream planning, but still fetch or confirm the current ticket context before side effects. Missing or unreadable latest pointers are non-blocking; continue with normal kickoff.
+If the user is resuming with phrases such as `continue this ticket` or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present before Step 1. Prefer a `kickoff_context_ready` entry matching the current branch and ticket ID when known; otherwise ask the user to choose among matching latest entries. Use the referenced checkpoint artifact as primary planning context, not as a replacement for live validation: still fetch or confirm current ticket context through Steps 1–4 before side effects. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then continue with normal kickoff.
 
 ## Internal: probe(<cap>)
 

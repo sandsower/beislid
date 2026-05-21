@@ -384,7 +384,7 @@ issue_command: '... {title_file} ... {body_file} ...'
 
 ### Planning artifacts
 
-Configure approved spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key. Also mention that checkpoint artifacts use the same lifecycle block for context-heavy boundaries, but do not force them into the planning-artifact preset unless the user asks.
+Configure approved spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key. Also mention that checkpoint artifacts use the same `lifecycle_actions` block but are configured separately for different workflow events such as `kickoff_context_ready` and `implementation_plan_created`.
 
 Ask:
 
