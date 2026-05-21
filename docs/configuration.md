@@ -230,6 +230,58 @@ Artifact results use the same status vocabulary in skill output and same-session
 
 Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work.
 
+P0 also supports boundary checkpoint artifacts as a thin workflow-configured slice of the future durable run ledger. Checkpoint artifacts are human-readable state seeds for fresh-context or Rondo-style handoff, not run storage. Current executable events are `kickoff_context_ready` and `implementation_plan_created`; reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be documented in config but are not executed by P0 skills yet.
+
+````markdown
+## Lifecycle actions
+
+```beislid:lifecycle_actions
+events:
+  kickoff_context_ready:
+    actions:
+      - name: write-kickoff-context-checkpoint
+        type: artifact
+        approval: prompt
+        path: 'checkpoints/{event}-{ticket_id}.md'
+  implementation_plan_created:
+    actions:
+      - name: write-implementation-plan-checkpoint
+        type: artifact
+        approval: auto
+        path: 'checkpoints/{event}-{ticket_id}.md'
+```
+````
+
+Checkpoint artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated `checkpoints/` and `.beislid/checkpoints/` state is local by default and ignored by Beislið's own repo. After a checkpoint is written, the skill updates `.beislid/checkpoints/latest.json` as a lightweight latest-pointer index so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path.
+
+Example pointer shape:
+
+```json
+{
+  "version": 1,
+  "latest": {
+    "kickoff_context_ready": {
+      "event": "kickoff_context_ready",
+      "path": "checkpoints/kickoff_context_ready-41.md",
+      "ticket": {"id": "41", "title": "Add explicit checkpoint artifact actions for orchestrator skills"},
+      "branch": "victor/41-checkpoint-artifacts",
+      "source_skill": "kickoff",
+      "written_at": "2026-05-21T22:30:00Z"
+    },
+    "implementation_plan_created": {
+      "event": "implementation_plan_created",
+      "path": "checkpoints/implementation_plan_created-41.md",
+      "ticket": {"id": "41", "title": "Add explicit checkpoint artifact actions for orchestrator skills"},
+      "branch": "victor/41-checkpoint-artifacts",
+      "source_skill": "implement",
+      "written_at": "2026-05-21T22:45:00Z"
+    }
+  }
+}
+```
+
+The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. Skills should prefer entries matching the current branch and ticket when rediscovering context; if multiple entries match or metadata is missing, they ask the user to choose. The broader #15-style run ledger remains future work and may later index these artifacts.
+
 ## Ready-for-review final review
 
 `ready-for-review` runs a primary `review` pass and then a final whole-diff `fresh-eyes` pass. Configure `fresh_eyes` only when you want to replace or explicitly disable that final pass; the primary review still runs.

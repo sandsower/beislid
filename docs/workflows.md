@@ -66,6 +66,7 @@ Use the routing this way:
 - `break-spec` when the requirement is clear but too large for one PR.
 - `blueprint` when the desired behavior is known and the remaining work is implementation design.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
+- If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.”
 
 ## Feedback loop
 
@@ -110,7 +111,7 @@ Examples:
 - "make a handoff for the migration"
 - "copy context for another agent to handle docs"
 
-For same-session resume, use a memory/checkpoint tool if your environment provides one. `handoff` is for cross-session or cross-agent transfer.
+For same-session resume, use a memory/checkpoint tool if your environment provides one. When workflow checkpoint artifacts are configured, boundary skills also update `.beislid/checkpoints/latest.json` so a fresh context can rediscover the latest checkpoint for the branch/ticket. `handoff` is for cross-session or cross-agent transfer.
 
 ## Standalone pressure tools
 

@@ -22,6 +22,8 @@ If using `spec`, carry ticket text, acceptance criteria, attachments, codebase f
 
 If requirements are clear, continue to Step 5 scope gate.
 
+After readiness is decided, continue to the checkpoint step before Step 5 scope. The checkpoint step owns any `kickoff_context_ready` side effects.
+
 ## Exit
 
 Print the Step 4 exit one-liner. Required outputs: readiness decision (`spec` or `blueprint` path), rationale, spec artifact status/path if spec ran, and context packet to carry forward.

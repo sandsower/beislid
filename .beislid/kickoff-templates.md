@@ -25,6 +25,7 @@ Entry:
 🔄 Step 2: Context — exploring code, configured explore skills, and optional domain knowledge.
 🔄 Step 3: Team guidance — checking local team notes if present.
 🔄 Step 4: Readiness — deciding whether this needs spec first.
+🔄 Step 4b: Checkpoint — writing kickoff context artifact if configured.
 🔄 Step 5: Scope — checking whether this fits one PR.
 🔄 Step 6: Blueprint — designing the implementation.
 🔄 Step 7: Discoveries — recording new domain knowledge if configured.
@@ -38,6 +39,7 @@ Exit:
 ✓ Step 2: Context gathered — <N> files, explore <default|replace|enhance>, domain <used|skipped>.
 ✓ Step 3: Team guidance <found|not configured>.
 ✓ Step 4: Readiness decided — <spec|blueprint>.
+✓ Step 4b: Checkpoint <written|skipped|not configured>.
 ✓ Step 5: Scope decided — <single PR|needs breakdown>.
 ✓ Step 6: Blueprint approved.
 ✓ Step 7: Discoveries <recorded|skipped>.
