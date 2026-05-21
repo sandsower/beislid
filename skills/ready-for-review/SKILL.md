@@ -1,6 +1,7 @@
 ---
 name: ready-for-review
-description: Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when completed work is explicitly ready for PR review handoff. Bookend to kickoff: gates, review, fresh-eyes, and PR creation/update. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
+description: >
+  Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when completed work is explicitly ready for PR review handoff. Bookend to kickoff: gates, review, fresh-eyes, and PR creation/update. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
 ---
 
 # Ready for Review
