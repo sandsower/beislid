@@ -10,7 +10,7 @@ Print the Phase 4 entry one-liner from `ready-for-review-templates.md`; verbose 
 
 ## Hard gate
 
-The user must explicitly approve the final PR title and body before any push/PR creation. Draft PR creation also requires this approval. Marking a draft PR ready requires a second explicit approval after bot review/fixes. Do not treat silence, ambiguous approval, or prior Phase 3 approval as PR approval.
+The user must explicitly approve the final PR title and body before any push/PR creation. Draft PR creation also requires this approval. Ask that blocking approval question exactly once in user-visible output: show the title/body as context, then put the single approval question in the final/blocking response, or do not restate it if the visible context already asked it. Marking a draft PR ready requires a second explicit approval after bot review/fixes. Do not treat silence, ambiguous approval, or prior Phase 3 approval as PR approval.
 
 ## 4-pre. Paired-set front-load
 
@@ -44,7 +44,7 @@ Compose the proposed PR:
 
 If `pr_description.formatter_skill` is configured, probe it on first need; on failure use the Phase 4b prompt and raw draft for proceed-this-session. If no formatter is configured, print the raw-draft note.
 
-Show final title/body and wait for explicit approval.
+Show final title/body and wait for explicit approval. Do not ask one approval question in progress prose and then a second shorter approval question in the final response.
 
 If draft PRs plus provider bot review are supported, after approval offer draft-bot-review. On yes: create draft, handle valid bot findings like Phase 3 review findings, rerun applicable gates after functional fixes, commit/push accepted fixes, then ask for explicit approval before marking ready.
 

@@ -2,7 +2,7 @@
   "name": "ready-for-review",
   "description": "Verbose no-ticket ready-for-review flow against a local origin and mocked gh.",
   "prompt": "Run ready-for-review for this fixture in verbose mode. This is no-ticket maintenance work; use ticket_id none. The diff is small, so use fast-path when eligible: preload aux, run safe gates in parallel when possible, and use combined review/fresh-eyes. Do not stop after green preflight/gate/status lines. For this noninteractive smoke fixture, this prompt is explicit approval to use title `Update smoke fixture docs`, push, and create the PR after gates and combined review are green; do not pause for another approval. Do not use real network for expected ready-for-review commands. The gh on PATH is mocked and safe; you MUST run gh pr create with --head agent-smoke/no-ticket-verbose. Do not simulate PR creation or invent a smoke:// URL. For smoke evidence, use the helper at $READY_FOR_REVIEW_SMOKE_EVIDENCE_HELPER: init before Phase 1 evidence, event at each aux-load/phase/gate/review/side-effect boundary, and finalize exactly once with phase_path new-pr-fast-path before final output. The verifier fails if mocked gh PR creation, transcript, evidence.json, fast-path marker, parallel gate evidence, or memory marker are missing.",
-  "supported_hosts": ["claude", "codex"],
+  "supported_hosts": ["codex"],
   "verify": "verify.py",
   "setup": "setup.py"
 }

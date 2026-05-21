@@ -37,7 +37,7 @@ Execution:
 1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
 3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md` (pytest parser when pytest-like, otherwise generic). Store raw logs by path when possible, else a safe summary.
-4. Autofix only when the envelope is `status: fail` and `environment_failure: false`: show envelope summary, run only that autofix, show diff, and ask before committing.
+4. Autofix only when the envelope is `status: fail` and `environment_failure: false`: show envelope summary, run only that autofix, show diff, and ask before committing. Ask the commit approval question exactly once in user-visible output; do not duplicate it across progress prose and the final/blocking response.
 5. For `status: error`, `environment_failure: true`, or no `autofix`, prompt from the envelope (`summary`, failures, flags, action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess. In parallel, wait for siblings and surface all failure envelopes together.
 6. After a fix, re-run the applicable gate before advancing. If the user explicitly proceeds without a passing gate, record that decision/risk.
 

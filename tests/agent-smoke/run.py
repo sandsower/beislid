@@ -413,7 +413,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     gate_p = sub.add_parser("gate", help="Run a scenario across hosts non-interactively")
     gate_p.add_argument("scenario")
-    gate_p.add_argument("--hosts", default="claude,codex")
+    gate_p.add_argument("--hosts", default="codex")
     gate_p.add_argument("--timeout", type=int, default=900)
     gate_p.add_argument("--changed-only", action="store_true", help="Skip unless skill/smoke files changed")
     gate_p.add_argument("--serial", action="store_true", help="Run hosts one after another instead of in parallel")

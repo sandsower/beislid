@@ -19,7 +19,7 @@ If the existing-PR fast path fires, append: ` Existing PR detected — fast-path
 
 ## Per-phase one-liners
 
-Each phase prints an entry summary on its way in and an exit summary on its way out. These are status lines, not prompts; continue automatically after green `✓`/`⚡`/`💭` lines unless a documented hard gate, failure, ambiguity, or approval point is reached. Both stay ≤120 chars. The `🔄` glyph marks the entry; `✓` marks a clean exit; `⚠️` marks an exit with non-blocking findings.
+Each phase prints an entry summary on its way in and an exit summary on its way out. These are status lines, not prompts; continue automatically after green `✓`/`⚡`/`💭` lines unless a documented hard gate, failure, ambiguity, or approval point is reached. At hard approval boundaries, ask the blocking approval question exactly once in user-visible output; context/draft prose must not duplicate the final/blocking prompt. Both stay ≤120 chars. The `🔄` glyph marks the entry; `✓` marks a clean exit; `⚠️` marks an exit with non-blocking findings.
 
 **Phase 1 — Detect:**
 ```
@@ -281,7 +281,7 @@ The transcript is evidence, not hidden reasoning. Initialize it immediately afte
 - phase exit
 - state-changing probe decisions (new probe, failure, retry, proceed-this-session, abort)
 - gate envelope summaries (gate name, stage, scope/cwd, command label, status, failures, retryable/environment flags, suggested action, raw-log reference, rich metadata used, autofix/user approval, skipped-by-stage when applicable)
-- user approvals / hard gates
+- user approvals / hard gates (record the single approval prompt/decision without duplicating the question)
 - external side effects (merge/rebase, commit, push, PR create, mark ready, cache write, memory capture)
 - run end / abort
 

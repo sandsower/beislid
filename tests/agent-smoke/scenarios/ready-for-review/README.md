@@ -6,7 +6,7 @@ It is normally launched through the generic harness:
 
 ```bash
 python3 tests/agent-smoke/run.py ready-for-review --host codex
-python3 tests/agent-smoke/run.py ready-for-review --host claude
+# Claude support is temporarily unavailable for this gate.
 ```
 
 The harness creates a temp fixture, points the selected host's Beislið skill symlinks at the worktree under test, opens a terminal, and prints the prompt for the child agent.
@@ -20,7 +20,7 @@ The harness creates a temp fixture, points the selected host's Beislið skill sy
 - `gh pr create` must be run through the mock on `PATH`; simulating PR creation or inventing a `smoke://` URL fails verification. It also fails unless exact `--head <branch>` is supplied.
 - Any issue lookup/list command fails; no-ticket flow must not guess an issue.
 - The small fixture should take the fast path: preload all ready-for-review aux files, batch safe gates when possible, and use combined review/fresh-eyes evidence.
-- The verifier checks mock `gh` calls, exact `--head`, repo cwd, local-origin push, transcript/stamp evidence, `evidence.json`, fake PR URL, fast-path evidence, gate evidence, no issue guessing, and exactly one structured memory marker with key fields (`kind: ready-for-review-session-memory-v1`, branch, base, ticket `none`, PR URL, transcript, and loaded aux files).
+- The verifier checks mock `gh` calls, exact `--head`, repo cwd, local-origin push, transcript/stamp evidence, `evidence.json`, fake PR URL, fast-path evidence, gate evidence, no issue guessing, no duplicate visible PR approval prompts, and exactly one structured memory marker with key fields (`kind: ready-for-review-session-memory-v1`, branch, base, ticket `none`, PR URL, transcript, and loaded aux files).
 
 This is not a network sandbox: an agent could still run unrelated tools such as `curl` or an absolute-path `gh`. It is a no-network fixture for expected ready-for-review commands, not a security boundary.
 

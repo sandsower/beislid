@@ -56,6 +56,27 @@ def normalize_loaded_aux(values: list[object]) -> set[str]:
     return normalized
 
 
+def duplicate_approval_prompt_errors(text: str) -> list[str]:
+    """Return smoke failures for duplicated visible hard-gate approval prompts."""
+    pr_approval_lines: list[str] = []
+    commit_approval_lines: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or "?" not in line or not re.search(r"\bapprov(?:e|al|ing)\b", line, re.IGNORECASE):
+            continue
+        if re.search(r"\b(push|pushing|pr|pull request|creating this pr|create(?:ing)? the pr)\b", line, re.IGNORECASE):
+            pr_approval_lines.append(line)
+        if re.search(r"\b(commit|committing|autofix|fix)\b", line, re.IGNORECASE):
+            commit_approval_lines.append(line)
+
+    errors: list[str] = []
+    if len(pr_approval_lines) > 1:
+        errors.append("duplicate visible PR approval prompts: " + " | ".join(pr_approval_lines))
+    if len(commit_approval_lines) > 1:
+        errors.append("duplicate visible commit/autofix approval prompts: " + " | ".join(commit_approval_lines))
+    return errors
+
+
 def extract_transcript_memory(text: str) -> dict:
     match = re.search(
         r"kind:\s*ready-for-review-session-memory-v1\s*```json\s*(\{.*?\})\s*```",
@@ -186,6 +207,8 @@ def verify(run_dir: Path) -> list[str]:
                     fail(errors, f"transcript {newest} does not show {aux} preloaded before Phase 2")
         if not re.search(r"parallel", text, re.IGNORECASE):
             fail(errors, f"transcript {newest} does not record fast-path parallel/sequential gate mode")
+        for prompt_error in duplicate_approval_prompt_errors(text):
+            fail(errors, f"transcript {newest} {prompt_error}")
         memory_markers = re.findall(r"kind:\s*ready-for-review-session-memory-v1", text, re.IGNORECASE)
         if len(memory_markers) != 1:
             fail(errors, f"transcript {newest} must record exactly one structured memory marker, found {len(memory_markers)}")
@@ -293,6 +316,15 @@ kind: ready-for-review-session-memory-v1
                 },
             },
         }))
+        duplicate_prompt_errors = duplicate_approval_prompt_errors("""
+Approve pushing `agent-smoke/no-ticket-verbose` and creating this PR against `main`?
+Approve pushing and creating the PR with the title/body above?
+""")
+        if not duplicate_prompt_errors:
+            print("self-test failed:", file=sys.stderr)
+            print("- duplicate approval prompt guard did not detect duplicated PR prompts", file=sys.stderr)
+            return 1
+
         errors = verify(run_dir)
         if errors:
             print("self-test failed:", file=sys.stderr)
