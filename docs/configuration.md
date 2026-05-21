@@ -228,9 +228,9 @@ events:
 
 Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
 
-Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work.
+Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work. Planning artifacts are also checkpoint-compatible state seeds: a fresh context may use an approved spec/design artifact as its primary input when it captures enough context for the next skill.
 
-P0 also supports boundary checkpoint artifacts as a thin workflow-configured slice of the future durable run ledger. Checkpoint artifacts are human-readable state seeds for fresh-context or Rondo-style handoff, not run storage. Current executable events are `kickoff_context_ready` and `implementation_plan_created`; reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be documented in config but are not executed by P0 skills yet.
+P0 also supports boundary checkpoint artifact events as a thin workflow-configured slice of the future durable run ledger. These events are useful when a workflow wants operational resume metadata around a boundary, not just the approved planning deliverable. Current executable events are `kickoff_context_ready` and `implementation_plan_created`; reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be documented in config but are not executed by P0 skills yet.
 
 ````markdown
 ## Lifecycle actions
@@ -252,7 +252,7 @@ events:
 ```
 ````
 
-Checkpoint artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated `checkpoints/` and `.beislid/checkpoints/` state is local by default and ignored by Beislið's own repo. After a checkpoint is written, the skill updates `.beislid/checkpoints/latest.json` as a lightweight latest-pointer index so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path.
+Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated `checkpoints/` and `.beislid/checkpoints/` state is local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the skill updates `.beislid/checkpoints/latest.json` as a lightweight latest-pointer index so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
 
 Example pointer shape:
 
