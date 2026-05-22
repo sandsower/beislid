@@ -834,6 +834,7 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   mkdir -p "$cellar/bin" "$libexec/bin" "$libexec/scripts" "$libexec/skills"
   cp "$REPO_DIR/bin/beislid" "$libexec/bin/beislid"
   cp "$REPO_DIR/scripts/install_lib.sh" "$libexec/scripts/install_lib.sh"
+  cp "$REPO_DIR/scripts/run_ledger.py" "$libexec/scripts/run_ledger.py"
   cp "$REPO_DIR/install.sh" "$libexec/install.sh"
   chmod +x "$libexec/bin/beislid"
   ln -s "$libexec/bin/beislid" "$cellar/bin/beislid"
@@ -849,6 +850,7 @@ test_homebrew_formula_draft_installs_runtime_subset() {
   assert_file_contains "$formula" "bin/beislid"
   assert_file_contains "$formula" "skills"
   assert_file_contains "$formula" "scripts/install_lib.sh"
+  assert_file_contains "$formula" "scripts/run_ledger.py"
   assert_file_contains "$formula" "install.sh"
   assert_file_contains "$formula" "Full Homebrew support"
 }

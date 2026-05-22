@@ -280,7 +280,31 @@ Example pointer shape:
 }
 ```
 
-The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. The `latest` pointer schema keeps one entry per event key; skills should verify the entry's branch and ticket metadata before rediscovering context. If metadata is missing or does not match the current context, ask the user to confirm or provide a checkpoint path. The broader #15-style run ledger remains future work and may later index these artifacts.
+The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. The `latest` pointer schema keeps one entry per event key; skills should verify the entry's branch and ticket metadata before rediscovering context. If metadata is missing or does not match the current context, ask the user to confirm or provide a checkpoint path.
+
+## Durable run ledger
+
+Beislið also provides a portable run-ledger utility for durable Rondo-style execution evidence. Unlike checkpoint artifacts, the ledger is not workflow-configured and does not write repo-local Markdown by default. It stores operational run state under external Beislið state:
+
+```text
+${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<repo_hash>/<run_id>/
+```
+
+Run IDs are stable, timestamped identifiers such as `20260521T224501Z-a7f3c9`. Each run directory contains `run.json`, append-only `events.jsonl`, a human-readable `transcript.md`, plus `artifacts/`, `logs/`, `checkpoints/`, and optional `final-report.md` paths. The utility redacts secret-looking fields before writing ledger events or transcript summaries; skills must still avoid sending hidden reasoning, raw secrets, auth headers, or unnecessary raw logs into the ledger.
+
+Use the CLI directly when an orchestrator or harness needs explicit state:
+
+```bash
+beislid run-ledger init --skill kickoff --ticket-id 15 --ticket-title 'Add durable run ledger'
+beislid run-ledger event --run-id <run_id> --type ticket_snapshot --json-file /tmp/ticket.json
+beislid run-ledger checkpoint --run-id <run_id> --name kickoff_context_ready --json-file /tmp/context.json
+beislid run-ledger gate --run-id <run_id> --name validate-skills --envelope-file /tmp/gate.json
+beislid run-ledger interrupt --run-id <run_id> --reason human_interrupt
+beislid run-ledger finalize --run-id <run_id> --status completed --report-file /tmp/final-report.md
+beislid run-ledger resume --ticket-id 15 --branch victor/15-run-ledger
+```
+
+The ledger may link to #41 checkpoint artifacts, but it does not replace them. `.beislid/checkpoints/latest.json` remains a lightweight repo-local rediscovery pointer; the ledger is the durable run history with run IDs, event history, gate log indexes, interruptions, approved risks, and final reports.
 
 ## Ready-for-review final review
 

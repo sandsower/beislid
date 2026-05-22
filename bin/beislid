@@ -36,6 +36,7 @@ _validate_runtime_layout() {
   [[ -f "$root/scripts/install_lib.sh" ]] || missing+=("scripts/install_lib.sh")
   [[ -d "$root/skills" ]] || missing+=("skills/")
   [[ -f "$root/install.sh" ]] || missing+=("install.sh")
+  [[ -f "$root/scripts/run_ledger.py" ]] || missing+=("scripts/run_ledger.py")
 
   if (( ${#missing[@]} > 0 )); then
     echo "error: Beislið runtime layout is incomplete at $root" >&2
@@ -64,6 +65,7 @@ Usage:
   beislid status [project [path]]
   beislid update [--force]
   beislid migrate v0.2 [--with-security-hooks] [--with-pi-show-me] [--force]
+  beislid run-ledger <init|event|checkpoint|gate|interrupt|finalize|resume> [...]
   beislid help
 USAGE
 }
@@ -226,6 +228,10 @@ case "$cmd" in
         exit 2
         ;;
     esac
+    ;;
+  run-ledger)
+    shift
+    python3 "$BEISLID_ROOT/scripts/run_ledger.py" "$@"
     ;;
   install)
     shift

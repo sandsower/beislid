@@ -22,6 +22,7 @@ class Beislid < Formula
     libexec.install "hooks"
     libexec.install "extensions"
     (libexec/"scripts").install "scripts/install_lib.sh"
+    (libexec/"scripts").install "scripts/run_ledger.py"
 
     bin.install_symlink libexec/"bin/beislid" => "beislid"
   end

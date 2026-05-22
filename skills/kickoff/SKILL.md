@@ -36,7 +36,7 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
-If the user is resuming with phrases such as `continue this ticket` or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present before Step 1. Prefer a `kickoff_context_ready` entry matching the current branch and ticket ID when known; otherwise ask the user to choose among matching latest entries. Use the referenced checkpoint artifact as primary planning context, not as a replacement for live validation: still fetch or confirm current ticket context through Steps 1–4 before side effects. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then continue with normal kickoff.
+If the user is resuming with phrases such as `continue this ticket` or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present before Step 1. Prefer a matching `kickoff_context_ready` entry, or ask the user to choose. Use the checkpoint as primary planning context, but still fetch/confirm live ticket context through Steps 1–4 before side effects. Malformed/missing pointers are non-blocking. If available, `beislid run-ledger resume --ticket-id <id> --branch <branch>` may add run context but never replaces live ticket validation or #41 checkpoints.
 
 ## Internal: probe(<cap>)
 
@@ -57,6 +57,7 @@ On clean run end, write probed/re-probed capability entries back to `<repo_hash>
 - Do not execute a step from memory if its aux file cannot be read.
 - Ticket-source fallback means strict pasted ticket context, not blind continuation.
 - No implementation starts before approved design.
+- Do not treat `.beislid/checkpoints/latest.json` as the durable run ledger.
 - Show and approve ticket update bodies before posting.
 - CLI ticket updates must use `{body_file}`, never raw body interpolation.
 - Lifecycle actions are configured side effects; run only supported providers and do not silently ignore failures.
