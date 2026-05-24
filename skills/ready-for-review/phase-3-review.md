@@ -44,7 +44,7 @@ The normal review loop converges only when no blocking review findings remain, w
 
 ## 3b. Final whole-diff review
 
-Read optional `beislid:fresh_eyes`. Absent block, or `enabled: true` with no `type`, uses built-in `fresh-eyes`; `enabled: false` skips this final pass as explicit project policy, not per-run reduced coverage. `type: command` with `enabled` absent/true replaces built-in `fresh-eyes`: `probe(fresh_eyes.command)`, run it from repo root with full diff/ticket/spec/design/gate context available, and treat nonzero/unclear output as blocking unless evidence disproves it.
+Read optional `beislid:fresh_eyes`. Absent/`enabled: true` with no `type` uses built-in `fresh-eyes`; `enabled: false` is explicit policy. `type: command` replaces built-in: `probe(fresh_eyes.command)`, then run the configured command exactly from repo root with full diff/ticket/spec/design/gate context. Do not rewrite env vars, args, or output paths for ledger storage; record/copy artifacts separately. Treat nonzero/unclear output as blocking unless evidence disproves it.
 
 If `fast_path_eligible=true`, use one combined review: primary review contract plus the selected final whole-diff check. Label built-in mode `combined review`; label custom mode `combined review + fresh_eyes.command`.
 

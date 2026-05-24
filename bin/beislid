@@ -21,6 +21,7 @@ BEISLID_BIN_SELF_DIR="$(_resolve_self "${BASH_SOURCE[0]}")"
 BEISLID_ROOT="$(cd "$BEISLID_BIN_SELF_DIR/.." && pwd)"
 if [[ -n "${BEISLID_HOME:-}" ]] && \
    { [[ ! -f "$BEISLID_ROOT/scripts/install_lib.sh" ]] || \
+     [[ ! -f "$BEISLID_ROOT/scripts/run_ledger.py" ]] || \
      [[ ! -d "$BEISLID_ROOT/skills" ]] || \
      [[ ! -f "$BEISLID_ROOT/install.sh" ]]; }; then
   if [[ -d "$BEISLID_HOME" ]]; then
