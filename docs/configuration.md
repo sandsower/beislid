@@ -442,7 +442,7 @@ Pass `--write-gitignore` to create `.gitignore` if needed, insert the block if a
 
 `packaging/homebrew/beislid.rb` is a draft Homebrew formula for packaging validation. It installs the Beislið runtime subset under Homebrew `libexec` and exposes `bin/beislid` on PATH. This is not published Homebrew support yet; full Homebrew install/upgrade policy is tracked separately in the Homebrew packaging work.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 

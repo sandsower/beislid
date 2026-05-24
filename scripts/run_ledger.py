@@ -26,6 +26,7 @@ SECRETISH = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)\s
 SECRETISH_JSON_KEY = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)")
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
+RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
 def now() -> str:
@@ -42,6 +43,12 @@ def state_dir() -> Path:
 
 def new_run_id() -> str:
     return f"{stamp()}-{secrets.token_hex(3)}"
+
+
+def validate_run_id(value: str) -> str:
+    if not RUN_ID_SEGMENT.fullmatch(value) or value in {".", ".."}:
+        raise SystemExit("invalid run id: use a single path-safe segment [A-Za-z0-9_.-]")
+    return value
 
 
 def slug(value: str, fallback: str = "item") -> str:
@@ -212,13 +219,13 @@ def command_init(args: argparse.Namespace) -> int:
     repo = repo_root(Path.cwd())
     hash_value = repo_hash(repo)
     flow = normalize_flow(args.flow, args.skill)
-    rid = args.run_id or new_run_id()
+    rid = validate_run_id(args.run_id) if args.run_id else new_run_id()
     root = run_root_for_repo(flow, hash_value)
     rdir = root / rid
     suffix = 1
     while rdir.exists():
         suffix += 1
-        rid = f"{args.run_id or new_run_id()}-{suffix}"
+        rid = f"{validate_run_id(args.run_id) if args.run_id else new_run_id()}-{suffix}"
         rdir = root / rid
     for sub in ("artifacts", "artifacts/gates", "artifacts/reviews", "logs", "checkpoints"):
         (rdir / sub).mkdir(parents=True, exist_ok=False)

@@ -192,6 +192,19 @@ assert payload['resume_hint'] == 'continue after interruption', payload
 PY
 }
 
+test_rejects_unsafe_run_id() {
+  local state="$TMP/state"
+  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --run-id '../escape') >/tmp/beislid-unsafe-run-id.out 2>/tmp/beislid-unsafe-run-id.err; then
+    note_fail "unsafe run id should be rejected"
+    return 1
+  fi
+  if [[ -e "$state/runs/escape" || -e "$state/escape" ]]; then
+    note_fail "unsafe run id wrote outside the run root"
+    return 1
+  fi
+  assert_contains /tmp/beislid-unsafe-run-id.err 'invalid run id'
+}
+
 test_legacy_active_resume_without_flow() {
   local state="$TMP/state" out run_id run_dir repo_hash legacy_dir resume_out
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Legacy run' --branch feature/ledger)"
@@ -233,6 +246,7 @@ PY
 
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
+run_test "rejects unsafe run id" test_rejects_unsafe_run_id
 run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
 run_test "beislid CLI dispatch" test_cli_dispatch
 

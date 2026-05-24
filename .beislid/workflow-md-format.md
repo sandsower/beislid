@@ -245,7 +245,7 @@ Checkpoint event artifacts use the same safety posture as planning artifacts: `a
 
 The durable run ledger is separate from workflow-configured checkpoint artifacts. It lives in external Beislið state by default at `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/` and is managed by `beislid run-ledger ...`. The ledger may index checkpoint artifact paths, but it owns run IDs, append-only event history, gate log indexes, interruption/resume metadata, approved risks, and final reports. Current run status values are `running`, `interrupted`, `failed`, and `completed`; repo-local `.beislid/runs` is reserved for a future explicit opt-in.
 
-Future events such as `pr_opened`, broader action providers for planning events, tracker posting, ship-time artifact handling, and run-ledger storage are reserved for later Beislið versions.
+Future events such as `pr_opened`, broader action providers for planning events, tracker posting, ship-time artifact handling, and repo-local run-ledger storage are reserved for later Beislið versions.
 
 ## Explore skill shape
 
