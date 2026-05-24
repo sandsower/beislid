@@ -33,7 +33,7 @@ workflow_hash=$(git hash-object .beislid/workflow.md)
 
 Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` and starts with empty in-memory state; matching hash means `fresh` and loads capability entries. Per-cap freshness uses `cache_ttl_hours` from workflow.md, default 24.
 
-Initialize the verbose transcript immediately after config/cache setup if `BEISLID_VERBOSE=1`, then load Phase 1 and record its aux-load/entry events. Print the orientation prose from `ready-for-review-templates.md` once after Phase 1 has established branch, base, and fast-path status, so the existing-PR suffix is accurate.
+After config/cache setup, initialize verbose transcript if enabled and best-effort `beislid run-ledger init/resume ... --flow ready-for-review`. Record safe aux/phase/approval/gate/review/side-effect/final events. Warn on ledger failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
 
 ## Internal: probe(<cap>)
 
@@ -60,10 +60,11 @@ Rules: never silently downgrade a configured capability to unconfigured behavior
 - Do not commit, push, create a PR, or mark a draft ready without the existing user-approval gates.
 - Fast-path mode never bypasses gates, blocking review handling, reduced-coverage acceptance, or PR approval.
 - PR creation must run from explicit repo cwd and pass `--head <branch>`.
+- Run-ledger resume hints return only to safe protocol boundaries; ask normal approvals again.
 
 ## Phase protocol loading
 
-Complete phases in order. At each phase entry, read the phase aux file and follow it as authoritative. Phase exit lines are progress reports, not checkpoints. If `fast_path_eligible=true`, preload Phase 2/3/4 aux before Phase 2. Do not execute a phase from memory if aux read fails; hard-fail and stop:
+Complete phases in order. At each entry, read the phase aux and follow it. Phase exits are progress reports; if a ledger is active, also checkpoint safe summary, artifacts, side effects, and `resume_hint`. If `fast_path_eligible=true`, preload Phase 2/3/4 aux before Phase 2. Do not execute from memory if aux read fails; stop:
 
 > 🛑 Could not read `skills/ready-for-review/<phase-file>.md`. Ready-for-review cannot safely execute this phase from memory; reinstall Beislið or restore the file.
 
@@ -100,6 +101,7 @@ Required outputs:
 - translation/browser checks run or skipped per trigger/config
 - guided walkthrough offered when thresholds are met and handled per user choice
 - any reviewer warnings such as AI-generated translations carried forward
+- ledger gate artifact paths, if active
 
 Exit: print the Phase 2 exit one-liner from `ready-for-review-templates.md`. If this is the existing-PR fast path, push to the PR branch, print the fast-path success line, then proceed to run-end cache/memory handling.
 
@@ -115,6 +117,7 @@ Required outputs:
 - incorrect findings pushed back with code/test evidence
 - applicable gates rerun after functional fixes
 - configured final check completed, disabled by policy, or fast-path combined review completed with no blockers/accepted risk
+- ledger review/final-check artifact paths, if active
 
 Exit: print the Phase 3 exit one-liner from `ready-for-review-templates.md`.
 
@@ -132,17 +135,18 @@ Required outputs:
 - branch pushed and PR created only after approval
 - domain knowledge capture considered
 - structured memento/session-memory brief attempted when enabled/detected
+- ledger finalized with PR URL, risks, side effects, artifacts, and memory status if active
 
 Exit: print the Phase 4 PR success and exit one-liners from `ready-for-review-templates.md`.
 
 ## Run end: write back probe cache
 
-After Phase 4 or fast-path push/report, write in-memory probe state to `<repo_hash>.json`: update probed/re-probed entries, exclude `session_skip: true`, preserve `doctor_run_at`, update `workflow_hash`, and keep the workflow TTL. If `workflow.md` changed mid-run, do not overwrite stale state. If write fails, surface the template warning; the run still completed. On abort after Phase 2 starts or any side effect, skip cache write-back unless safe, but still attempt/print the structured brief with `phase_path: aborted`.
+After Phase 4 or fast-path push/report, write in-memory probe state to `<repo_hash>.json`: update probed entries, exclude `session_skip`, preserve `doctor_run_at`, update `workflow_hash`, and keep TTL. If `workflow.md` changed mid-run, do not overwrite. If write fails, warn; the run still completed. On abort after Phase 2 or any side effect, skip cache write-back unless safe, but still print the structured brief with `phase_path: aborted`.
 
 ## Verbose transcript and memory brief
 
-Default mode prints only prose. With `BEISLID_VERBOSE=1`, append structured stamps under prose, persist a best-effort local transcript at major boundaries, and print the transcript path if written. Read `ready-for-review-templates.md` for exact stamp layout, transcript boundary/redaction rules, write-failure behavior, and loaded/not-reached summary.
+Default mode prints prose only. With `BEISLID_VERBOSE=1`, append structured stamps, persist a best-effort transcript, and print its path. See `ready-for-review-templates.md` for stamp/redaction/write-failure details.
 
-`BEISLID_MEMENTO_CAPTURE` is independent from verbose mode. Generic auto-capture does not satisfy ready-for-review memory. Before final run-end output, write exactly one memory marker to transcript/output: `kind: ready-for-review-session-memory-v1` with the brief, or `memory brief unavailable:<reason>`. The brief includes PR/ticket links or `none`, loaded aux, transcript path/unavailable reason, gates, review status, risks, side effects, host/duration, and summary.
+`BEISLID_MEMENTO_CAPTURE` is independent from verbose mode. Before final output, write exactly one marker: `kind: ready-for-review-session-memory-v1` with the brief, or `memory brief unavailable:<reason>`. Include PR/ticket, aux, transcript, gates, review, risks, side effects, host/duration, and summary.
 
 Cross-host protocol changes should use `tests/agent-smoke/` when practical.

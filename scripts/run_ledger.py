@@ -2,7 +2,7 @@
 """Durable Beislið run ledger utility.
 
 Stores run state outside the repo by default:
-${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<repo_hash>/<run_id>/
+${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/
 """
 
 from __future__ import annotations
@@ -20,9 +20,12 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = 1
+LEDGER_KIND = "run-ledger-v1"
+CHECKPOINT_KIND = "run-ledger-checkpoint-v1"
 SECRETISH = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)\s*[:=]\s*\S+")
 SECRETISH_JSON_KEY = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)")
-VALID_STATUSES = {"active", "interrupted", "failed", "completed"}
+VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
+INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 
 
 def now() -> str:
@@ -37,8 +40,13 @@ def state_dir() -> Path:
     return Path(os.environ.get("BEISLID_STATE_DIR", Path.home() / ".local" / "state" / "beislid")).resolve()
 
 
-def run_id() -> str:
+def new_run_id() -> str:
     return f"{stamp()}-{secrets.token_hex(3)}"
+
+
+def slug(value: str, fallback: str = "item") -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-._")
+    return safe or fallback
 
 
 def redact_text(text: str, limit: int = 2000) -> str:
@@ -61,6 +69,7 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -107,21 +116,37 @@ def current_branch(repo: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else "unknown"
 
 
-def run_root_for_repo(hash_value: str) -> Path:
-    return state_dir() / "runs" / hash_value
+def normalize_flow(flow: str | None, skill: str | None = None) -> str:
+    return slug(flow or skill or "run", "run")
 
 
-def find_run_dir(rid: str, repo: Path | None = None) -> Path:
-    roots: list[Path]
+def run_root_for_repo(flow: str, hash_value: str) -> Path:
+    return state_dir() / "runs" / normalize_flow(flow) / hash_value
+
+
+def candidate_roots(repo: Path | None = None, flow: str | None = None) -> list[Path]:
+    runs_root = state_dir() / "runs"
+    if repo is not None and flow:
+        return [run_root_for_repo(flow, repo_hash(repo))]
     if repo is not None:
-        roots = [run_root_for_repo(repo_hash(repo))]
-    else:
-        roots = sorted((state_dir() / "runs").glob("*")) if (state_dir() / "runs").exists() else []
-    matches = [root / rid for root in roots if (root / rid / "run.json").is_file()]
+        hash_value = repo_hash(repo)
+        roots = [path / hash_value for path in sorted(runs_root.glob("*"))] if runs_root.exists() else []
+        legacy_root = runs_root / hash_value
+        if legacy_root.exists():
+            roots.append(legacy_root)
+        return roots
+    if flow:
+        flow_root = runs_root / normalize_flow(flow)
+        return sorted(flow_root.glob("*")) if flow_root.exists() else []
+    return sorted(runs_root.glob("*/*")) if runs_root.exists() else []
+
+
+def find_run_dir(rid: str, repo: Path | None = None, flow: str | None = None) -> Path:
+    matches = [root / rid for root in candidate_roots(repo, flow) if (root / rid / "run.json").is_file()]
     if not matches:
         raise SystemExit(f"run not found: {rid}")
     if len(matches) > 1:
-        raise SystemExit(f"run id is ambiguous across repositories: {rid}")
+        raise SystemExit(f"run id is ambiguous; pass --flow to disambiguate: {rid}")
     return matches[0]
 
 
@@ -146,30 +171,71 @@ def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transc
     return event
 
 
+def checkpoint_payload(name: str, payload: dict[str, Any], resume_hint: str | None = None) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "kind": CHECKPOINT_KIND,
+        "checkpoint": name,
+        "timestamp": now(),
+        "payload": redact_json(payload),
+    }
+    if resume_hint:
+        body["resume_hint"] = redact_text(resume_hint, 500)
+    return body
+
+
+def record_checkpoint(run_dir: Path, name: str, payload: dict[str, Any], resume_hint: str | None = None) -> Path:
+    checkpoint_path = run_dir / "checkpoints" / f"{slug(name, 'checkpoint')}.json"
+    write_json(checkpoint_path, checkpoint_payload(name, payload, resume_hint))
+    run = read_json(run_dir / "run.json")
+    entry = {"name": name, "path": str(checkpoint_path), "timestamp": now()}
+    if resume_hint:
+        entry["resume_hint"] = redact_text(resume_hint, 500)
+        run["resume_hint"] = entry["resume_hint"]
+    run["latest_checkpoint"] = entry
+    run["last_checkpoint"] = str(checkpoint_path)
+    run["current_step"] = name
+    run.setdefault("checkpoints", []).append(str(checkpoint_path))
+    write_json(run_dir / "run.json", run)
+    return checkpoint_path
+
+
+def next_attempt_dir(gate_root: Path) -> Path:
+    attempt = 1
+    while (gate_root / str(attempt)).exists():
+        attempt += 1
+    path = gate_root / str(attempt)
+    path.mkdir(parents=True, exist_ok=False)
+    return path
+
+
 def command_init(args: argparse.Namespace) -> int:
     repo = repo_root(Path.cwd())
     hash_value = repo_hash(repo)
-    rid = args.run_id or run_id()
-    root = run_root_for_repo(hash_value)
+    flow = normalize_flow(args.flow, args.skill)
+    rid = args.run_id or new_run_id()
+    root = run_root_for_repo(flow, hash_value)
     rdir = root / rid
     suffix = 1
     while rdir.exists():
         suffix += 1
-        rid = f"{args.run_id or run_id()}-{suffix}"
+        rid = f"{args.run_id or new_run_id()}-{suffix}"
         rdir = root / rid
-    for sub in ("artifacts", "logs", "checkpoints"):
+    for sub in ("artifacts", "artifacts/gates", "artifacts/reviews", "logs", "checkpoints"):
         (rdir / sub).mkdir(parents=True, exist_ok=False)
     started = now()
     ticket = {"id": args.ticket_id or "none", "title": args.ticket_title or "none", "url": args.ticket_url or ""}
     run = {
+        "kind": LEDGER_KIND,
         "schema_version": SCHEMA_VERSION,
         "run_id": rid,
+        "flow": flow,
         "repo": str(repo),
         "repo_hash": hash_value,
         "branch": args.branch or current_branch(repo),
         "skill": args.skill,
         "ticket": ticket,
-        "status": "active",
+        "ticket_id": ticket["id"],
+        "status": "running",
         "started_at": started,
         "updated_at": started,
         "paths": {
@@ -181,15 +247,20 @@ def command_init(args: argparse.Namespace) -> int:
         "selected_guides": [],
         "plan": None,
         "current_step": None,
+        "checkpoints": [],
         "artifacts": [],
         "logs": [],
+        "accepted_risks": [],
+        "side_effects": [],
         "events": {"count": 0},
     }
     write_json(rdir / "run.json", run)
     (rdir / "events.jsonl").write_text("", encoding="utf-8")
     (rdir / "transcript.md").write_text(
         "# Beislið run transcript\n\n"
+        f"kind: `{LEDGER_KIND}`\n"
         f"run_id: `{rid}`\n"
+        f"flow: `{flow}`\n"
         f"repo: {repo}\n"
         f"branch: {redact_text(run['branch'])}\n"
         f"ticket_id: `{redact_text(ticket['id'])}`\n"
@@ -197,13 +268,13 @@ def command_init(args: argparse.Namespace) -> int:
         f"started: {started}\n",
         encoding="utf-8",
     )
-    append_event(rdir, "run_initialized", {"skill": args.skill, "ticket": ticket, "branch": run["branch"]})
-    print(json.dumps({"run_id": rid, "run_dir": str(rdir), "run_json": str(rdir / "run.json")}, sort_keys=True))
+    append_event(rdir, "run_initialized", {"skill": args.skill, "flow": flow, "ticket": ticket, "branch": run["branch"]})
+    print(json.dumps({"run_id": rid, "flow": flow, "run_dir": str(rdir), "run_json": str(rdir / "run.json")}, sort_keys=True))
     return 0
 
 
 def command_event(args: argparse.Namespace) -> int:
-    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()))
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
     payload = load_payload(args.json_file)
     append_event(rdir, args.type, payload, args.summary)
     print(json.dumps({"run_id": args.run_id, "event_type": args.type}, sort_keys=True))
@@ -211,91 +282,108 @@ def command_event(args: argparse.Namespace) -> int:
 
 
 def command_checkpoint(args: argparse.Namespace) -> int:
-    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()))
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
     payload = load_payload(args.json_file)
-    checkpoint_path = rdir / "checkpoints" / f"{args.name}.json"
-    write_json(checkpoint_path, {"name": args.name, "timestamp": now(), "payload": redact_json(payload)})
-    run = read_json(rdir / "run.json")
-    run["latest_checkpoint"] = {"name": args.name, "path": str(checkpoint_path), "timestamp": now()}
-    run["current_step"] = args.name
-    write_json(rdir / "run.json", run)
-    append_event(rdir, "checkpoint", {"name": args.name, "path": str(checkpoint_path), "payload": payload})
+    checkpoint_path = record_checkpoint(rdir, args.name, payload, args.resume_hint)
+    append_event(rdir, "checkpoint", {"name": args.name, "path": str(checkpoint_path), "payload": payload, "resume_hint": args.resume_hint})
     print(json.dumps({"run_id": args.run_id, "checkpoint": str(checkpoint_path)}, sort_keys=True))
     return 0
 
 
 def command_gate(args: argparse.Namespace) -> int:
-    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()))
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
     envelope = load_payload(args.envelope_file)
-    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "-", args.name).strip("-") or "gate"
-    log_path = rdir / "logs" / f"{safe_name}.json"
-    write_json(log_path, redact_json(envelope))
+    scope = slug(args.scope or envelope.get("gate", {}).get("scope", "repo"), "repo")
+    safe_name = slug(args.name, "gate")
+    attempt_dir = next_attempt_dir(rdir / "artifacts" / "gates" / scope / safe_name)
+    envelope_path = attempt_dir / "envelope.json"
+    write_json(envelope_path, redact_json(envelope))
     run = read_json(rdir / "run.json")
-    run.setdefault("logs", []).append({"name": args.name, "path": str(log_path), "kind": "gate"})
+    artifact = {"name": args.name, "path": str(envelope_path), "kind": "gate", "scope": scope}
+    run.setdefault("artifacts", []).append(artifact)
+    run.setdefault("logs", []).append(artifact)
     write_json(rdir / "run.json", run)
-    append_event(rdir, "gate_result", {"name": args.name, "path": str(log_path), "envelope": envelope})
-    print(json.dumps({"run_id": args.run_id, "gate_log": str(log_path)}, sort_keys=True))
+    checkpoint_path = record_checkpoint(
+        rdir,
+        f"gate-{scope}-{safe_name}",
+        {"name": args.name, "scope": scope, "path": str(envelope_path), "status": envelope.get("status"), "envelope": envelope},
+        args.resume_hint or "continue after reviewing gate result",
+    )
+    append_event(rdir, "gate_result", {"name": args.name, "scope": scope, "path": str(envelope_path), "checkpoint": str(checkpoint_path), "envelope": envelope})
+    print(json.dumps({"run_id": args.run_id, "gate_log": str(envelope_path), "checkpoint": str(checkpoint_path)}, sort_keys=True))
     return 0
 
 
 def command_interrupt(args: argparse.Namespace) -> int:
-    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()))
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
+    checkpoint_path = record_checkpoint(rdir, "interrupted", {"reason": args.reason}, args.resume_hint)
     run = read_json(rdir / "run.json")
     run["status"] = "interrupted"
-    run["interruption"] = {"timestamp": now(), "reason": args.reason}
+    run["interruption"] = {"timestamp": now(), "reason": redact_text(args.reason), "checkpoint": str(checkpoint_path)}
+    if args.resume_hint:
+        run["resume_hint"] = redact_text(args.resume_hint, 500)
     write_json(rdir / "run.json", run)
-    append_event(rdir, "interrupted", {"reason": args.reason})
-    print(json.dumps({"run_id": args.run_id, "status": "interrupted"}, sort_keys=True))
+    append_event(rdir, "interrupted", {"reason": args.reason, "resume_hint": args.resume_hint, "checkpoint": str(checkpoint_path)})
+    print(json.dumps({"run_id": args.run_id, "status": "interrupted", "checkpoint": str(checkpoint_path)}, sort_keys=True))
     return 0
 
 
 def command_finalize(args: argparse.Namespace) -> int:
-    if args.status not in VALID_STATUSES - {"active"}:
+    if args.status not in VALID_STATUSES - {"running"}:
         raise SystemExit(f"invalid final status: {args.status}")
-    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()))
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
     report_path = None
     if args.report_file:
         report_path = rdir / "final-report.md"
         shutil.copyfile(args.report_file, report_path)
+    checkpoint_path = record_checkpoint(
+        rdir,
+        "final-report",
+        {"status": args.status, "final_report": str(report_path) if report_path else None},
+        "run complete" if args.status == "completed" else "inspect final status before resuming",
+    )
     run = read_json(rdir / "run.json")
     run["status"] = args.status
     run["finalized_at"] = now()
     if report_path:
         run["paths"]["final_report"] = str(report_path)
     write_json(rdir / "run.json", run)
-    append_event(rdir, "finalized", {"status": args.status, "final_report": str(report_path) if report_path else None})
+    append_event(rdir, "finalized", {"status": args.status, "final_report": str(report_path) if report_path else None, "checkpoint": str(checkpoint_path)})
     print(json.dumps({"run_id": args.run_id, "status": args.status, "final_report": str(report_path) if report_path else None}, sort_keys=True))
     return 0
 
 
 def command_resume(args: argparse.Namespace) -> int:
     repo = repo_root(Path.cwd())
-    root = run_root_for_repo(repo_hash(repo))
-    allowed = VALID_STATUSES if args.include_completed else {"active", "interrupted", "failed"}
+    allowed = VALID_STATUSES | {"active"} if args.include_completed else INCOMPLETE_STATUSES
     candidates: list[dict[str, Any]] = []
-    for run_file in sorted(root.glob("*/run.json")) if root.exists() else []:
-        try:
-            run = read_json(run_file)
-        except Exception:
-            continue
-        if run.get("status") not in allowed:
-            continue
-        if args.ticket_id and str(run.get("ticket", {}).get("id")) != str(args.ticket_id):
-            continue
-        if args.branch and run.get("branch") != args.branch:
-            continue
-        candidates.append(run)
+    for root in candidate_roots(repo, args.flow):
+        for run_file in sorted(root.glob("*/run.json")) if root.exists() else []:
+            try:
+                run = read_json(run_file)
+            except Exception:
+                continue
+            if run.get("status") not in allowed:
+                continue
+            if args.ticket_id and str(run.get("ticket_id") or run.get("ticket", {}).get("id")) != str(args.ticket_id):
+                continue
+            if args.branch and run.get("branch") != args.branch:
+                continue
+            candidates.append(run)
     if not candidates:
         raise SystemExit("no matching run found")
     candidates.sort(key=lambda r: r.get("updated_at") or r.get("started_at") or "")
     selected = candidates[-1]
     print(json.dumps({
         "run_id": selected["run_id"],
+        "flow": selected.get("flow"),
         "run_dir": selected["paths"]["run_dir"],
         "status": selected["status"],
         "ticket": selected.get("ticket"),
         "branch": selected.get("branch"),
         "latest_checkpoint": selected.get("latest_checkpoint"),
+        "last_checkpoint": selected.get("last_checkpoint"),
+        "resume_hint": selected.get("resume_hint"),
     }, sort_keys=True))
     return 0
 
@@ -306,6 +394,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_p = sub.add_parser("init")
     init_p.add_argument("--skill", required=True)
+    init_p.add_argument("--flow", help="Ledger flow name; defaults to --skill")
     init_p.add_argument("--ticket-id", default="none")
     init_p.add_argument("--ticket-title", default="none")
     init_p.add_argument("--ticket-url", default="")
@@ -315,6 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     event_p = sub.add_parser("event")
     event_p.add_argument("--run-id", required=True)
+    event_p.add_argument("--flow")
     event_p.add_argument("--type", required=True)
     event_p.add_argument("--json-file")
     event_p.add_argument("--summary")
@@ -322,28 +412,37 @@ def build_parser() -> argparse.ArgumentParser:
 
     checkpoint_p = sub.add_parser("checkpoint")
     checkpoint_p.add_argument("--run-id", required=True)
+    checkpoint_p.add_argument("--flow")
     checkpoint_p.add_argument("--name", required=True)
     checkpoint_p.add_argument("--json-file")
+    checkpoint_p.add_argument("--resume-hint")
     checkpoint_p.set_defaults(func=command_checkpoint)
 
     gate_p = sub.add_parser("gate")
     gate_p.add_argument("--run-id", required=True)
+    gate_p.add_argument("--flow")
     gate_p.add_argument("--name", required=True)
+    gate_p.add_argument("--scope")
     gate_p.add_argument("--envelope-file", required=True)
+    gate_p.add_argument("--resume-hint")
     gate_p.set_defaults(func=command_gate)
 
     interrupt_p = sub.add_parser("interrupt")
     interrupt_p.add_argument("--run-id", required=True)
+    interrupt_p.add_argument("--flow")
     interrupt_p.add_argument("--reason", required=True)
+    interrupt_p.add_argument("--resume-hint")
     interrupt_p.set_defaults(func=command_interrupt)
 
     final_p = sub.add_parser("finalize")
     final_p.add_argument("--run-id", required=True)
+    final_p.add_argument("--flow")
     final_p.add_argument("--status", required=True)
     final_p.add_argument("--report-file")
     final_p.set_defaults(func=command_finalize)
 
     resume_p = sub.add_parser("resume")
+    resume_p.add_argument("--flow")
     resume_p.add_argument("--ticket-id")
     resume_p.add_argument("--branch")
     resume_p.add_argument("--include-completed", action="store_true")

@@ -75,7 +75,7 @@ assert_contains() {
 
 test_init_event_checkpoint_finalize_resume() {
   local state="$TMP/state" out run_id run_dir event_payload checkpoint_payload report resume_out
-  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --ticket-id 15 --ticket-title 'Durable ledger' --branch feature/ledger)"
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Durable ledger' --branch feature/ledger)"
   run_id="$(python3 - <<'PY' "$out"
 import json, sys
 print(json.loads(sys.argv[1])['run_id'])
@@ -95,7 +95,9 @@ PY
   assert_file "$run_dir/run.json"
   assert_file "$run_dir/events.jsonl"
   assert_file "$run_dir/transcript.md"
-  [[ "$(json_get "$run_dir/run.json" status)" == "active" ]] || { note_fail "run should start active"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" kind)" == "run-ledger-v1" ]] || { note_fail "run kind not recorded"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" flow)" == "kickoff" ]] || { note_fail "run flow not recorded"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" status)" == "running" ]] || { note_fail "run should start running"; return 1; }
   [[ "$(json_get "$run_dir/run.json" ticket.id)" == "15" ]] || { note_fail "ticket id not recorded"; return 1; }
 
   event_payload="$TMP/event.json"
@@ -110,29 +112,31 @@ PY
 
   checkpoint_payload="$TMP/checkpoint.json"
   printf '{"next":"implement"}\n' > "$checkpoint_payload"
-  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" checkpoint --run-id "$run_id" --name kickoff_context_ready --json-file "$checkpoint_payload") >/dev/null
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" checkpoint --run-id "$run_id" --flow kickoff --name kickoff_context_ready --json-file "$checkpoint_payload" --resume-hint 'continue with implementation planning') >/dev/null
   assert_file "$run_dir/checkpoints/kickoff_context_ready.json"
+  assert_contains "$run_dir/checkpoints/kickoff_context_ready.json" 'resume_hint'
   [[ "$(json_get "$run_dir/run.json" latest_checkpoint.name)" == "kickoff_context_ready" ]] || { note_fail "latest checkpoint not recorded"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" resume_hint)" == "continue with implementation planning" ]] || { note_fail "resume hint not recorded"; return 1; }
 
   local gate_payload="$TMP/gate.json"
   printf '{"gate":{"name":"validate-skills"},"status":"pass","authorization":"Bearer abc123"}\n' > "$gate_payload"
-  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --name validate-skills --envelope-file "$gate_payload") >/dev/null
-  assert_file "$run_dir/logs/validate-skills.json"
-  if grep -q 'Bearer abc123' "$run_dir/logs/validate-skills.json" "$run_dir/events.jsonl"; then
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow kickoff --name validate-skills --scope repo --envelope-file "$gate_payload") >/dev/null
+  assert_file "$run_dir/artifacts/gates/repo/validate-skills/1/envelope.json"
+  if grep -q 'Bearer abc123' "$run_dir/artifacts/gates/repo/validate-skills/1/envelope.json" "$run_dir/events.jsonl"; then
     note_fail "gate logs/events should redact auth values"
     return 1
   fi
 
-  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" interrupt --run-id "$run_id" --reason human_interrupt) >/dev/null
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" interrupt --run-id "$run_id" --flow kickoff --reason human_interrupt --resume-hint 'resume at approval boundary') >/dev/null
   [[ "$(json_get "$run_dir/run.json" status)" == "interrupted" ]] || { note_fail "run should be interrupted"; return 1; }
 
   report="$TMP/report.md"
   printf '# Final report\n\nDone.\n' > "$report"
-  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" finalize --run-id "$run_id" --status completed --report-file "$report") >/dev/null
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" finalize --run-id "$run_id" --flow kickoff --status completed --report-file "$report") >/dev/null
   assert_file "$run_dir/final-report.md"
   [[ "$(json_get "$run_dir/run.json" status)" == "completed" ]] || { note_fail "run should be completed"; return 1; }
 
-  resume_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --ticket-id 15 --branch feature/ledger --include-completed)"
+  resume_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --flow kickoff --ticket-id 15 --branch feature/ledger --include-completed)"
   python3 - <<'PY' "$resume_out" "$run_id"
 import json, sys
 payload = json.loads(sys.argv[1])
@@ -144,7 +148,7 @@ PY
 
 test_cli_dispatch() {
   local state="$TMP/state" out
-  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" BEISLID_HOME="$REPO_DIR" "$CLI" run-ledger init --skill implement --ticket-id 15 --ticket-title 'CLI dispatch' --branch feature/ledger)"
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" BEISLID_HOME="$REPO_DIR" "$CLI" run-ledger init --skill implement --flow implement --ticket-id 15 --ticket-title 'CLI dispatch' --branch feature/ledger)"
   python3 - <<'PY' "$out"
 import json, sys
 payload = json.loads(sys.argv[1])
@@ -153,7 +157,83 @@ assert payload['run_dir']
 PY
 }
 
+test_resume_ignores_completed_without_flag() {
+  local state="$TMP/state" out completed_id interrupted_id resume_out report="$TMP/report.md"
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Completed run' --branch feature/ledger)"
+  completed_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  printf '# Final report\n\nDone.\n' > "$report"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" finalize --run-id "$completed_id" --flow kickoff --status completed --report-file "$report") >/dev/null
+
+  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --flow kickoff --ticket-id 15 --branch feature/ledger) >/tmp/beislid-resume-unexpected.out 2>/dev/null; then
+    note_fail "resume should ignore completed runs unless --include-completed"
+    return 1
+  fi
+
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Interrupted run' --branch feature/ledger)"
+  interrupted_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" interrupt --run-id "$interrupted_id" --flow kickoff --reason human_interrupt --resume-hint 'continue after interruption') >/dev/null
+
+  resume_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --flow kickoff --ticket-id 15 --branch feature/ledger)"
+  python3 - <<'PY' "$resume_out" "$interrupted_id"
+import json, sys
+payload = json.loads(sys.argv[1])
+expected = sys.argv[2]
+assert payload['run_id'] == expected, payload
+assert payload['status'] == 'interrupted', payload
+assert payload['resume_hint'] == 'continue after interruption', payload
+PY
+}
+
+test_legacy_active_resume_without_flow() {
+  local state="$TMP/state" out run_id run_dir repo_hash legacy_dir resume_out
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Legacy run' --branch feature/ledger)"
+  run_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  run_dir="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_dir'])
+PY
+)"
+  repo_hash="$(basename "$(dirname "$run_dir")")"
+  legacy_dir="$state/runs/$repo_hash/$run_id"
+  mkdir -p "$(dirname "$legacy_dir")"
+  mv "$run_dir" "$legacy_dir"
+  python3 - <<'PY' "$legacy_dir/run.json"
+import json, sys
+path = sys.argv[1]
+with open(path, encoding='utf-8') as f:
+    payload = json.load(f)
+payload['status'] = 'active'
+payload['paths']['run_dir'] = path.rsplit('/', 1)[0]
+with open(path, 'w', encoding='utf-8') as f:
+    json.dump(payload, f, indent=2, sort_keys=True)
+    f.write('\n')
+PY
+
+  resume_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --ticket-id 15 --branch feature/ledger)"
+  python3 - <<'PY' "$resume_out" "$run_id"
+import json, sys
+payload = json.loads(sys.argv[1])
+expected = sys.argv[2]
+assert payload['run_id'] == expected, payload
+assert payload['status'] == 'active', payload
+PY
+}
+
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
+run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
+run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
 run_test "beislid CLI dispatch" test_cli_dispatch
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
