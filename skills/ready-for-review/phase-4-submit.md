@@ -80,6 +80,7 @@ Generic session-end auto-capture does not satisfy this step. On successful PR ha
 1. If host memory exists or `BEISLID_MEMENTO_CAPTURE=1`, attempt one structured brief.
 2. Append/print exactly one literal marker: `kind: ready-for-review-session-memory-v1` with the brief, or `memory brief unavailable:<reason>`.
 3. Include repo, branch, base, ticket id or `none`, PR URL if any, phase path (`new-pr-fast-path` when used), aux loaded, transcript path/unavailable reason, gates including parallel mode, review/final-check or combined-review status including cancellation/partial output, accepted risks, side effects, host, timestamp, and duration if known.
+4. If a run ledger is active: `finalize` only after successful PR handoff; on abort, record `beislid run-ledger interrupt` with context.
 
 Do not finish with only prose such as “brief summarized”; that fails smoke. Do not include secrets, env values, auth headers, or raw stdout/stderr.
 

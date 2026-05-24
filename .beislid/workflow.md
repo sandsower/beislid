@@ -34,9 +34,11 @@ rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewe
 
 ## Quality gates
 
-The repo has no scope separation (single markdown distribution). One top-level gate runs the skill frontmatter validator from the repo root.
+The repo has no scope separation (single markdown distribution). Top-level gates run skill size budgets and the skill frontmatter validator from the repo root.
 
 ```beislid:gates
+- name: skill-size-budgets
+  command: 'python3 scripts/check_skill_size_budgets.py'
 - name: validate-skills
   command: 'python3 scripts/validate_skills.py'
 ```

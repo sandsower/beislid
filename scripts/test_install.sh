@@ -800,6 +800,18 @@ test_packaged_cli_uses_beislid_home_when_layout_missing() {
   assert_stdout_contains "beislid install project"
 }
 
+test_packaged_cli_uses_beislid_home_when_run_ledger_missing() {
+  local package_root="$TMP/package-missing-run-ledger"
+  mkdir -p "$package_root/bin" "$package_root/scripts" "$package_root/skills"
+  cp "$REPO_DIR/bin/beislid" "$package_root/bin/beislid"
+  cp "$REPO_DIR/scripts/install_lib.sh" "$package_root/scripts/install_lib.sh"
+  cp "$REPO_DIR/install.sh" "$package_root/install.sh"
+  chmod +x "$package_root/bin/beislid"
+
+  run_packaged_cli "$package_root/bin/beislid" "$REPO_DIR" run-ledger init --skill kickoff --flow kickoff --run-id packaged-fallback-test
+  assert_stdout_contains '"run_id": "packaged-fallback-test"'
+}
+
 test_packaged_cli_reports_incomplete_layout() {
   local package_root="$TMP/broken-package"
   mkdir -p "$package_root/bin"
@@ -834,6 +846,7 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   mkdir -p "$cellar/bin" "$libexec/bin" "$libexec/scripts" "$libexec/skills"
   cp "$REPO_DIR/bin/beislid" "$libexec/bin/beislid"
   cp "$REPO_DIR/scripts/install_lib.sh" "$libexec/scripts/install_lib.sh"
+  cp "$REPO_DIR/scripts/run_ledger.py" "$libexec/scripts/run_ledger.py"
   cp "$REPO_DIR/install.sh" "$libexec/install.sh"
   chmod +x "$libexec/bin/beislid"
   ln -s "$libexec/bin/beislid" "$cellar/bin/beislid"
@@ -849,6 +862,7 @@ test_homebrew_formula_draft_installs_runtime_subset() {
   assert_file_contains "$formula" "bin/beislid"
   assert_file_contains "$formula" "skills"
   assert_file_contains "$formula" "scripts/install_lib.sh"
+  assert_file_contains "$formula" "scripts/run_ledger.py"
   assert_file_contains "$formula" "install.sh"
   assert_file_contains "$formula" "Full Homebrew support"
 }
@@ -1417,6 +1431,7 @@ run_test "status handles malformed manifest"                   test_status_handl
 run_test "CLI help prints command usage"                       test_cli_help
 run_test "CLI ignores ambient BEISLID_HOME"                    test_cli_ignores_ambient_beislid_home
 run_test "packaged CLI can use BEISLID_HOME fallback"           test_packaged_cli_uses_beislid_home_when_layout_missing
+run_test "packaged CLI falls back when run ledger missing"       test_packaged_cli_uses_beislid_home_when_run_ledger_missing
 run_test "packaged CLI reports incomplete runtime layout"       test_packaged_cli_reports_incomplete_layout
 run_test "packaged CLI reports invalid BEISLID_HOME clearly"     test_packaged_cli_reports_invalid_beislid_home_as_layout_error
 run_test "packaged CLI supports Homebrew symlink layout"         test_packaged_cli_supports_homebrew_symlink_layout

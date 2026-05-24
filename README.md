@@ -212,11 +212,11 @@ Flags:
 - `--write-gitignore`: create or replace the managed project `.gitignore` block
 - `--force`: repoint/replace existing symlinks. Never clobbers unmarked regular files or directories.
 
-Machine state for user installs lives at `${BEISLID_STATE_DIR:-~/.local/state/beislid}/install.json` and records the CLI path when the CLI link is installed or already correct. Project install state lives at `<project>/.beislid/project-install.json`. Re-running is safe: dangling symlinks are auto-repaired; symlinks pointing at another live target are left alone unless you pass `--force`. Regular files are never clobbered. Update never touches project-owned `.beislid/workflow.md` files.
+Machine state for user installs lives at `${BEISLID_STATE_DIR:-~/.local/state/beislid}/install.json` and records the CLI path when the CLI link is installed or already correct. Durable run-ledger state lives under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/` and can be managed with `beislid run-ledger ...` for Rondo-style runs, gate logs, interruptions, and final reports. Project install state lives at `<project>/.beislid/project-install.json`. Re-running is safe: dangling symlinks are auto-repaired; symlinks pointing at another live target are left alone unless you pass `--force`. Regular files are never clobbered. Update never touches project-owned `.beislid/workflow.md` files.
 
 ### Homebrew packaging draft
 
-This repo includes a draft formula at `packaging/homebrew/beislid.rb`. It is for packaging validation and future tap work, not the published install path yet. Full Homebrew support, including publishing and upgrade policy, is tracked in #67.
+This repo includes a draft formula at `packaging/homebrew/beislid.rb`. It is for packaging validation and future tap work, not the published install path yet. Full Homebrew support, including publishing and upgrade policy, is tracked separately in the Homebrew packaging work.
 
 The CLI is package-layout friendly: it resolves its runtime from the real `bin/beislid` path, or from `BEISLID_HOME` when a packaged wrapper points at a separate runtime root. If the runtime subset is incomplete, it prints a layout error instead of failing with a shell source error.
 

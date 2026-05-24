@@ -9,7 +9,9 @@ Creates a structured plan, tracks it with the host agent's todo/task mechanism, 
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
-If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then ignore the pointer and fall back to a matching checkpoint artifact or conversation context.
+If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then ignore the pointer and fall back to a matching checkpoint artifact or conversation context. If durable run-ledger state is available, `beislid run-ledger resume --flow implement --ticket-id <id> --branch <branch>` may identify the latest running/interrupted/failed external run, but checkpoint artifacts/design artifacts remain the primary content seed for implementation planning.
+
+For durable run evidence, best-effort `beislid run-ledger init/resume ... --flow implement` when the CLI is available and ticket/branch context is known. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add a ledger checkpoint payload that links to the artifact path and includes a `resume_hint` for the next safe task boundary. Ledger failures warn but never replace task tracking, verification, or checkpoint artifact behavior.
 
 ## Phase 1: Write the Plan
 
@@ -42,7 +44,7 @@ Break work into bite-sized tasks (2-5 minutes each). Each task specifies:
 - Documentation
 - Dependency updates
 
-If a task is non-TDD, explicitly note why.
+If a task is non-TDD, explicitly note why. If a run ledger is active, record the final approved plan or task list path as a ledger checkpoint before starting code changes.
 
 ### Batch Independent Tasks
 
@@ -74,7 +76,7 @@ Default path: `checkpoints/{event}-{ticket_id}.md` when ticket context is known,
 
 Checkpoint content must be human-readable Markdown with stable sections: `Checkpoint Metadata`, `State Summary`, `Key Context`, `Decisions`, `Next Step`, `Open Risks / Questions`, and optional `Related Artifacts`. Include ticket id/title when known, branch, source skill `implement`, event name, approved design source/path, goal, architecture, files touched, task decomposition, batches/dependencies, verification plan, and open risks. Summarize architecture, tasks, and approach only when they match the approved design or implementation plan; do not introduce new implementation decisions.
 
-After a checkpoint artifact is written, update `.beislid/checkpoints/latest.json` with a replaceable latest-pointer entry containing event, path, `ticket: {id, title}` when known, branch, source skill, and written timestamp when available. This pointer is convenience state for fresh-context rediscovery only: no run ID, no event history, no gate logs, and no resume state machine. If the pointer update fails, report it but keep the artifact result.
+After a checkpoint artifact is written, update `.beislid/checkpoints/latest.json` with a replaceable latest-pointer entry containing event, path, `ticket: {id, title}` when known, branch, source skill, and written timestamp when available. This pointer is convenience state for fresh-context rediscovery only: no run ID, no event history, no gate logs, and no resume state machine. If a durable run ledger is active, record the checkpoint path there as run history, but do not replace or reinterpret the `.beislid/checkpoints/latest.json` pointer. If the pointer update fails, report it but keep the artifact result.
 
 When a checkpoint is written, print host-neutral fresh-context guidance and pause before code changes: tell the user this is the safest point to run `/clear` or `/new`, and that after restarting they can say `continue implementation` or `continue from checkpoint` so the latest pointer can be rediscovered. Do not invoke `/clear` or `/new` automatically.
 
@@ -110,4 +112,4 @@ When all tasks are complete, run the full verification:
 - Build succeeds
 - No regressions
 
-Only then mark the plan as done. Invoke `verify` if needed.
+Only then mark the plan as done. Invoke `verify` if needed. If a run ledger is active, write a final implementation checkpoint or finalize event with verification evidence, remaining risks, changed files summary, and the next recommended workflow (`ready-for-review`, `rinse`, or user follow-up).
