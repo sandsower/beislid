@@ -22,8 +22,11 @@ from typing import Any
 SCHEMA_VERSION = 1
 LEDGER_KIND = "run-ledger-v1"
 CHECKPOINT_KIND = "run-ledger-checkpoint-v1"
-SECRETISH = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)\s*[:=]\s*\S+")
-SECRETISH_JSON_KEY = re.compile(r"(?i)(token|secret|password|authorization|api[_-]?key)")
+SECRETISH = re.compile(
+    r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b\s*[:=]\s*"
+    r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\r\n]+)"
+)
+SECRETISH_JSON_KEY = re.compile(r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b")
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -77,7 +80,26 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp = path.parent / f".{path.name}.{secrets.token_hex(4)}.tmp"
+    data = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        try:
+            dir_fd = os.open(path.parent, os.O_RDONLY)
+        except OSError:
+            dir_fd = None
+        if dir_fd is not None:
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def repo_root(cwd: Path | None = None) -> Path:
@@ -368,7 +390,8 @@ def command_resume(args: argparse.Namespace) -> int:
         for run_file in sorted(root.glob("*/run.json")) if root.exists() else []:
             try:
                 run = read_json(run_file)
-            except Exception:
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"warning: skipping unreadable run file {run_file}: {exc}", file=sys.stderr)
                 continue
             if run.get("status") not in allowed:
                 continue

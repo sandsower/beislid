@@ -54,8 +54,12 @@ jobs:
   run-ledger:
     name: Run ledger utility tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - run: bash scripts/test_run_ledger.sh
 
   symlink-integrity:

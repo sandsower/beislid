@@ -101,11 +101,11 @@ PY
   [[ "$(json_get "$run_dir/run.json" ticket.id)" == "15" ]] || { note_fail "ticket id not recorded"; return 1; }
 
   event_payload="$TMP/event.json"
-  printf '{"title":"ticket loaded","token":"secret-token-value"}\n' > "$event_payload"
+  printf '{"title":"ticket loaded","message":"Authorization: Bearer abc123","token":"secret-token-value"}\n' > "$event_payload"
   (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" event --run-id "$run_id" --type ticket_snapshot --json-file "$event_payload") >/dev/null
   assert_contains "$run_dir/events.jsonl" '"type": "ticket_snapshot"'
   assert_contains "$run_dir/transcript.md" 'ticket_snapshot'
-  if grep -q 'secret-token-value' "$run_dir/transcript.md" "$run_dir/events.jsonl"; then
+  if grep -q -e 'secret-token-value' -e 'Bearer abc123' "$run_dir/transcript.md" "$run_dir/events.jsonl"; then
     note_fail "ledger should redact secret-looking values"
     return 1
   fi
@@ -168,7 +168,8 @@ PY
   printf '# Final report\n\nDone.\n' > "$report"
   (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" finalize --run-id "$completed_id" --flow kickoff --status completed --report-file "$report") >/dev/null
 
-  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --flow kickoff --ticket-id 15 --branch feature/ledger) >/tmp/beislid-resume-unexpected.out 2>/dev/null; then
+  local unexpected_out="$TMP/beislid-resume-unexpected.out"
+  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" resume --flow kickoff --ticket-id 15 --branch feature/ledger) >"$unexpected_out" 2>/dev/null; then
     note_fail "resume should ignore completed runs unless --include-completed"
     return 1
   fi
@@ -194,7 +195,9 @@ PY
 
 test_rejects_unsafe_run_id() {
   local state="$TMP/state"
-  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --run-id '../escape') >/tmp/beislid-unsafe-run-id.out 2>/tmp/beislid-unsafe-run-id.err; then
+  local unsafe_out="$TMP/beislid-unsafe-run-id.out"
+  local unsafe_err="$TMP/beislid-unsafe-run-id.err"
+  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --run-id '../escape') >"$unsafe_out" 2>"$unsafe_err"; then
     note_fail "unsafe run id should be rejected"
     return 1
   fi
@@ -202,7 +205,7 @@ test_rejects_unsafe_run_id() {
     note_fail "unsafe run id wrote outside the run root"
     return 1
   fi
-  assert_contains /tmp/beislid-unsafe-run-id.err 'invalid run id'
+  assert_contains "$unsafe_err" 'invalid run id'
 }
 
 test_legacy_active_resume_without_flow() {
