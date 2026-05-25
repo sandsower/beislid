@@ -29,6 +29,7 @@ setup
 - planning artifacts written after approved specs/designs
 - quality gates
 - scopes
+- action policy overrides
 - custom kickoff explore skills and triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 - probe cache settings
@@ -175,6 +176,53 @@ When orchestrators run gates, they summarize each result as an agent-readable en
 ```
 
 Generic text output and pytest-style output have built-in parser guidance in the shared output templates; `output.parser: generic-text` or `output.parser: pytest` metadata can guide parser selection where supported.
+
+## Action policy
+
+Action policy is the deterministic risk model repo-aware orchestrators use before risky side effects. It is evaluated by:
+
+```bash
+beislid action-policy evaluate --mode unattended-auto --action git.push --sandbox-baseline non-default-branch
+```
+
+The evaluator accepts explicit JSON/config input and returns an envelope with `decision` (`allow`, `ask`, or `deny`), `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. It intentionally does not attempt full shell parsing; orchestrators pass action identity and declared classes. A small known-action registry and conservative secret-bearing heuristics cover common cases.
+
+Built-in classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Actions may have multiple classes; the strictest matching rule wins (`deny` > `ask` > `allow`). Built-in modes are `supervised-auto` and `unattended-auto`.
+
+Default behavior:
+
+- `supervised-auto`: read/network-read actions allow; workspace writes, dependency installs, local/remote git, and secret-bearing actions ask; destructive actions deny.
+- `unattended-auto`: read/network-read actions allow; workspace writes, dependency installs, and local git ask; remote git, destructive, and secret-bearing actions deny.
+- Unknown or unclassified actions ask by default in both modes.
+- `unattended-auto` requires at least a `non-default-branch` sandbox baseline by default. Stricter baselines are `separate-worktree` and `host-sandbox`. Uncommitted changes ask unless project policy overrides that to deny or allow.
+
+Override defaults in workflow config only where the project needs stricter or looser behavior:
+
+````markdown
+## Action policy
+
+```beislid:action_policy
+modes:
+  unattended-auto:
+    sandbox:
+      minimum: separate-worktree
+      on_uncommitted_changes: deny
+    rules:
+      git-remote: deny
+      dependency-install: ask
+    unknown_action: ask
+    unclassified_action: ask
+  supervised-auto:
+    rules:
+      destructive: deny
+```
+````
+
+Doctor validates `beislid:action_policy` as config, not as an external probe. It should report invalid modes, classes, decisions, sandbox baselines, and malformed overrides instead of silently falling back to defaults.
+
+Policy decisions recorded in run summaries or the durable ledger should preserve the evaluator envelope shape: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When an `ask` decision is accepted or declined, summaries should record the human outcome separately from the original evaluator decision. Denied actions should include the remediation hint and stop point.
+
+In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, and `review-response`. They use the same envelope rather than duplicating policy tables in skill prose.
 
 ## Lifecycle actions
 
@@ -442,7 +490,7 @@ Pass `--write-gitignore` to create `.gitignore` if needed, insert the block if a
 
 `packaging/homebrew/beislid.rb` is a draft Homebrew formula for packaging validation. It installs the Beislið runtime subset under Homebrew `libexec` and exposes `bin/beislid` on PATH. This is not published Homebrew support yet; full Homebrew install/upgrade policy is tracked separately in the Homebrew packaging work.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 

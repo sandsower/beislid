@@ -101,6 +101,17 @@ The capability intentionally has no automated write path. Doctor records `status
 
 This is explicit ready-for-review project policy, not a probe. Doctor records `fresh_eyes` as `status: ok`, `probe_supported: true`, with `value: "(built-in fresh-eyes disabled by workflow)"`.
 
+### action_policy validation
+
+`beislid:action_policy` is validated, not probed as an external dependency. Doctor should use `beislid action-policy validate` or the same deterministic evaluator contract to validate overrides and derive the effective policy summary.
+
+| Status | Condition |
+|---|---|
+| `ok` | Policy overrides parse and validate. `probe_supported: true`, `probe_kind: validation`, value summarizes modes, sandbox minimums, fallback decisions, and known-action registry availability. |
+| `failed` | Unknown mode/class, invalid decision, invalid sandbox baseline, malformed `rules`/`sandbox`, or invalid fallback value. `probe_supported: true`; reason names the invalid path/value. |
+
+No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
+
 ### type=artifact lifecycle actions
 
 Artifact actions under `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:

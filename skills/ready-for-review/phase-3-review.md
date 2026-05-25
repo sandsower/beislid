@@ -34,7 +34,7 @@ Push back on incorrect findings with code or test evidence. If evidence does not
 
 When valid findings require fixes:
 
-1. Make or guide the fix according to normal host behavior.
+1. Policy-check orchestrator-owned writes (`workspace-write` plus known non-read class); fix only on `allow`/approved `ask`.
 2. Track findings addressed and risks the user explicitly accepted.
 3. If the fix touched functional code, rerun the Phase 2 gates that apply to changed files before continuing. Naming-only, comment-only, or documentation-only fixes do not require rerun unless they affect configured gates.
 
@@ -44,7 +44,7 @@ The normal review loop converges only when no blocking review findings remain, w
 
 ## 3b. Final whole-diff review
 
-Read optional `beislid:fresh_eyes`. Absent/`enabled: true` with no `type` uses built-in `fresh-eyes`; `enabled: false` is explicit policy. `type: command` replaces built-in: `probe(fresh_eyes.command)`, then run the configured command exactly from repo root with full diff/ticket/spec/design/gate context. Do not rewrite env vars, args, or output paths for ledger storage; record/copy artifacts separately. Treat nonzero/unclear output as blocking unless evidence disproves it.
+Read optional `beislid:fresh_eyes`. Absent/`enabled: true` uses built-in; `enabled: false` is explicit policy. `type: command`: `probe(fresh_eyes.command)`, policy-check classes (`read` unless metadata mutates), then run from repo root with full diff/ticket/spec/design/gate context. Do not rewrite env vars, args, or output paths for ledger storage; record/copy artifacts separately. Treat nonzero/unclear output as blocking unless evidence disproves it.
 
 If `fast_path_eligible=true`, use one combined review: primary review contract plus the selected final whole-diff check. Label built-in mode `combined review`; label custom mode `combined review + fresh_eyes.command`.
 
@@ -60,6 +60,7 @@ Outputs to Phase 4: review mode, final-check mode (`built-in`, `command`, or `di
 
 ## Phase-local tripwires
 
-- Do not skip the final whole-diff check unless `fresh_eyes.enabled: false` is explicitly configured.
+- Do not skip policy at covered write/custom commands.
+- Do not skip final whole-diff check unless `fresh_eyes.enabled: false`.
 - Do not proceed with Critical findings; Important findings require fixes or explicit user risk acceptance.
 - Cancelled/incomplete review requires explicit reduced-coverage acceptance before Phase 4.

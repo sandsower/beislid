@@ -11,7 +11,7 @@ If the handoff includes an explicit design artifact path from `blueprint`, read 
 
 If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then ignore the pointer and fall back to a matching checkpoint artifact or conversation context. If durable run-ledger state is available, `beislid run-ledger resume --flow implement --ticket-id <id> --branch <branch>` may identify the latest running/interrupted/failed external run, but checkpoint artifacts/design artifacts remain the primary content seed for implementation planning.
 
-For durable run evidence, best-effort `beislid run-ledger init/resume ... --flow implement` when the CLI is available and ticket/branch context is known. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add a ledger checkpoint payload that links to the artifact path and includes a `resume_hint` for the next safe task boundary. Ledger failures warn but never replace task tracking, verification, or checkpoint artifact behavior.
+Action-risk decisions follow `action-policy-protocol.md`; read it before checkpoint writes, workspace edits, dependency installs, local git operations, or configured side-effect hooks. For durable run evidence, best-effort `beislid run-ledger init/resume ... --flow implement` when the CLI is available and ticket/branch context is known. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add a ledger checkpoint payload that links to the artifact path and includes a `resume_hint` for the next safe task boundary. Ledger failures warn but never replace task tracking, verification, or checkpoint artifact behavior.
 
 ## Phase 1: Write the Plan
 
@@ -70,7 +70,7 @@ Supported P0 action shape:
   path: 'checkpoints/{event}-{ticket_id}.md' # optional default
 ```
 
-Execute only `type: artifact`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. Use the same artifact safety posture as planning artifacts: `approval: prompt` asks write/skip and shows action name, resolved path, content summary, and parent directory creation; `approval: auto` writes automatically only when the target does not exist; existing targets always prompt for overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block implementation, but code changes must not start until checkpoint handling and the boundary prompt are complete.
+Before each checkpoint artifact write, evaluate action policy for `checkpoint.implementation_plan_created.<name>` with class `workspace-write`. Execute only `type: artifact`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. Use the same artifact safety posture as planning artifacts: `approval: prompt` asks write/skip and shows action name, resolved path, content summary, and parent directory creation; `approval: auto` writes automatically only when the target does not exist; existing targets always prompt for overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block implementation, but code changes must not start until checkpoint handling and the boundary prompt are complete.
 
 Default path: `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Supported placeholders are `{event}` (`implementation_plan_created`), `{feature}`, `{kind}` (`checkpoint`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the implementation goal, then approved design title/path, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root, contain no `..`, and end in `.md`.
 
@@ -91,7 +91,7 @@ Create an item for every task in the host agent's todo/task mechanism. If the ho
 ## Phase 3: Execute
 
 ### Single tasks
-Work through the todo list in order. Follow the TDD rhythm. Commit after each task or logical group.
+Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group only when policy allows or `ask` is approved.
 
 ### Parallel batches
 When a batch has 3+ independent tasks, dispatch subagents:
@@ -112,4 +112,4 @@ When all tasks are complete, run the full verification:
 - Build succeeds
 - No regressions
 
-Only then mark the plan as done. Invoke `verify` if needed. If a run ledger is active, write a final implementation checkpoint or finalize event with verification evidence, remaining risks, changed files summary, and the next recommended workflow (`ready-for-review`, `rinse`, or user follow-up).
+Only then mark the plan as done. Invoke `verify` if needed. If a run ledger is active, write a final implementation checkpoint or finalize event with verification evidence, policy decisions, sandbox status, remaining risks, changed files summary, and the next recommended workflow (`ready-for-review`, `rinse`, or user follow-up).

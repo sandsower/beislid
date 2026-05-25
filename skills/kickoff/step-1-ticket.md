@@ -18,7 +18,7 @@ If `branch_pattern` is configured, apply it to `git branch --show-current` and c
 
 If `ticket_source.type: paste`, ask for title, full body, acceptance criteria, and attachments/screenshots using the strict paste shape from `kickoff-templates.md`.
 
-Otherwise `probe(ticket_source)` before fetching. On failure:
+Otherwise `probe(ticket_source)` before fetching. For `mcp`/`cli`/`file` fetches that leave the local process or filesystem, evaluate action policy for `ticket.fetch` with class `network-read` or `read` as appropriate before fetching. On failure:
 
 - `(a)` retry the probe.
 - `(b)` means strict manual paste now — title, full body, acceptance criteria or `none`, attachments/screenshots or `none`.
@@ -37,7 +37,7 @@ Summarize ticket title, body, labels/metadata, attachments, and acceptance crite
 
 If `lifecycle_actions.events.kickoff_start.actions` is configured, probe only that event as `lifecycle_actions.kickoff_start` before running actions. P0 supports `type: cli` only; for other types, stop and say the provider is reserved for a later Beislið version.
 
-Run actions in configured order after ticket fetch succeeds. Substitute only these placeholders: `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}` = `kickoff_start`. Placeholder values must be passed through argv construction when the host supports it, or shell-quoted before command execution; never splice raw branch/ticket text into a shell. `approval: auto` runs once configured. `approval: prompt` shows the action name/command and asks: run / skip this action / skip remaining lifecycle actions / abort; silence or ambiguity means no side effect and prompts again or skips per user choice. On command failure, use the lifecycle-action prompt from `kickoff-templates.md`: `(a)` retry this action, `(b)` skip remaining lifecycle actions this session, `(c)` abort. Skipped results are `session_skip` and excluded from probe cache writeback.
+Run actions in configured order after ticket fetch succeeds. Evaluate action policy for `lifecycle.kickoff_start.<name>` before each configured action, using classes from action metadata when present, otherwise `workspace-write` for local mutations and `network-read`/`git-remote` for external tracker writes. Substitute only these placeholders: `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}` = `kickoff_start`. Placeholder values must be passed through argv construction when the host supports it, or shell-quoted before command execution; never splice raw branch/ticket text into a shell. `approval: auto` runs once configured. `approval: prompt` shows the action name/command and asks: run / skip this action / skip remaining lifecycle actions / abort; silence or ambiguity means no side effect and prompts again or skips per user choice. On command failure, use the lifecycle-action prompt from `kickoff-templates.md`: `(a)` retry this action, `(b)` skip remaining lifecycle actions this session, `(c)` abort. Skipped results are `session_skip` and excluded from probe cache writeback.
 
 ## Exit
 
@@ -47,4 +47,4 @@ Print the Step 1 exit one-liner. Required outputs: `ticket_id`, title, body, acc
 
 - Ticket-source failure `(b)` is strict paste fallback, not blind skip.
 - Do not infer or search unrelated tickets when a ticket ID is absent.
-- Lifecycle actions are side effects, not quality gates; do not silently ignore configured action failures.
+- Lifecycle actions are side effects, not quality gates; do not silently ignore configured action failures or policy denials.
