@@ -16,7 +16,7 @@ If only cosmetic changes were made, pushing without gates is allowed after telli
 
 Categorize the fix diff by gate model:
 
-- `gate_sets`: match ordered selectors to fix-diff files, apply excludes, union/de-dupe sets deterministically, run selected executable `pre-pr` gates, and record selected/skipped reasons.
+- `gate_sets`: match selectors, apply excludes, union/de-dupe sets, apply set `cwd`/`stage` defaults before normalization, run selected executable `pre-pr` gates, and record reasons.
 - `scopes`: for each touched scope, `pushd <scope.cwd>` and run executable `pre-pr` gates.
 - top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
 - none: print `no gates configured — skipping`.

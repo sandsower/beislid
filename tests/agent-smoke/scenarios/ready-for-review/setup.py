@@ -65,8 +65,13 @@ sets:
         parallel_safe: true
   skills:
     gates:
-      - name: skills-should-skip
-        command: 'python3 scripts/skills_should_skip.py'
+      - name: validate-skills-area
+        command: 'python3 scripts/validate_skills_area.py'
+        parallel_safe: true
+  workflows:
+    gates:
+      - name: workflows-should-skip
+        command: 'python3 scripts/workflows_should_skip.py'
         parallel_safe: true
 selectors:
   - name: docs-files
@@ -75,6 +80,9 @@ selectors:
   - name: skill-files
     paths: ['skills/**', '.beislid/**']
     gate_sets: ['skills']
+  - name: workflow-files
+    paths: ['.github/**']
+    gate_sets: ['workflows']
 ```
 
 ```beislid:fresh_eyes
@@ -92,12 +100,18 @@ assert Path('docs/smoke.md').exists(), 'docs/smoke.md missing'
 print('ok: fixture validated')
 """)
     os.chmod(repo / "scripts" / "validate_fixture.py", 0o755)
-    write(repo / "scripts" / "skills_should_skip.py", """#!/usr/bin/env python3
+    write(repo / "scripts" / "validate_skills_area.py", """#!/usr/bin/env python3
 from pathlib import Path
-Path('skills-should-skip.marker').write_text('skills gate unexpectedly ran\n', encoding='utf-8')
-raise SystemExit('skills gate should be skipped for docs-only change')
+assert Path('skills/example/SKILL.md').exists(), 'skills example missing'
+print('ok: skills area validated')
 """)
-    os.chmod(repo / "scripts" / "skills_should_skip.py", 0o755)
+    os.chmod(repo / "scripts" / "validate_skills_area.py", 0o755)
+    write(repo / "scripts" / "workflows_should_skip.py", """#!/usr/bin/env python3
+from pathlib import Path
+Path('workflows-should-skip.marker').write_text('workflow gate unexpectedly ran\\n', encoding='utf-8')
+raise SystemExit('workflow gate should be skipped when no workflow files changed')
+""")
+    os.chmod(repo / "scripts" / "workflows_should_skip.py", 0o755)
     write(repo / "scripts" / "fresh_eyes_check.py", """#!/usr/bin/env python3
 import os
 import sys
@@ -113,6 +127,15 @@ print('ok: fresh_eyes command final-check passed')
 """)
     os.chmod(repo / "scripts" / "fresh_eyes_check.py", 0o755)
     write(repo / "docs" / "smoke.md", "# Smoke fixture\n\nInitial text.\n")
+    write(repo / "skills" / "example" / "SKILL.md", """---
+name: example
+description: Fixture skill for changed-file gate-set smoke.
+---
+
+# Example fixture skill
+
+Initial text.
+""")
     run(["git", "add", "."], cwd=repo)
     run(["git", "commit", "-m", "Initial smoke fixture"], cwd=repo)
     run(["git", "branch", "-M", "main"], cwd=repo)
@@ -121,8 +144,19 @@ print('ok: fresh_eyes command final-check passed')
     branch = "agent-smoke/no-ticket-verbose"
     run(["git", "checkout", "-b", branch], cwd=repo)
     write(repo / "docs" / "smoke.md", "# Smoke fixture\n\nInitial text.\n\nVerbose no-ticket ready-for-review smoke change.\n")
-    run(["git", "add", "docs/smoke.md"], cwd=repo)
-    run(["git", "commit", "-m", "Update smoke fixture docs"], cwd=repo)
+    write(repo / "skills" / "example" / "SKILL.md", """---
+name: example
+description: Fixture skill for changed-file gate-set smoke.
+---
+
+# Example fixture skill
+
+Initial text.
+
+Skill-area smoke change.
+""")
+    run(["git", "add", "docs/smoke.md", "skills/example/SKILL.md"], cwd=repo)
+    run(["git", "commit", "-m", "Update smoke fixture docs and skills"], cwd=repo)
 
     evidence_helper = SCENARIO_DIR / "evidence_helper.py"
     metadata: dict[str, object] = {

@@ -24,14 +24,14 @@ If conflicts occur, stop and ask the user for help. After resolution, continue P
 
 Run applicable checks in order and fail fast; fast-path may parallelize safe gates after probing. Selection is config-driven:
 
-- `gate_sets`: run Phase 1 selected gates. Preserve order, de-dupe, use gate/set cwd or repo root, and record selected/skipped reasons.
+- `gate_sets`: run Phase 1 selected gates. Apply set `cwd`/`stage` defaults before normalization; gate fields win. Preserve order, de-dupe, and record reasons.
 - `scopes`: run touched scopes only (`pushd <scope.cwd>`, executable pre-pr gates, `popd`).
 - top-level `gates`: run executable pre-pr gates from repo root.
 - none: print `no gates configured — skipping`.
 
 Normalize per `workflow-md-format.md`: flat `name`+`command` means pre-pr computational sensor. P0 ready-for-review executes legacy gates plus rich gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` exists, and `execution` is absent/`computational`. Record other stages as `skipped-by-stage`; record pre-pr non-computational/non-sensor as `skipped-by-execution`. Treat rich `output`/`failure` as prompt context.
 
-Probe each selected gate once (`probe(scopes.<scope>.gates[<gate>].command)` or top-level equivalent), plus `required_tools[]` binaries via `command -v`. On probe failure, use the Phase 2b prompt in `ready-for-review-templates.md`.
+Probe each selected gate once (`probe(gate_sets.sets.<set>.gates[<gate>].command)`, scope, or top-level equivalent), plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
 
 Execution:
 
