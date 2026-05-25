@@ -91,7 +91,7 @@ Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-m
 
 ## Scopes and quality gates
 
-Scopes let Beislið run the gates that match the files touched by a branch.
+Scopes let Beislið run the gates that match the files touched by a branch. For newer workflows that need reusable named gate groups and explicit selected/skipped explanations, prefer `gate_sets`.
 
 Example shape:
 
@@ -117,6 +117,31 @@ Example shape:
 ````
 
 Use top-level gates when the project does not need scoped gates. Existing flat gates are still valid and default to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. For `ready-for-review` fast-path, mark independent read-only gates with `parallel_safe: true`; unmarked gates stay sequential.
+
+Changed-file-aware gate sets are selected before legacy scopes/top-level gates when configured:
+
+````markdown
+```beislid:gate_sets
+sets:
+  docs:
+    gates:
+      - name: docs-lint
+        command: 'python3 scripts/check_docs.py'
+  skills:
+    gates:
+      - name: validate-skills
+        command: 'python3 scripts/validate_skills.py'
+selectors:
+  - name: docs-files
+    paths: ['docs/**', 'README.md']
+    gate_sets: ['docs']
+  - name: skill-files
+    paths: ['skills/**', '.beislid/**']
+    gate_sets: ['skills']
+```
+````
+
+When multiple selectors match, Beislið unions their gate sets deterministically in selector/config order and de-dupes repeated gates. Runs should explain why each gate was selected and why unmatched selectors or non-executable staged gates were skipped.
 
 Rich gate metadata can describe where a check belongs in the harness and how agents should interpret failures:
 

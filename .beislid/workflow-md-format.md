@@ -21,6 +21,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `PR reviews`
 - `Scopes`
 - `Quality gates`
+- `Gate sets`
 - `Lifecycle actions`
 - `Action policy`
 - `Translation sync`
@@ -82,6 +83,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `scopes` — list of scope objects, each with `name`, `paths` (glob list), `cwd`, `gates` (list of gate objects; see **Gate object shape** below)
 - `split_policy` — single string; `exclusive` is the only recognized value
 - `gates` (top-level) — single gate list when `scopes` is not configured; same gate object shape as a scope's gates
+- `gate_sets` — changed-file-aware gate selection. Fields: `sets` (map of set name → object with `gates`, optional `cwd`, optional `stage`) and `selectors` (ordered list with `name`, `paths`, `gate_sets`, optional `exclude`). See **Gate-set selection shape** below.
 
 **Lifecycle actions:**
 - `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; spec/design approval events and checkpoint events support `type: artifact` only. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command` and require `approval` (`auto` / `prompt`). Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and placeholders `{feature}`, `{kind}`, `{ticket_id}`, and `{event}` where documented for checkpoint artifacts. Actions run in order.
@@ -222,9 +224,40 @@ Supported stage values are `preflight`, `per-edit`, `pre-commit`, `pre-pr`, `pos
 
 `cost` is free-form but recommended values are `cheap`, `medium`, and `expensive`. `required_tools` is a list of additional CLI binaries the gate depends on beyond the command's first word; doctor and gate-running orchestrators probe each with `command -v` before treating the gate as runnable. `mutates: true` means the gate may edit files or external state and must not be auto-batched as read-only. `parallel_safe: true` remains the fast-path batching flag and is only honored when the gate has no `autofix` and `mutates` is not true.
 
-Selectors may use `changed_file_selector.include` / `exclude` glob lists (or legacy draft `selector.paths`) to describe when the gate is relevant. P0 docs and doctor report selector metadata; full changed-file-aware selection is reserved for the dedicated selector work.
+Selectors may use `changed_file_selector.include` / `exclude` glob lists (or legacy draft `selector.paths`) to describe when the gate is relevant. Gate-level selectors are advisory metadata unless a selected gate set includes the gate; the changed-file-aware selector model is `gate_sets`.
 
 Output/parser metadata is declarative. `output.parser` may name parsers such as `generic-text` or `pytest`, but the full agent-readable result envelope is handled by the gate-result-envelope work. `failure` may declare `retryable`, `max_fix_iterations`, `stop_if_patterns`, and `hint`; P0 orchestrators surface this context in failure prompts but still require user direction before risky fixes or skips.
+
+## Gate-set selection shape
+
+`gate_sets` is the preferred model when a project needs deterministic changed-file-aware checks. It is optional and takes precedence over legacy `scopes` / top-level `gates` when configured; if absent, orchestrators keep the old fallback behavior.
+
+````markdown
+```beislid:gate_sets
+sets:
+  docs:
+    gates:
+      - name: docs-lint
+        command: 'python3 scripts/check_docs.py'
+  skills:
+    gates:
+      - name: validate-skills
+        command: 'python3 scripts/validate_skills.py'
+selectors:
+  - name: docs-files
+    paths: ['docs/**', 'README.md']
+    gate_sets: ['docs']
+  - name: skill-files
+    paths: ['skills/**', '.beislid/**']
+    gate_sets: ['skills']
+```
+````
+
+Selection is driven by the changed file list. Orchestrators evaluate selectors in file/config order, match `paths` with git-style globs, apply optional `exclude` globs, then union the referenced sets deterministically: first selector order, then `gate_sets` order inside the selector, then gate declaration order inside each set. Duplicate gates are de-duped by stable identity (`set`, `scope/cwd`, `name`, `command`) so the first selection reason wins.
+
+Every run should explain selection. For each selected gate, record the changed file(s), selector, and gate set that selected it. For skipped selectors, record that no changed file matched. For skipped gates, record whether the reason was stage, execution/kind, missing command/tools, or another normalized-gate rule. P0 `ready-for-review` and `review-response` execute only selected gates that also normalize to executable computational `pre-pr` sensors; other stages remain metadata and are reported as skipped, not run at the wrong lifecycle point.
+
+Gate sets work with the same **Gate object shape** as `gates` and scope gates. A set-level `cwd` applies to gates in that set unless a gate declares its own `cwd`; absent `cwd` runs from the repo root. A set-level `stage` may be used as metadata for all gates in the set, but gate-level `stage` wins.
 
 ## Lifecycle actions shape
 

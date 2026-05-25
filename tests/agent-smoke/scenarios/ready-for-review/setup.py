@@ -56,10 +56,25 @@ command: 'gh issue view {id} --json number,title,body,state,labels'
 id_pattern: '^#?\\d+$'
 ```
 
-```beislid:gates
-- name: validate-fixture
-  command: 'python3 scripts/validate_fixture.py'
-  parallel_safe: true
+```beislid:gate_sets
+sets:
+  docs:
+    gates:
+      - name: validate-fixture
+        command: 'python3 scripts/validate_fixture.py'
+        parallel_safe: true
+  skills:
+    gates:
+      - name: skills-should-skip
+        command: 'python3 scripts/skills_should_skip.py'
+        parallel_safe: true
+selectors:
+  - name: docs-files
+    paths: ['docs/**']
+    gate_sets: ['docs']
+  - name: skill-files
+    paths: ['skills/**', '.beislid/**']
+    gate_sets: ['skills']
 ```
 
 ```beislid:fresh_eyes
@@ -77,6 +92,12 @@ assert Path('docs/smoke.md').exists(), 'docs/smoke.md missing'
 print('ok: fixture validated')
 """)
     os.chmod(repo / "scripts" / "validate_fixture.py", 0o755)
+    write(repo / "scripts" / "skills_should_skip.py", """#!/usr/bin/env python3
+from pathlib import Path
+Path('skills-should-skip.marker').write_text('skills gate unexpectedly ran\n', encoding='utf-8')
+raise SystemExit('skills gate should be skipped for docs-only change')
+""")
+    os.chmod(repo / "scripts" / "skills_should_skip.py", 0o755)
     write(repo / "scripts" / "fresh_eyes_check.py", """#!/usr/bin/env python3
 import os
 import sys

@@ -24,6 +24,8 @@ REQUIRED_TRANSCRIPT_PATTERNS = [
     ("fast-path marker", r"fast[- ]path"),
     ("combined review marker", r"combined review|combined review/final-check|combined review/fresh-eyes"),
     ("fixture gate evidence", r"validate-fixture|ok:\s*fixture validated"),
+    ("gate-set selection evidence", r"gate[-_ ]sets?|selector|docs-files"),
+    ("gate-set skip evidence", r"skills-should-skip|skill-files|skipped"),
     ("push side effect", r"\bpush(?:ed)?\b|git push"),
     ("PR creation side effect", r"pr create|PR opened|Opened PR|pull/1"),
 ]
@@ -189,6 +191,11 @@ def verify(run_dir: Path) -> list[str]:
         fail(errors, "configured fresh_eyes command log did not contain invocation marker")
     if not (run_dir / "pr-url.txt").exists():
         fail(errors, "fake PR URL was not produced")
+    skipped_gate_marker = repo / "skills-should-skip.marker"
+    if skipped_gate_marker.exists():
+        fail(errors, f"changed-file gate selection ran a gate that should have been skipped: {skipped_gate_marker}")
+    if "skills_should_skip.py" in gh_text or "skills-should-skip" in gh_text:
+        fail(errors, "mock event log suggests skipped skills gate ran or was treated as selected")
 
     pushed = subprocess.run(
         ["git", "--git-dir", str(origin), "show-ref", "--verify", f"refs/heads/{branch}"],
@@ -283,6 +290,8 @@ phase 3 entry
 phase 4 entry
 fast-path eligible
 parallel safe gate validate-fixture
+selected gate validate-fixture from gate_sets selector docs-files
+skipped gate skills-should-skip selector skill-files no changed files matched
 combined review/final-check complete
 ok: fixture validated
 ticket_id: `none`

@@ -8,7 +8,7 @@ Print the Phase 1 entry/exit one-liners from `ready-for-review-templates.md`; in
 
 ## Phase outputs
 
-Populate run context for later phases: `ticket_id`, `branch`, `base`, `existing_pr_fast_path` plus `pr_url`, `diff_files`, changed-line summary, touched scopes or implicit repo-root scope, optional-skill trigger booleans, `freshness` (`fresh`, `behind`, or `unknown`), `needs_merge`, `fast_path_eligible`/reason, and warnings/accepted risks.
+Populate run context: ticket/branch/base/PR, diff files/stats, gate model (`gate_sets`/scopes/repo-root) with selected/skipped reasons, optional triggers, freshness/merge state, fast-path eligibility, warnings/risks.
 
 Expose `existing_pr_fast_path` early enough for orientation output to append the fast-path clause.
 
@@ -50,7 +50,7 @@ git diff <base>...HEAD --name-only
 git diff <base>...HEAD --shortstat
 ```
 
-Store files and changed-line summary. Mark touched configured scopes by path. If no scopes but top-level `gates` exists, create one implicit repo-root scope. If neither scopes nor top-level gates exist, record no gate scopes.
+Store files/stats. If `gate_sets` exists, match ordered selectors to changed files, apply `exclude`, union sets deterministically, de-dupe by stable gate identity, and record selected/skipped reasons. Else mark touched scopes; else create implicit repo-root scope for top-level `gates`; else no gate scopes.
 
 ### 1d. Apply split policy
 
@@ -77,7 +77,7 @@ Fast-path is for small, low-risk new PRs. Set `fast_path_eligible=true` only whe
 
 - not `existing_pr_fast_path`
 - changed lines (additions + deletions from `--shortstat`) are known and ≤100
-- exactly one touched scope, including the implicit repo-root scope
+- exactly one touched gate area: one selected gate-set group, one touched scope, or the implicit repo-root scope
 - no split-policy violation
 - `freshness=fresh` and `needs_merge=false`
 
