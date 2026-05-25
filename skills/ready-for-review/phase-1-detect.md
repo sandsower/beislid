@@ -77,7 +77,7 @@ Fast-path is for small, low-risk new PRs. Set `fast_path_eligible=true` only whe
 
 - not `existing_pr_fast_path`
 - changed lines (additions + deletions from `--shortstat`) are known and ≤100
-- exactly one touched gate area: one selected gate-set group, one touched scope, or the implicit repo-root scope
+- one touched scope/repo-root, or `gate_sets` with selected executable gates parallel-safe, nonmutating, no fix
 - no split-policy violation
 - `freshness=fresh` and `needs_merge=false`
 

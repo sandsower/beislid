@@ -21,7 +21,7 @@ Categorize the fix diff by gate model:
 - top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
 - none: print `no gates configured — skipping`.
 
-Normalize each gate before selection. A legacy flat gate with `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes legacy gates and rich gates where `stage` is absent or `pre-pr`, `kind` is absent or `sensor`, `command` is present, and `execution` is absent or `computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
+Normalize effective gates after `gate_sets` selection, or before legacy scope/top-level selection. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` is present, and `execution` is absent/`computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
 
 Before each selected gate, probe the gate command plus any `required_tools[]`. On failure use the gate prompt; `(b)` skips only this gate and is not cached.
 
