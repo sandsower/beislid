@@ -127,7 +127,7 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
-      "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 9"
+      "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 10"
     }
   }
 }
@@ -140,7 +140,7 @@ Field rules:
 - `project_name` — basename of `git rev-parse --show-toplevel`.
 - `cache_ttl_hours` — read from `beislid:probe_cache.ttl_hours` in workflow.md; defaults to `24`.
 - `probe_supported` — `false` only when the host literally cannot probe the kind (e.g., subagent probe on a host without subagents). Capability-not-found-in-session uses `probe_supported: true` with `status: missing`.
-- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, action-policy summary, etc.). Omitted on `disabled` entries. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them. For `action_policy`, summarize effective modes, sandbox minimums, fallback decisions when configured, and known-action registry size; do not store the whole policy table in the cache.
+- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, action-policy summary, etc.). Omitted on `disabled` entries. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them. For `action_policy`, summarize effective modes, sandbox minimums, action overrides, fallback decisions when configured, and known-action registry size; do not store the whole policy table in the cache.
 - `reason` — only on `missing` and `failed`. Always omitted on `ok` and `disabled`.
 - `probed_at`, `probe_kind`, `value` — omitted on `disabled` entries (no probe was run).
 
@@ -167,7 +167,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ lifecycle_actions.kickoff_context_ready artifact          ok (prompted artifact at runtime)
 ✓ lifecycle_actions.implementation_plan_created artifact    ok (auto artifact at runtime)
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
-✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 9)
+✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 10)
 cache file:        <path>
 cache valid until: <ISO-8601>
 workflow_hash:     <hash>

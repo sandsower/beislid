@@ -210,6 +210,8 @@ modes:
     rules:
       git-remote: deny
       dependency-install: ask
+    actions:
+      pr.review.reply: allow
     unknown_action: ask
     unclassified_action: ask
   supervised-auto:
@@ -217,6 +219,8 @@ modes:
       destructive: deny
 ```
 ````
+
+Use `actions` for explicit stable action-id overrides when one action should differ from its class default; for example, `pr.review.reply: allow` can auto-allow PR review replies while `git-remote` still asks for push/PR creation.
 
 Doctor validates `beislid:action_policy` as config, not as an external probe. It should report invalid modes, classes, decisions, sandbox baselines, and malformed overrides instead of silently falling back to defaults.
 

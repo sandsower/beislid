@@ -87,7 +87,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; spec/design approval events and checkpoint events support `type: artifact` only. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command` and require `approval` (`auto` / `prompt`). Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and placeholders `{feature}`, `{kind}`, `{ticket_id}`, and `{event}` where documented for checkpoint artifacts. Actions run in order.
 
 **Action policy:**
-- `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
+- `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
 
 **Kickoff overrides:**
 - `explore` — fields: `skill` (Beislið skill name), `mode` (`replace` or `enhance`; default `enhance`). Put this block under a `## Kickoff` or `## Skill-specific overrides` section. Used by kickoff Step 2 before implementation design.
@@ -158,6 +158,8 @@ modes:
     rules:
       git-remote: deny
       dependency-install: ask
+    actions:
+      pr.review.reply: allow
     unknown_action: ask
     unclassified_action: ask
   supervised-auto:
@@ -171,7 +173,7 @@ Built-in defaults:
 - `supervised-auto`: `read` and `network-read` allow; `workspace-write`, `dependency-install`, `git-local`, `git-remote`, and `secret-bearing` ask; `destructive` denies; no sandbox baseline is required, but uncommitted changes ask.
 - `unattended-auto`: `read` and `network-read` allow; `workspace-write`, `dependency-install`, and `git-local` ask; `git-remote`, `destructive`, and `secret-bearing` deny; sandbox minimum is `non-default-branch`, and uncommitted changes ask.
 
-Evaluator input is explicit JSON/config from the calling orchestrator. The evaluator intentionally does not attempt full shell parsing. It uses a small known-action registry plus conservative secret-bearing heuristics for obvious tokens, environment variable names, and authorization headers. Doctor validates policy overrides through the same evaluator contract (`beislid action-policy validate`) and records a concise effective-policy summary rather than probing an external dependency.
+Evaluator input is explicit JSON/config from the calling orchestrator. The evaluator intentionally does not attempt full shell parsing. It uses a small known-action registry plus conservative secret-bearing heuristics for obvious tokens, environment variable names, and authorization headers. Optional `actions` entries are explicit project allow/ask/deny decisions for stable action ids such as `pr.review.reply`. Doctor validates policy overrides through the same evaluator contract (`beislid action-policy validate`) and records a concise effective-policy summary rather than probing an external dependency.
 
 The policy decision envelope contains `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. Run summaries and ledger events should preserve that shape, plus a separate human outcome when an `ask` decision is accepted or declined.
 

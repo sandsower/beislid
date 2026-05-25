@@ -108,7 +108,7 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 | Status | Condition |
 |---|---|
 | `ok` | Policy overrides parse and validate. `probe_supported: true`, `probe_kind: validation`, value summarizes modes, sandbox minimums, fallback decisions, and known-action registry availability. |
-| `failed` | Unknown mode/class, invalid decision, invalid sandbox baseline, malformed `rules`/`sandbox`, or invalid fallback value. `probe_supported: true`; reason names the invalid path/value. |
+| `failed` | Unknown mode/class, invalid decision, invalid sandbox baseline, malformed `rules`/`actions`/`sandbox`, or invalid fallback value. `probe_supported: true`; reason names the invalid path/value. |
 
 No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
 

@@ -29,7 +29,7 @@ Use the authorization copy from `review-response-templates.md`. If the user appr
 - committing after policy `allow` or approved `ask`
 - running gates
 - pushing after policy `allow` or approved `ask`
-- posting `Fixed in <short-sha>` PR replies when `pr_review_update` is CLI and ok and policy allows
+- posting `Fixed in <short-sha>` PR replies when `pr_review_update` is CLI and ok and policy allows or `ask` is approved
 - posting QA/ticket clear-fix replies when `ticket_update` is configured and ok
 - re-requesting review only if warranted by the rule in Phase 3
 

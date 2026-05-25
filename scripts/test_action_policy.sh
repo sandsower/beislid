@@ -94,6 +94,25 @@ test_unknown_unattended_defaults_to_ask() {
   assert_contains_json_text "$out" '"rule": "unclassified_action"'
 }
 
+test_action_override_can_allow_pr_reply() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "actions": {
+        "pr.review.reply": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action pr.review.reply)"
+  assert_decision "$out" allow
+  assert_contains_json_text "$out" '"type": "action"'
+}
+
 test_policy_override_can_deny_workspace_write() {
   local override out
   override="$TMP/policy.json"
@@ -224,6 +243,7 @@ run_test "supervised read allows" test_supervised_read_allows
 run_test "git status is read-only" test_git_status_is_read_only
 run_test "strictest class wins" test_strictest_class_wins
 run_test "unknown unattended asks" test_unknown_unattended_defaults_to_ask
+run_test "action override allows PR reply" test_action_override_can_allow_pr_reply
 run_test "policy override denies workspace write" test_policy_override_can_deny_workspace_write
 run_test "unattended requires non-default branch" test_unattended_requires_non_default_branch_by_default
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline

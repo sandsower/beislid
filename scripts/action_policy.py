@@ -46,6 +46,7 @@ KNOWN_ACTIONS: dict[str, dict[str, Any]] = {
     "git.push": {"classes": ["git-remote"], "description": "Push commits to a remote"},
     "gh.issue.view": {"classes": ["network-read"], "description": "Read an issue through gh"},
     "gh.pr.create": {"classes": ["git-remote"], "description": "Create a pull request"},
+    "pr.review.reply": {"classes": ["git-remote"], "description": "Post a PR review reply"},
     "dependency.install": {"classes": ["workspace-write", "dependency-install", "network-read"], "description": "Install dependencies"},
     "shell.rm": {"classes": ["workspace-write", "destructive"], "description": "Delete files"},
 }
@@ -148,6 +149,11 @@ def normalize_policy(policy: dict[str, Any]) -> dict[str, Any]:
             validate_decision(str(decision), f"{mode}.{cls}")
         for field in ("unknown_action", "unclassified_action"):
             validate_decision(str(mode_policy.get(field, "ask")), f"{mode}.{field}")
+        actions = mode_policy.get("actions", {})
+        if not isinstance(actions, dict):
+            raise SystemExit(f"policy.modes.{mode}.actions must be an object")
+        for action_id, decision in actions.items():
+            validate_decision(str(decision), f"{mode}.actions.{action_id}")
         sandbox = mode_policy.get("sandbox", {})
         if not isinstance(sandbox, dict):
             raise SystemExit(f"policy.modes.{mode}.sandbox must be an object")
@@ -201,6 +207,7 @@ def policy_summary(policy: dict[str, Any]) -> dict[str, Any]:
             "unknown_action": mode_policy.get("unknown_action", "ask"),
             "unclassified_action": mode_policy.get("unclassified_action", "ask"),
             "sandbox": mode_policy.get("sandbox", {}),
+            "actions": mode_policy.get("actions", {}),
         }
     return {
         "status": "ok",
@@ -251,6 +258,12 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         unclassified_decision = validate_decision(str(mode_policy.get("unclassified_action", "ask")), f"{run_mode}.unclassified_action")
         decision = stricter(decision, unclassified_decision)
         matched_rules.append({"type": "fallback", "rule": "unclassified_action", "decision": unclassified_decision})
+
+    action_overrides = mode_policy.get("actions", {})
+    if action in action_overrides:
+        action_decision = validate_decision(str(action_overrides[action]), f"{run_mode}.actions.{action}")
+        decision = action_decision
+        matched_rules.append({"type": "action", "action": action, "decision": action_decision})
 
     sandbox_status = payload.get("sandbox_status") if isinstance(payload.get("sandbox_status"), dict) else {}
     sandbox_dec, sandbox_rules, sandbox_hints, required_baseline = sandbox_decision(mode_policy, sandbox_status, run_mode)
