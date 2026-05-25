@@ -50,7 +50,7 @@ If draft PRs plus provider bot review are supported, after approval offer draft-
 
 ## 4c. Push and create PR
 
-Before push, if the PR provider is GitHub/`gh` and changed files include `.github/workflows/`, preflight auth for `workflow` scope (for example `gh auth status`). If scope is missing or cannot be checked, warn and ask retry / proceed-with-warning / abort. This preflight is skipped for non-GitHub/non-`gh` providers.
+Policy-check push/PR create/draft-ready as `git-remote`; record envelopes/`ask` outcomes. If GitHub/`gh` and `.github/workflows/` changed, preflight `workflow` scope. If scope is missing or cannot be checked, warn and ask retry / proceed-with-warning / abort. This preflight is skipped for non-GitHub/non-`gh` providers.
 
 Run push/PR commands from explicit repo cwd. Always pass the branch with `--head <branch>`; do not rely on `gh` inferring upstream, especially when uncommitted/untracked files exist.
 
@@ -90,6 +90,6 @@ Print the Phase 4 exit one-liner from `ready-for-review-templates.md`. In verbos
 
 ## Phase-local tripwires
 
-- Never create/ready a PR without the explicit approvals defined above.
+- Never push/create/ready a PR without policy and explicit approvals.
 - Ticket association is confirmed id or `none`; never guessed from issue lists.
 - Always create PRs with explicit repo cwd and `--head <branch>`.

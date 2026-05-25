@@ -22,14 +22,14 @@ Compose a concise implementation-plan update:
 
 If `ticket_update` is not configured, print the update for manual posting using `kickoff-templates.md` copy.
 
-If configured: `probe(ticket_update)` before posting. Kickoff uses only the comment channel:
+If configured: `probe(ticket_update)` and evaluate action policy for `ticket.comment` with class `network-read` plus the write class appropriate to the provider (`git-remote`/external write for tracker APIs) before posting. Kickoff uses only the comment channel:
 
 - **mcp:** call `ticket_update.comment_tool` with ticket ID and body.
 - **cli:** write the approved body to a temp file, then run `ticket_update.comment_command` with `{id}` and `{body_file}` substituted. Never interpolate the raw body into the shell.
 
 If the configured command uses `{body}` instead of `{body_file}`, stop and ask the user to update workflow.md via `/setup` or print the update manually for this run.
 
-Show the exact body and wait for user approval before posting. On probe failure `(b)`, print the body for manual posting; do not write the skipped result to cache.
+Show the exact body and wait for user approval before posting. On policy `deny`, print the body for manual posting instead of posting. On probe failure `(b)`, print the body for manual posting; do not write the skipped result to cache.
 
 ### 8b. Transition to implementation
 
@@ -41,6 +41,6 @@ Print the Step 8 exit one-liner. Required outputs: update status (`posted` or `p
 
 ## Tripwires
 
-- Always show the ticket update body before posting.
+- Always evaluate policy and show the ticket update body before posting.
 - CLI updates must use temp-file placeholders; never interpolate raw body text.
 - Do not start implementation before approved blueprint and update handling.

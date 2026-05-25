@@ -8,11 +8,11 @@ Inputs: `base`, `branch`, ticket id, fast-path flag/PR URL, `needs_merge`, diff 
 
 Outputs: gate envelopes, status/duration/count, autofix count, user decisions, fast-path parallel status, new commits/changes, reviewer warnings, browser advisory result, walkthrough result, and resume route.
 
-Print Phase 2 entry/exit one-liners from `ready-for-review-templates.md`. In verbose mode, emit aux-load, phase boundary, exit-check, probe, skipped-scope, and transcript-safe gate summaries.
+Print Phase 2 entry/exit one-liners. Verbose mode emits aux/probe/gate summaries.
 
 ## 2a. Merge base if stale
 
-If `needs_merge` is true, merge the already-fetched base:
+If `needs_merge`, policy-check `git.merge` (`workspace-write`, `git-local`) and merge only on `allow`/approved `ask`:
 
 ```bash
 git merge origin/<base>
@@ -37,7 +37,7 @@ Execution:
 1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
 3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md` (pytest parser when pytest-like, otherwise generic). Store raw logs by path when possible, else a safe summary.
-4. Autofix only when the envelope is `status: fail` and `environment_failure: false`: show envelope summary, run only that autofix, show diff, and ask before committing. Ask the commit approval question exactly once in user-visible output; do not duplicate it across progress prose and the final/blocking response.
+4. Autofix only when `fail` and not environment failure: policy-check `gate.autofix` (`workspace-write` plus non-read classes), show summary, run on `allow`/approved `ask`, show diff, ask before commit. Ask the commit approval question exactly once in user-visible output; do not duplicate it across progress prose and the final/blocking response.
 5. For `status: error`, `environment_failure: true`, or no `autofix`, prompt from the envelope (`summary`, failures, flags, action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess. In parallel, wait for siblings and surface all failure envelopes together.
 6. After a fix, re-run the applicable gate before advancing. If the user explicitly proceeds without a passing gate, record that decision/risk.
 
@@ -55,7 +55,7 @@ Otherwise:
 
 1. `probe(translation_sync.skill)`. On failure, use the Phase 2c prompt from `ready-for-review-templates.md`.
 2. If probe resolves, invoke the configured skill via the host agent's skill mechanism. The skill owns pull/push cycles and may commit translation files.
-3. If new translation files or edits result, ask the user before committing them.
+3. If translation edits result, policy-check `git.commit` (`workspace-write`, `git-local`), then ask before committing.
 
 If the invoked skill reports machine- or AI-generated user-facing content, carry that warning to Phase 4. Do not silently pass AI-authored translations/localized copy to reviewers.
 
@@ -101,5 +101,5 @@ If the user explicitly asks for a durable visual proof/review artifact, suggest 
 
 - Run only applicable gates: touched scopes when scoped, top-level gates only when scopes are absent.
 - Fast-path parallelism requires `parallel_safe: true`; absence of `autofix` alone is not enough, and `mutates: true` gates are never parallel candidates.
-- Only configured `autofix` commands may run automatically; all other failures need user direction.
+- Only configured `autofix` commands may run after policy; other failures need user direction.
 - Walkthrough is optional and `show-me` requires an explicit user request; neither is an automatic blocker.

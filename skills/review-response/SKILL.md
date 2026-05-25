@@ -9,7 +9,7 @@ Address post-submission feedback: PR review threads, PR comments, QA ticket comm
 
 **Don't use this for:** starting new ticket work, creating PRs, or reviewing someone else's PR. Use `kickoff`, `ready-for-review`, or `pr-patrol` instead.
 
-Project config lives at `<repo>/.beislid/workflow.md` (typed-key fenced YAML blocks; format reference at `workflow-md-format.md`). Capabilities are probed lazily on first need per `probe-semantics.md`. Output prose follows `output-templates.md` and `review-response-templates.md`.
+Project config lives at `<repo>/.beislid/workflow.md` (typed-key fenced YAML blocks; format reference at `workflow-md-format.md`). Capabilities are probed lazily on first need per `probe-semantics.md`. Action-risk decisions follow `action-policy-protocol.md`. Output prose follows `output-templates.md` and `review-response-templates.md`.
 
 ---
 
@@ -69,7 +69,7 @@ Review-response phases are authoritative only after their aux files are read. At
 - Phase 2: `skills/review-response/phase-2-fix.md`
 - Phase 3: `skills/review-response/phase-3-push.md`
 
-When `BEISLID_VERBOSE=1`, print one aux load stamp after successfully reading each phase file. Stamp format is `✓ review-response/<phase-file-stem> v1 loaded` for `phase-1-detect`, `phase-2-fix`, and `phase-3-push`.
+Read `action-policy-protocol.md` before Phase 2/3 side effects. When `BEISLID_VERBOSE=1`, print one aux load stamp after successfully reading each phase file. Stamp format is `✓ review-response/<phase-file-stem> v1 loaded` for `phase-1-detect`, `phase-2-fix`, and `phase-3-push`.
 
 ## Checklist
 
@@ -95,7 +95,7 @@ Read and follow `phase-3-push.md`. Print the entry/exit one-liners from `review-
 
 ## Common mistakes
 
-- **Using hidden GitHub writes.** PR review reads/writes come from `pr_review_source` and `pr_review_update`; otherwise paste/print manually.
+- **Using hidden GitHub writes.** PR review reads/writes come from `pr_review_source` and `pr_review_update`; otherwise paste/print manually. Evaluate action policy before covered writes.
 - **Continuing without feedback context.** Source failure `(b)` means strict paste now, not blind skip.
 - **Offering fast path for judgment calls.** Fast path is only for obviously clear fetched feedback with non-manual update paths.
 - **Interpolating reply bodies into shell commands.** Use JSON temp files for PR review updates and body/title temp files for ticket updates.

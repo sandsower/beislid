@@ -25,11 +25,11 @@ Offer the fast path only when every item is obviously clear or already addressed
 
 Use the authorization copy from `review-response-templates.md`. If the user approves, that single approval authorizes:
 
-- making clear fixes
-- committing
+- making clear fixes after policy `allow` or approved `ask`
+- committing after policy `allow` or approved `ask`
 - running gates
-- pushing
-- posting `Fixed in <short-sha>` PR replies when `pr_review_update` is CLI and ok
+- pushing after policy `allow` or approved `ask`
+- posting `Fixed in <short-sha>` PR replies when `pr_review_update` is CLI and ok and policy allows or `ask` is approved
 - posting QA/ticket clear-fix replies when `ticket_update` is configured and ok
 - re-requesting review only if warranted by the rule in Phase 3
 
@@ -40,7 +40,7 @@ Never fast-path product judgment, architectural tradeoffs, ambiguous intent, pus
 Work item by item unless fast path was approved:
 
 1. Read relevant files and surrounding code.
-2. Make the fix or investigation-driven change.
+2. Evaluate action policy for the workspace write (`workspace-write` plus any known non-read class), then make the fix or investigation-driven change only when policy allows or `ask` is approved.
 3. For pushback or clarification, draft reasoning instead of changing code.
 4. Show substantive replies to the user before posting.
 
@@ -56,7 +56,7 @@ For out-of-scope QA/ticket items:
 
 1. Draft a child-ticket title/body.
 2. Ask for approval.
-3. If approved and `ticket_update` has an issue channel, `probe(ticket_update)` and create it. For CLI issue commands, write title and body to temp files and substitute `{title_file}` + `{body_file}`; never interpolate raw text.
+3. If approved and `ticket_update` has an issue channel, `probe(ticket_update)`, evaluate action policy for `ticket.create_child` with external write classes, and create it only when policy allows or `ask` is approved. For CLI issue commands, write title and body to temp files and substitute `{title_file}` + `{body_file}`; never interpolate raw text.
 4. If absent/manual/skipped, print the child-ticket draft.
 5. Draft a reply: `Tracked in <new-ticket-id>` or manual equivalent.
 
@@ -65,6 +65,7 @@ For clarification-needed items, draft a question and ask approval before posting
 ## Outputs to Phase 3
 
 - fix commits made or note that no code changes were needed
+- policy decision envelopes and accepted/declined `ask` outcomes
 - changed files and whether changes are cosmetic or functional
 - reply drafts plus source metadata
 - approved fast-path status, if any

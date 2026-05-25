@@ -9,7 +9,7 @@ Turn a checked-out feature branch and ticket into an implementation-ready plan. 
 
 **Don't use this for:** creating PRs, handling review/QA feedback, or PR handoff for completed work. Use `ready-for-review` or `review-response` for those.
 
-Project config lives at `<repo>/.beislid/workflow.md` (typed-key fenced YAML blocks; format reference at `workflow-md-format.md`). Capabilities are probed lazily on first need per `probe-semantics.md`. Output prose follows `output-templates.md` and `kickoff-templates.md`.
+Project config: `<repo>/.beislid/workflow.md` (see `workflow-md-format.md`). Probe lazily; policy-check side effects per `action-policy-protocol.md`. Output follows templates.
 
 ---
 
@@ -61,6 +61,7 @@ On clean run end, write probed/re-probed capability entries back to `<repo_hash>
 - No implementation starts before approved design.
 - Do not treat `.beislid/checkpoints/latest.json` as the durable run ledger.
 - Show and approve ticket update bodies before posting.
+- Policy-check ticket/lifecycle/checkpoint side effects; `ask` requires approval, `deny` stops or prints manual fallback.
 - CLI ticket updates must use `{body_file}`, never raw body interpolation.
 - Lifecycle actions are configured side effects; run only supported providers and do not silently ignore failures.
 
@@ -70,7 +71,7 @@ Complete steps in order. At each step entry, read the step aux file and follow i
 
 > 🛑 Could not read `skills/kickoff/<step-file>.md`. Kickoff cannot safely execute this step from memory; reinstall Beislið or restore the file.
 
-When `BEISLID_VERBOSE=1`, print one aux load stamp after successfully reading a step file, e.g. `✓ kickoff/step-1-ticket v1 loaded`, and include step exit checks in the transcript/output when practical.
+Read `action-policy-protocol.md` before Step 1 side effects. Verbose mode prints aux load stamps and step exit checks when practical.
 
 ## Checklist and required outputs
 

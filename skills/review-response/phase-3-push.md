@@ -22,13 +22,13 @@ Categorize the fix diff by scope:
 
 Normalize each gate before selection. A legacy flat gate with `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes legacy gates and rich gates where `stage` is absent or `pre-pr`, `kind` is absent or `sensor`, `command` is present, and `execution` is absent or `computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
 
-Before each selected gate command, `probe(scopes.<scope>.gates[<gate>].command)` or `probe(gates[<gate>].command)` as a CLI command, plus CLI `command -v` probes for any `required_tools[]` binaries. On failure use the gate prompt from `review-response-templates.md`; `(b)` skips only this gate for the session and is not written to cache.
+Before each selected gate, probe the gate command plus any `required_tools[]`. On failure use the gate prompt; `(b)` skips only this gate and is not cached.
 
-For every gate run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md`; use the pytest parser for pytest-like output, otherwise generic text. Store raw logs by path when possible, or a transcript-safe summary.
+For every gate, capture duration and parse stdout/stderr into the shared Gate envelope; use pytest parser for pytest-like output, otherwise generic. Store raw logs by path when possible, or a safe summary.
 
 Gate failure handling:
 
-- Gate with `autofix` and envelope `status: fail` / `environment_failure: false`: show the envelope summary, run autofix, show diff, ask before committing.
+- Gate `autofix` with `fail` / not env failure: show summary, policy-check, run on `allow`/approved `ask`, show diff, ask before commit.
 - Envelope `status: error` or `environment_failure: true`: do not run autofix; prompt to repair/retry the environment or abort.
 - Gate without `autofix`: prompt from the envelope (`summary`, key failures, retryable/environment flags, suggested next action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess.
 
@@ -38,9 +38,11 @@ If `split_policy: exclusive` and post-fix diff touches more than one scope, warn
 
 Skip if `translation_sync` is not configured or no fix-diff file matches `trigger_paths`.
 
-Otherwise `probe(translation_sync.skill)` before invoking. If ok, invoke the skill. It may commit translation files; ask approval before committing generated changes.
+Otherwise `probe(translation_sync.skill)` before invoking. If ok, invoke it. It may commit translation files; policy-check `git.commit`, then ask before commit.
 
 ## 3d. Push
+
+Policy-check `git.push` (`git-remote`), then push on `allow`/approved `ask`:
 
 ```bash
 git push
@@ -50,7 +52,7 @@ git push
 
 For PR review items:
 
-- If `pr_review_update.type: cli`, `probe(pr_review_update)` before the first write.
+- If `pr_review_update.type: cli`, `probe(pr_review_update)` and policy-check `pr.review.reply`.
 - Write temp JSON payloads and substitute `{json_file}` into configured commands. Never shell-interpolate comment bodies.
 - Clear-fix replies may be `Fixed in <short-sha>` after commit/push when fast path or item-level approval authorized them.
 - Pushback and clarification replies always require per-item approval before posting.
@@ -64,9 +66,9 @@ Reply payload:
 
 For QA/ticket items:
 
-- Use `ticket_update.comment_tool` / `comment_command` after approval.
-- For CLI comment commands, write reply text to a temp file and substitute `{body_file}` with the path. Never interpolate raw reply text into the shell. If the configured command uses `{body}` instead of `{body_file}`, stop and ask the user to update workflow.md via `/setup` or print the reply manually for this run.
-- If absent or skipped, print manual reply text.
+- Use `ticket_update.comment_tool` / `comment_command` after approval and `ticket.comment` policy.
+- CLI commands write reply text to temp file and substitute `{body_file}`; never raw body shell interpolation. If configured `{body}`, stop and ask for `/setup` update or print manually.
+- If absent/skipped, print manual reply text.
 
 ## 3f. Re-request review
 
@@ -78,7 +80,7 @@ If warranted and `pr_review_update.rerequest_command` exists, write JSON payload
 { "reviewers": ["<reviewer>"] }
 ```
 
-Run configured command with `{json_file}`. If `rerequest_command` is absent/manual/skipped, print instructions.
+Policy-check `pr.review.rerequest`, then run configured command with `{json_file}` on `allow`/approved `ask`. If absent/manual/skipped, print instructions.
 
 ## Outputs to run end
 
@@ -86,4 +88,5 @@ Run configured command with `{json_file}`. If `rerequest_command` is absent/manu
 - replies posted or printed
 - gate envelopes/status, skipped-by-stage/skipped-by-execution rich gates, and any accepted skips
 - review re-request status if warranted
+- policy envelopes and `ask` outcomes
 - probe/cache entries to write back

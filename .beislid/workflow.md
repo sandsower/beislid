@@ -49,6 +49,17 @@ Agent smoke is intentionally not a default quality gate because it spends model 
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
 ```
 
+## Action policy
+
+This repo auto-allows PR review reply posting in supervised review-response runs while keeping other remote git/PR actions on the built-in approval path.
+
+```beislid:action_policy
+modes:
+  supervised-auto:
+    actions:
+      pr.review.reply: allow
+```
+
 ## Translation sync
 
 Disabled for this project — Beislið has no user-facing translations.

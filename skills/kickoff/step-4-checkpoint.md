@@ -23,7 +23,7 @@ Supported P0 action shape:
   path: 'checkpoints/{event}-{ticket_id}.md'
 ```
 
-Execute only `type: artifact`; skip other providers as reserved. Use the same artifact safety posture as `spec`/`blueprint`: omitted `approval` means `prompt`; `auto` writes only a missing target; existing targets always prompt for overwrite / choose path / skip. Skip, failed writes, and reserved actions do not block kickoff routing.
+Before each checkpoint artifact write, evaluate action policy for `checkpoint.kickoff_context_ready.<name>` with class `workspace-write`. Execute only `type: artifact`; skip other providers as reserved. Use the same artifact safety posture as `spec`/`blueprint`: omitted `approval` means `prompt`; `auto` writes only a missing target; existing targets always prompt for overwrite / choose path / skip. Skip, failed writes, reserved actions, and policy denials do not block kickoff routing; record the skipped/denied status.
 
 Default path: `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Supported placeholders are `{event}` (`kickoff_context_ready`), `{feature}`, `{kind}` (`checkpoint`), and `{ticket_id}`. Derive `{feature}` from ticket title, then branch; ask if none. Paths must be relative repo-local `.md` files with no `..`.
 

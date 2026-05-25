@@ -10,7 +10,7 @@ Take a completed branch through gates, review, final check, and PR creation. Exi
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 
-Project config lives at `<repo>/.beislid/workflow.md` (typed-key fenced YAML blocks; format reference at `workflow-md-format.md`). Capabilities are probed lazily on first need. Output prose follows `output-templates.md` and `ready-for-review-templates.md`.
+Project config: `<repo>/.beislid/workflow.md` (format: `workflow-md-format.md`). Probe lazily. Use `action-policy-protocol.md` before side effects. Output follows `output-templates.md` and `ready-for-review-templates.md`.
 
 ---
 
@@ -58,7 +58,8 @@ Rules: never silently downgrade a configured capability to unconfigured behavior
 - No-ticket PR handoff must be explicit (`ticket_id = none`); never infer issues from open issue lists.
 - Never push/create a PR from the default/base branch; Phase 1 branches/commits approved paths first.
 - Do not commit, push, create a PR, or mark a draft ready without the existing user-approval gates.
-- Fast-path mode never bypasses gates, blocking review handling, reduced-coverage acceptance, or PR approval.
+- Covered side effects require action-policy evaluation; `ask` needs approval, `deny` stops.
+- Fast-path mode never bypasses gates, blocking review handling, reduced-coverage acceptance, policy, or PR approval.
 - PR creation must run from explicit repo cwd and pass `--head <branch>`.
 - Run-ledger resume hints return only to safe protocol boundaries; ask normal approvals again.
 
@@ -68,7 +69,7 @@ Complete phases in order. At each entry, read the phase aux and follow it. Phase
 
 > 🛑 Could not read `skills/ready-for-review/<phase-file>.md`. Ready-for-review cannot safely execute this phase from memory; reinstall Beislið or restore the file.
 
-When `BEISLID_VERBOSE=1`, emit the aux load stamp from `ready-for-review-templates.md`, append the transcript boundary, and include loaded/not-reached aux files at run end.
+Read `action-policy-protocol.md` before Phase 2 side effects. Verbose mode emits aux stamps/transcript boundaries and loaded/not-reached aux files.
 
 ## Phase 1: Detect
 
@@ -94,7 +95,7 @@ Read and follow `phase-2-gates.md`.
 Inputs: Phase 1 outputs, configured scopes/gates, trigger booleans, `needs_merge`, existing-PR fast-path state, and small-diff fast-path eligibility.
 
 Required outputs:
-- stale base merged or explicitly blocked on conflicts
+- stale base merge policy-checked or blocked
 - applicable gates run by touched scope or top-level config
 - autofix diffs shown and committed only with user approval
 - non-autofix failures surfaced for user direction
@@ -132,7 +133,7 @@ Required outputs:
 - ticket title fetched/pasted, or `ticket_id=none` recorded as no issue
 - PR title/body drafted, optionally formatted, shown to the user, and explicitly approved
 - optional draft-bot-review path handled when supported and accepted
-- branch pushed and PR created only after approval
+- branch pushed/PR created only after policy and approval
 - domain knowledge capture considered
 - structured memento/session-memory brief attempted when enabled/detected
 - ledger finalized with PR URL, risks, side effects, artifacts, and memory status if active
