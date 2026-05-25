@@ -57,6 +57,7 @@ This repo auto-allows PR review reply posting in supervised review-response runs
 modes:
   supervised-auto:
     actions:
+      # ticket.fetch is read-only and needed by orchestrators alongside review replies.
       ticket.fetch: allow
       pr.review.reply: allow
 ```

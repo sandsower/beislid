@@ -141,7 +141,7 @@ selectors:
 ```
 ````
 
-When multiple selectors match, Beislið unions their gate sets deterministically in selector/config order and de-dupes repeated gates. Runs should explain why each gate was selected and why unmatched selectors or non-executable staged gates were skipped.
+When multiple selectors match, Beislið unions their gate sets deterministically: first by selector order, then by `gate_sets` order within each selector, then by gate declaration order within each set. De-duplication preserves the first occurrence in that order. Runs should explain why each selector, gate set, and gate declaration was selected or skipped.
 
 Rich gate metadata can describe where a check belongs in the harness and how agents should interpret failures:
 

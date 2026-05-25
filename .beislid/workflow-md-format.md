@@ -253,7 +253,7 @@ selectors:
 ```
 ````
 
-Selection is driven by the changed file list. Orchestrators evaluate selectors in file/config order, match `paths` with git-style globs, apply optional `exclude` globs, then union the referenced sets deterministically: first selector order, then `gate_sets` order inside the selector, then gate declaration order inside each set. Duplicate gates are de-duped by stable identity (`set`, `scope/cwd`, `name`, `command`) so the first selection reason wins.
+Selection is driven by the changed file list. Orchestrators evaluate selectors in file/config order, match `paths` with git-style globs, apply optional `exclude` globs, then union the referenced sets deterministically: first selector order, then `gate_sets` order inside the selector, then gate declaration order inside each set. Duplicate gates are de-duped by stable identity (`set`, `cwd`, `name`, `command`) so the first selection reason wins.
 
 Every run should explain selection. For each selected gate, record the changed file(s), selector, and gate set that selected it. For skipped selectors, record that no changed file matched. For skipped gates, record whether the reason was stage, execution/kind, missing command/tools, or another normalized-gate rule. P0 `ready-for-review` and `review-response` execute only selected gates that also normalize to executable computational `pre-pr` sensors; other stages remain metadata and are reported as skipped, not run at the wrong lifecycle point.
 
