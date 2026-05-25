@@ -237,7 +237,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 
 **On (1) Add a section:** present a sub-menu of optional sections that aren't yet configured. Each item shows a one-line "when this fires" hint (plain English, not phase-numbered):
 
-- **Scopes & quality gates** — *Run lint/test commands across the repo or scopes. Simple gates need only name+command; rich gates may add stage, cost, timeout, selectors, output parser, and failure policy.*
+- **Scopes & quality gates** — *Run lint/test commands across the repo, scopes, or changed-file-aware gate sets. Simple gates need only name+command; rich gates may add stage, cost, timeout, selectors, output parser, and failure policy.*
 - **Explore skill** — *Let kickoff Step 2 run a project skill as an exploration enhancer or replacement before design.*
 - **Translation sync** — *Run a translation-sync skill during quality gates whenever paths under your trigger globs are touched.*
 - **Browser compatibility** — *Run an advisory browser compatibility skill during quality gates whenever paths under your trigger globs are touched. Doesn't block PR handoff.*
@@ -279,7 +279,7 @@ Show diff; confirm; write.
 
 ### Scopes & quality gates
 
-Configure either top-level `gates` or scoped `scopes`; do not configure both unless a future format explicitly supports precedence. Default to the simple backward-compatible gate shape and offer advanced rich metadata only when the user asks for staged/Rondo-style gates.
+Configure one gate model: changed-file-aware `gate_sets`, scoped `scopes`, or top-level `gates`. Prefer `gate_sets` when the user wants reusable named checks, selector explanations, staged/rich gates by changed path, or multiple touched areas that union checks deterministically. Keep `scopes` and top-level `gates` backward-compatible.
 
 For each simple gate ask: gate name, command, optional autofix command, and whether it is independent/read-only enough for `parallel_safe: true`. Explain that flat gates remain valid and default to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`.
 
@@ -292,6 +292,8 @@ If the user chooses rich metadata, collect only fields they can answer confident
 - changed-file selector globs under `changed_file_selector.include` / `exclude`
 - `output.parser` and `output.agent_summary`
 - `failure.retryable`, `failure.max_fix_iterations`, `failure.stop_if_patterns`, and `failure.hint`
+
+For `gate_sets`, collect named sets first (set name, optional cwd, gates), then ordered selectors (selector name, path globs, optional exclude globs, referenced set names). Explain that multiple matching selectors union gate sets deterministically and orchestrators should report selected/skipped reasons.
 
 Warn that P0 `ready-for-review` and `review-response` run legacy/pre-pr command gates. Other stages are valid metadata for Rondo/future orchestrators and should not be presented as active blockers in today's PR handoff flows.
 

@@ -14,13 +14,14 @@ If only cosmetic changes were made, pushing without gates is allowed after telli
 
 ## 3b. Run gates
 
-Categorize the fix diff by scope:
+Categorize the fix diff by gate model:
 
-- If `scopes` is configured: for each scope touched by the fix commits, `pushd <scope.cwd>` and run executable `pre-pr` gates in order.
-- If top-level `gates` is configured and no scopes are configured: run executable `pre-pr` gates from repo root.
-- If neither is configured: print `no gates configured — skipping`.
+- `gate_sets`: match selectors, apply excludes, union/de-dupe sets, apply set `cwd`/`stage` defaults before normalization, run selected executable `pre-pr` gates, and record reasons.
+- `scopes`: for each touched scope, `pushd <scope.cwd>` and run executable `pre-pr` gates.
+- top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
+- none: print `no gates configured — skipping`.
 
-Normalize each gate before selection. A legacy flat gate with `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes legacy gates and rich gates where `stage` is absent or `pre-pr`, `kind` is absent or `sensor`, `command` is present, and `execution` is absent or `computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
+Normalize effective gates after `gate_sets` selection, or before legacy scope/top-level selection. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` is present, and `execution` is absent/`computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
 
 Before each selected gate, probe the gate command plus any `required_tools[]`. On failure use the gate prompt; `(b)` skips only this gate and is not cached.
 
@@ -32,7 +33,7 @@ Gate failure handling:
 - Envelope `status: error` or `environment_failure: true`: do not run autofix; prompt to repair/retry the environment or abort.
 - Gate without `autofix`: prompt from the envelope (`summary`, key failures, retryable/environment flags, suggested next action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess.
 
-If `split_policy: exclusive` and post-fix diff touches more than one scope, warn but do not block — the PR already exists.
+If `split_policy: exclusive` and post-fix diff touches >1 scope, warn but don't block. `gate_sets` unioning areas is not itself a violation.
 
 ## 3c. Translation sync
 
@@ -86,7 +87,7 @@ Policy-check `pr.review.rerequest`, then run configured command with `{json_file
 
 - pushed branch status
 - replies posted or printed
-- gate envelopes/status, skipped-by-stage/skipped-by-execution rich gates, and any accepted skips
+- gate envelopes/status, selection model, selected/skipped reasons, skipped-by-stage/skipped-by-execution rich gates, and any accepted skips
 - review re-request status if warranted
 - policy envelopes and `ask` outcomes
 - probe/cache entries to write back

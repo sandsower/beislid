@@ -4,7 +4,7 @@ Loaded just in time after Phase 1. If this file cannot be read, hard-fail; do no
 
 ## Inputs / outputs
 
-Inputs: `base`, `branch`, ticket id, fast-path flag/PR URL, `needs_merge`, diff stats, touched scopes, configured `scopes`/top-level `gates`, optional `translation_sync`, `browser_compat`, `guided_walkthrough`, trigger booleans, and accumulated notes/warnings.
+Inputs: base/branch/ticket/PR, merge/diff state, gate model (`gate_sets`/scopes/repo-root), configured gates, optional triggered skills/walkthrough, notes/warnings.
 
 Outputs: gate envelopes, status/duration/count, autofix count, user decisions, fast-path parallel status, new commits/changes, reviewer warnings, browser advisory result, walkthrough result, and resume route.
 
@@ -24,13 +24,14 @@ If conflicts occur, stop and ask the user for help. After resolution, continue P
 
 Run applicable checks in order and fail fast; fast-path may parallelize safe gates after probing. Selection is config-driven:
 
-- `scopes`: run touched scopes only (`pushd <scope.cwd>`, run executable pre-pr gates, `popd`).
+- `gate_sets`: run Phase 1 selected gates. Apply set `cwd`/`stage` defaults before normalization; gate fields win. Preserve order, de-dupe, and record reasons.
+- `scopes`: run touched scopes only (`pushd <scope.cwd>`, executable pre-pr gates, `popd`).
 - top-level `gates`: run executable pre-pr gates from repo root.
-- neither: print `no gates configured — skipping` and continue.
+- none: print `no gates configured — skipping`.
 
 Normalize per `workflow-md-format.md`: flat `name`+`command` means pre-pr computational sensor. P0 ready-for-review executes legacy gates plus rich gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` exists, and `execution` is absent/`computational`. Record other stages as `skipped-by-stage`; record pre-pr non-computational/non-sensor as `skipped-by-execution`. Treat rich `output`/`failure` as prompt context.
 
-Probe each selected gate once (`probe(scopes.<scope>.gates[<gate>].command)` or top-level equivalent), plus `required_tools[]` binaries via `command -v`. On probe failure, use the Phase 2b prompt in `ready-for-review-templates.md`.
+Probe each selected gate once (`probe(gate_sets.sets.<set>.gates[<gate>].command)`, scope, or top-level equivalent), plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
 
 Execution:
 
@@ -43,7 +44,7 @@ Execution:
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state for cache write-back. Plain git checks are not probe-cache entries.
 
-Track gate envelopes, skipped counts, scopes, duration, autofix count, parallel/sequential mode, probe/cache updates, rich metadata used, and approved exceptions for Phase 2 exit, Phase 3 context, and transcript.
+Track envelopes, skipped counts/reasons, gate model/areas, duration, autofix count, parallel mode, probe/cache updates, rich metadata, and approved exceptions.
 
 ## 2c. Translation sync
 
@@ -99,7 +100,7 @@ If the user explicitly asks for a durable visual proof/review artifact, suggest 
 
 ## Phase-local tripwires
 
-- Run only applicable gates: touched scopes when scoped, top-level gates only when scopes are absent.
+- Run only applicable gates: `gate_sets` selection when configured, otherwise touched scopes when scoped, otherwise top-level gates only when scopes are absent.
 - Fast-path parallelism requires `parallel_safe: true`; absence of `autofix` alone is not enough, and `mutates: true` gates are never parallel candidates.
 - Only configured `autofix` commands may run after policy; other failures need user direction.
 - Walkthrough is optional and `show-me` requires an explicit user request; neither is an automatic blocker.
