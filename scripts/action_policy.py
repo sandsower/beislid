@@ -57,16 +57,16 @@ DEFAULT_POLICY: dict[str, Any] = {
             "rules": {
                 "read": "allow",
                 "network-read": "allow",
-                "workspace-write": "ask",
+                "workspace-write": "allow",
                 "dependency-install": "ask",
-                "git-local": "ask",
+                "git-local": "allow",
                 "git-remote": "ask",
                 "destructive": "deny",
                 "secret-bearing": "ask",
             },
-            "unknown_action": "ask",
-            "unclassified_action": "ask",
-            "sandbox": {"minimum": "none", "on_uncommitted_changes": "ask"},
+            "unknown_action": "allow",
+            "unclassified_action": "allow",
+            "sandbox": {"minimum": "none", "on_uncommitted_changes": "allow"},
         },
         "unattended-auto": {
             "rules": {
