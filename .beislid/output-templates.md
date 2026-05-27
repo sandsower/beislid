@@ -86,6 +86,16 @@ Parser rules:
 
 Failure prompts must show `summary`, key `failures`, `retryable`, `environment_failure`, `suggested_next_action`, and raw-log path/summary. Do not dump full raw logs into the prompt unless the user asks.
 
+## Model routing status envelope
+
+When a host/orchestrator evaluates `beislid:model_routing`, summarize the result before invoking the routed skill or subagent:
+
+```yaml
+model_routing: {skill: "<skill>", status: honored | fallback | unsupported | blocked, requested: ["opus"], resolved: "<model or host-default>", mode: prefer | require, reason: "short explanation"}
+```
+
+`prefer` routes may continue with `fallback` or `unsupported`; `require` routes use `blocked` when no candidate can be honored and must stop before the routed invocation. Do not claim routing was honored unless the host actually selected one of the requested candidates.
+
 ## Verbose-stamps layout
 
 When `BEISLID_VERBOSE=1` is set, structured stamps appear *under* the prose, separated by a `---` divider. Stamps never replace the prose narration — they augment it.

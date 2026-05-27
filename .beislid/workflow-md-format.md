@@ -29,6 +29,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Domain capture`
 - `PR description`
 - `Guided walkthrough`
+- `Model routing`
 - `Probe cache`
 - `Skill-specific overrides`
 - `Ready-for-review`
@@ -91,6 +92,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Action policy:**
 - `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
 
+**Model routing:**
+- `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), and `skills` (required on overrides). `when` is reserved for future conditional routing and is not executable in v1.
+
 **Kickoff overrides:**
 - `explore` — fields: `skill` (Beislið skill name), `mode` (`replace` or `enhance`; default `enhance`). Put this block under a `## Kickoff` or `## Skill-specific overrides` section. Used by kickoff Step 2 before implementation design.
 
@@ -113,6 +117,28 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `probe_cache` — fields: `ttl_hours` (integer; defaults to 24 when absent)
 
 Capabilities not in this list are unknown — doctor reports them with a `💭` inline note and continues.
+
+## Model routing shape
+
+`model_routing` lets a repo declare which host model candidates should run specific Beislið skills. It is a host-adapter control contract: hosts honor it when they expose model selection, disclose fallback when they cannot, and block only for required routes that cannot be honored.
+
+````markdown
+## Model routing
+
+```beislid:model_routing
+defaults:
+  models: [sonnet]
+  mode: prefer
+overrides:
+  - skills: [spec, blueprint, poke-holes]
+    models: [opus, openai:gpt-5.5]
+    mode: require
+  - skills: [implement, ready-for-review, review-response]
+    model: sonnet
+```
+````
+
+`model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
 
 ## Fresh-eyes replacement shape
 
