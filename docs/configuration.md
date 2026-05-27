@@ -30,6 +30,7 @@ setup
 - quality gates
 - scopes
 - action policy overrides
+- per-skill model routing hints/requirements
 - custom kickoff explore skills and triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 - probe cache settings
@@ -59,6 +60,7 @@ Doctor checks:
 - duplicate or unknown config keys
 - disabled vs missing capabilities
 - whether configured commands/tools are reachable in the current host session
+- validation-only config such as action policy and model routing
 - probe cache freshness
 
 Doctor reports gaps in prose. It is an audit tool, not a fixer.
@@ -383,6 +385,30 @@ beislid run-ledger resume --flow kickoff --ticket-id 15 --branch victor/15-run-l
 
 The ledger may link to workflow-configured checkpoint artifacts, but it does not replace them. `.beislid/checkpoints/latest.json` remains a lightweight repo-local rediscovery pointer; the ledger is the durable run history with run IDs, event history, gate log indexes, interruptions, approved risks, and final reports.
 
+## Model routing
+
+`model_routing` lets a repo describe which host model candidates should run each Beislið skill. It is a host hint plus enforcement contract, not a guarantee that every host can switch the currently running model. Hosts should report whether routing was honored, unsupported, fallen back, or blocked.
+
+````markdown
+## Model routing
+
+```beislid:model_routing
+defaults:
+  models: [sonnet]
+  mode: prefer
+overrides:
+  - skills: [spec, blueprint, poke-holes]
+    models: [opus, openai:gpt-5.5]
+    mode: require
+  - skills: [implement, ready-for-review, review-response]
+    model: sonnet
+```
+````
+
+`model` is shorthand for a one-item `models` list. `models` is ordered: the host picks the first supported candidate unless its adapter has a more specific local mapping policy. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings are allowed as escape hatches. `mode: prefer` continues with a disclosed fallback if none can be honored. `mode: require` stops before invoking that skill unless at least one candidate can be honored. Ordered overrides are first-match by skill name, then defaults. Subagents inherit the parent skill's resolved model by default when supported.
+
+Conditional `when:` routing is reserved for future work and is not active in v1; do not rely on a `when:` field to narrow a route.
+
 ## Ready-for-review final review
 
 `ready-for-review` runs a primary `review` pass and then a final whole-diff `fresh-eyes` pass. Configure `fresh_eyes` only when you want to replace or explicitly disable that final pass; the primary review still runs.
@@ -430,10 +456,10 @@ mode: enhance
 
 These skills read `workflow.md`:
 
-- `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks.
-- `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks.
-- `review-response`: PR review source/update path, ticket update path, feedback handling.
-- `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events.
+- `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
+- `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
+- `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
+- `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.
 - `doctor`: all configured capabilities.
 - `setup`: writes and updates config.
 

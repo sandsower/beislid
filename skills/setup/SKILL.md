@@ -239,6 +239,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 
 - **Scopes & quality gates** — *Run lint/test commands across the repo, scopes, or changed-file-aware gate sets. Simple gates need only name+command; rich gates may add stage, cost, timeout, selectors, output parser, and failure policy.*
 - **Explore skill** — *Let kickoff Step 2 run a project skill as an exploration enhancer or replacement before design.*
+- **Model routing** — *Declare preferred or required host model candidates per Beislið skill, with fallback/blocking disclosure.*
 - **Translation sync** — *Run a translation-sync skill during quality gates whenever paths under your trigger globs are touched.*
 - **Browser compatibility** — *Run an advisory browser compatibility skill during quality gates whenever paths under your trigger globs are touched. Doesn't block PR handoff.*
 - **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
@@ -331,6 +332,30 @@ For `enhance` or `replace`, ask for the skill name. Explain that `enhance` keeps
 skill: <skill-name>
 mode: enhance
 ```
+
+### Model routing
+
+Configure the canonical `model_routing` block under `Model routing` or `Skill-specific overrides`. Explain that this is a host-adapter hint/enforcement contract: hosts honor it only when model selection is supported, report the routing status, and block only for `mode: require` when no candidate can be honored.
+
+Ask for an optional default route, then ordered skill overrides. For each route collect:
+
+- skills list (overrides only), using Beislið skill names such as `spec`, `blueprint`, `implement`, `review`, `fresh-eyes`, `ready-for-review`, and `review-response`
+- model candidates as an ordered list; `model` may be written only as shorthand for a single candidate, otherwise write `models`
+- mode: `prefer` or `require`, default `prefer`
+
+Prefer portable aliases (`opus`, `sonnet`, `haiku`, `default`, `host-default`), but allow namespaced provider strings as escape hatches. Do not collect `when:` conditions in v1; say conditional routing is reserved for later workflow support and should not be written as active config.
+
+```beislid:model_routing
+defaults:
+  models: [sonnet]
+  mode: prefer
+overrides:
+  - skills: [spec, blueprint, poke-holes]
+    models: [opus, openai:gpt-5.5]
+    mode: require
+```
+
+Never create duplicate `beislid:model_routing` blocks; update or remove the existing one.
 
 ### Fresh-eyes final review
 

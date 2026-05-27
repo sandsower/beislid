@@ -112,6 +112,10 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 
 No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
 
+### model_routing validation
+
+`beislid:model_routing` is validated, not probed as an external dependency. Doctor checks shape only: optional `defaults`, ordered `overrides[]`, route `model`/`models` candidates, `mode: prefer|require`, and override `skills[]`. It should record `probe_kind: validation` and summarize default candidates, override count, and required-route count. Runtime hosts decide whether candidates are supported; doctor may warn on unknown bare aliases but must not spend model budget probing availability. `when` is reserved for future conditional routing and should warn as inactive v1 config rather than narrowing a route.
+
 ### type=artifact lifecycle actions
 
 Artifact actions under `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:
