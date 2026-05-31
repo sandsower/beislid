@@ -40,7 +40,7 @@ Exit:
 ✓ Step 3: Team guidance <found|not configured>.
 ✓ Step 4: Readiness decided — <spec|blueprint>.
 ✓ Step 4b: Checkpoint <status>.
-✓ Step 5: Scope decided — <single PR|needs breakdown>.
+✓ Step 5: Scope classified — <atomic|single_pr|multi_slice|project|unknown>.
 ✓ Step 6: Blueprint approved.
 ✓ Step 7: Discoveries <recorded|skipped>.
 ✓ Step 8: Plan <posted|printed>; handing to implement.

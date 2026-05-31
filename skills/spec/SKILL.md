@@ -108,7 +108,11 @@ Required structure:
 - `Extension Slots` YAML keys: `scope_classification`, `proof_requirements`, `slice_plan`, and `children`.
 
 Population rules:
-- `scope_classification` is intentionally shallow for #55 but must include `kind`, `rationale`, `recommended_route`, `requires_human_approval`, `requires_split`, and `split_reason`.
+- `scope_classification` must include `kind`, `confidence`, `rationale`, `recommended_route`, `requires_human_approval`, `requires_split`, and `split_reason`.
+- Valid kinds are `atomic`, `single_pr`, `multi_slice`, `project`, and draft-only `unknown`; valid confidence values are `low`, `medium`, and `high`.
+- Use `atomic` only for bounded, clear, low-branching work; use `single_pr` for one coherent PR; use `multi_slice` for multiple independently shippable slices; use `project` when milestones/contracts/ownership boundaries are needed before execution.
+- `unknown` is allowed only for `draft` or `needs-human-decision` contracts and routes to `spec_refinement` with `requires_human_approval: true`.
+- Require approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence high consequence. Prefer refinement questions that reduce approval burden over under-classifying.
 - `proof_requirements: []` is reserved for #57.
 - `slice_plan: null` and `children: []` are reserved for #58.
 - Broad/project work should not jump directly to scaffolding by default.
@@ -140,7 +144,9 @@ Record artifact results as `written`, `auto-written`, `skipped`, `not configured
 
 Print the approved spec summary, artifact status/path list, and routing recommendation.
 
-Then route:
-- If the spec is too large for one coherent PR, hand off to `break-spec` with the approved spec and any artifact path written in this session.
-- If the spec is implementation-ready and scoped, hand off to `blueprint` with the approved spec and any artifact path written in this session.
-- If invoked by `kickoff`, return the approved spec, artifact status/path, and routing recommendation to `kickoff`.
+Then route by `scope_classification` when present:
+- `atomic` or `single_pr`: hand off to `blueprint` with the approved spec/Work Contract and any artifact path written in this session.
+- `multi_slice`: hand off to `break-spec` with the approved spec/Work Contract and any artifact path written in this session.
+- `project`: recommend `spec_refinement` until project boundaries are approved, then hand off to `break-spec`/slice planning; do not scaffold by default.
+- `unknown`: keep refining; do not hand off to automation as approved.
+- If invoked by `kickoff`, return the approved spec or Work Contract, artifact status/path, and routing recommendation to `kickoff`.

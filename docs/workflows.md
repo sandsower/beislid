@@ -31,7 +31,7 @@ Routing rules:
 - Use `spec` to finalize a `work-contract-v1` section or artifact when the next skill needs stable requirements for automation handoff.
 - Use `poke-holes` after `spec` when the spec is still broad, unfocused, or needs pressure before implementation design.
 - Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question; an approved Work Contract counts as that requirements input.
-- Use `break-spec` when the approved work is too large for one coherent PR.
+- Use Work Contract `scope_classification` for routing: `atomic`/`single_pr` go to `blueprint`, `multi_slice` goes to `break-spec`, and `project` starts with spec refinement before slice planning.
 - Use `implement` after the design is approved. It creates the file-level execution plan and task list.
 - When configured, `spec` and `blueprint` write local planning artifacts after approval through lifecycle actions; default `plans/` paths feed downstream skills.
 - Use `verify` before any done/fixed/passing claim.
@@ -46,15 +46,15 @@ Most ticket work starts with `kickoff`. It reads `<repo>/.beislid/workflow.md`, 
 flowchart TD
   A["kickoff<br/>Fetch ticket + explore context"] --> B{"Requirements clear?"}
   B -- "no" --> C["spec<br/>Fill product gaps"]
-  B -- "yes" --> D{"Too large for<br/>one coherent PR?"}
+  B -- "yes" --> D{"Scope classification?<br/>atomic/single_pr/multi_slice/project"}
   C --> P{"Spec still broad<br/>or unfocused?"}
   P -- "yes" --> Q["poke-holes<br/>Refine scope + details"]
-  P -- "no" --> E{"Too large after spec?"}
+  P -- "no" --> E{"Scope classification?"}
   Q --> E
-  E -- "yes" --> F["break-spec"]
-  E -- "no" --> G["blueprint"]
-  D -- "yes" --> F
-  D -- "no" --> G
+  E -- "multi_slice/project" --> F["break-spec"]
+  E -- "atomic/single_pr" --> G["blueprint"]
+  D -- "multi_slice/project" --> F
+  D -- "atomic/single_pr" --> G
   F --> H["Pick one phase"]
   H --> G
   G --> I["implement"]
@@ -65,7 +65,8 @@ Use the routing this way:
 - `spec` when the ticket is vague, product behavior is unclear, success criteria are missing, or multiple interpretations are plausible.
 - `kickoff` may derive a `work-contract-v1` context packet from a tracker issue; missing contract fields stay as unknowns or human decisions.
 - `poke-holes` after `spec` when the shaped spec still needs pressure, focus, or detail refinement.
-- `break-spec` when the requirement is clear but too large for one PR.
+- `scope_classification` is canonical when present: `atomic` and `single_pr` route to `blueprint`; `multi_slice` routes to `break-spec`; `project` routes to spec refinement first, then slice planning once boundaries are approved.
+- `break-spec` when the requirement is classified as `multi_slice`, or as `project` after project boundaries are approved.
 - `blueprint` when the desired behavior is known and the remaining work is implementation design; an approved Work Contract is a primary requirements handoff.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
 - If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.”
