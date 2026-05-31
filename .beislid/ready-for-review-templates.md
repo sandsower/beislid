@@ -30,7 +30,7 @@ Each phase prints an entry summary on its way in and an exit summary on its way 
 **Phase 2 — Quality gates:**
 ```
 🔄 Phase 2: Quality gates — running <N> gate(s) across <S> scope(s).
-✓ Phase 2: selected pre-pr gates green in <duration>; <K> staged/non-computational gate(s) skipped.
+✓ Phase 2: proof satisfied; pre-pr gates green in <duration>; <K> gate(s) skipped.
 ⚡ Phase 2: fast-path ran <N> safe gate(s) in parallel; all green in <duration>.
 ⚠️ Phase 2: <N> gate(s) needed autofix; resumed after fixes.
 ```
@@ -54,8 +54,8 @@ What now? fix / retry / accept risk / abort.
 ```
 🔄 Phase 3: Review — invoking review then final whole-diff check against <base>.
 🔄 Phase 3: Fast-path review — one combined review/final-check pass against <base>.
-✓ Phase 3: <N> findings addressed; no blocking issues remaining.
-⚡ Phase 3: combined review complete; no blocking issues remaining.
+✓ Phase 3: review/fresh-eyes proof satisfied; <N> findings addressed.
+⚡ Phase 3: combined review proof satisfied; no blockers.
 ```
 
 **Phase 4 — Submit:**
@@ -192,6 +192,8 @@ Printed at Phase 4c after `gh pr create` succeeds (≤500 chars including surrou
 Title: `<title>`
 Base:  `<base>`
 Files: <N> changed, <K> additions, <M> deletions.
+
+Proof: <required/advisory proof status summary>.
 
 <optional inline notes from this run, e.g.:
 - 💭 Phase 4d skipped: domain capture not configured.

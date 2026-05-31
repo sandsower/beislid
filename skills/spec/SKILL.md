@@ -109,7 +109,7 @@ Required structure:
 
 Population rules:
 - `scope_classification` is intentionally shallow for #55 but must include `kind`, `rationale`, `recommended_route`, `requires_human_approval`, `requires_split`, and `split_reason`.
-- `proof_requirements: []` is reserved for #57.
+- `proof_requirements` uses `proof-requirement-v1`; use `[]` only when no proof has been identified.
 - `slice_plan: null` and `children: []` are reserved for #58.
 - Broad/project work should not jump directly to scaffolding by default.
 - Missing product decisions belong under `Unknowns / Human Decisions`; do not invent them to unblock `blueprint`.

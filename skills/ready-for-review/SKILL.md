@@ -95,13 +95,13 @@ Read and follow `phase-2-gates.md`.
 Inputs: Phase 1 outputs, configured scopes/gates, trigger booleans, `needs_merge`, existing-PR fast-path state, and small-diff fast-path eligibility.
 
 Required outputs:
-- stale base merge policy-checked or blocked
-- applicable gates run by touched scope or top-level config
-- autofix diffs shown and committed only with user approval
-- non-autofix failures surfaced for user direction
-- translation/browser checks run or skipped per trigger/config
-- guided walkthrough offered when thresholds are met and handled per user choice
-- any reviewer warnings such as AI-generated translations carried forward
+- stale base merge handled
+- applicable gates run; proof status reported and required proof blocked/interrupted per policy
+- autofix diffs handled with approval
+- non-autofix failures surfaced
+- translation/browser checks handled
+- guided walkthrough handled when threshold met
+- reviewer warnings carried forward
 - ledger gate artifact paths, if active
 
 Exit: print the Phase 2 exit one-liner from `ready-for-review-templates.md`. If this is the existing-PR fast path, push to the PR branch, print the fast-path success line, then proceed to run-end cache/memory handling.
@@ -126,7 +126,7 @@ Exit: print the Phase 3 exit one-liner from `ready-for-review-templates.md`.
 
 Skip on existing-PR fast path. Otherwise read and follow `phase-4-submit.md`.
 
-Inputs: Phase 3 result and review mode, ticket ID, base, branch, diff summary, reviewer warnings, and configured PR handoff/memory capabilities.
+Inputs: Phase 3 result, review mode, proof status, ticket ID, base, branch, diff summary, reviewer warnings, and PR handoff/memory capabilities.
 
 Required outputs:
 - domain capture paired-set front-loaded before side effects

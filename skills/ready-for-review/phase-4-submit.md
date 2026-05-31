@@ -38,7 +38,7 @@ Compose the proposed PR:
 
 - Title: `<TICKET-ID>: <ticket title>` only when a real ticket id is confirmed; otherwise a concise no-ticket title. Never render `none` as a prefix; `none: <title>` is invalid.
 - Base: Phase 1 base.
-- Body: terse record-facing summary of changes, why, verification, reviewer warnings, accepted risks, and reduced review coverage if any.
+- Body: terse record-facing summary of changes, why, proof status, reviewer warnings, accepted risks, and reduced review coverage if any.
 - Include carried warnings such as AI-generated translation notices.
 - Labels/reviewers only when configured or requested.
 
