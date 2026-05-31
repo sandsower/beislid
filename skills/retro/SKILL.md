@@ -89,7 +89,7 @@ Default is no write. After presenting the recommendations, ask at most once:
 
 > Save this retro as a setup handoff note? [y/N]
 
-Only on explicit yes, write a Markdown handoff artifact. Before writing, read `action-policy-protocol.md` when present and evaluate/handle workspace-write policy if the project provides the Beislið CLI.
+Only on explicit yes, write a Markdown handoff artifact. Before writing, read `action-policy-protocol.md` when present and evaluate action id `file.write` with class `workspace-write` if the project provides the Beislið CLI. Handle `ask` exactly as the protocol requires; the generic save offer is not enough unless it includes the policy envelope and explicit approval.
 
 Default path:
 

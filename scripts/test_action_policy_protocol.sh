@@ -34,6 +34,7 @@ check_contains "skills/ready-for-review/phase-4-submit.md" 'Policy-check push/PR
 check_contains "skills/kickoff/step-1-ticket.md" 'Evaluate action policy for `lifecycle.kickoff_start.<name>`'
 check_contains "skills/kickoff/step-8-ticket-update.md" 'evaluate action policy for `ticket.comment`'
 check_contains "skills/implement/SKILL.md" 'Evaluate action policy before workspace writes'
+check_contains "skills/retro/SKILL.md" 'evaluate action id `file.write` with class `workspace-write`'
 check_contains "skills/review-response/phase-2-fix.md" 'Evaluate action policy for the workspace write'
 check_contains "skills/review-response/phase-3-push.md" 'Policy-check `git.push`'
 check_contains "docs/configuration.md" "repo-aware orchestrators enforce action policy"
