@@ -255,6 +255,103 @@ Policy decisions recorded in run summaries or the durable ledger should preserve
 
 In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, and `review-response`. They use the same envelope rather than duplicating policy tables in skill prose.
 
+## Work Contract v1
+
+`work-contract-v1` is the shared planning contract that lets Beislið carry requirements across `spec`, `kickoff`, and `blueprint` without turning planning artifacts into execution state. Current spec artifacts remain human-readable specs; a Work Contract is the hardened section or artifact shape used when downstream automation needs stable fields.
+
+A Work Contract is Markdown with stable fields and headings:
+
+- `Kind`: `work-contract-v1`.
+- `Status`: `draft`, `needs-human-decision`, `approved`, or `superseded`.
+- `Source`: user prompt, GitHub issue, Linear issue, PR feedback, CI failure, roadmap item, or new-project ask, plus source URL/identifier when known.
+- `Problem`: what is broken or missing, and who or what is affected.
+- `Desired Outcome`: the observable end state, not the implementation design.
+- `Constraints`: explicit technical, product, policy, compatibility, or timeline constraints.
+- `Acceptance Outcomes`: user-reviewable outcomes that prove the contract is satisfied.
+- `Unknowns / Human Decisions`: unresolved product choices; agents must not invent these to unblock implementation.
+- `Risk Classification`: low, medium, high, or critical, with a short reason.
+- `scope_classification`: intentionally shallow in #55; #56 fully defines the classifier. Broad/project work should not jump directly to scaffolding by default.
+- `proof_requirements`: reserved list for Proof Requirement v1 from #57.
+- `slice_plan`: reserved for break-spec child contract output from #58.
+- `children`: reserved for child Work Contracts or child slice references from #58.
+- `Ownership Boundary`: what Beislið owns versus Rondo execution/proof/run state and Memento curated memory.
+
+Stable extension slots:
+
+```yaml
+scope_classification:
+  kind: unknown # later: atomic | single_pr | multi_slice | project
+  rationale: ""
+  recommended_route: ""
+  requires_human_approval: false
+  requires_split: false
+  split_reason: null
+
+proof_requirements: [] # populated by proof-requirement-v1 in #57
+
+slice_plan: null       # populated for multi_slice/project work in #58
+children: []           # child Work Contracts / child slice references in #58
+```
+
+Example:
+
+````markdown
+# Work Contract: Define Work Contract v1
+
+Kind: work-contract-v1
+Status: approved
+
+## Source
+- Type: GitHub issue
+- Identifier: #55
+- URL: https://github.com/sandsower/beislid/issues/55
+
+## Problem
+Beislið planning flows do not share one durable, human-reviewable artifact describing the work to be done.
+
+## Desired Outcome
+`spec`, `kickoff`, and `blueprint` can pass a stable planning contract forward before implementation fanout.
+
+## Constraints
+- Keep this in Beislið planning semantics.
+- Do not introduce Rondo execution state.
+- Follow existing lifecycle artifact safety rules for writes.
+
+## Acceptance Outcomes
+- Fields and one example are documented.
+- `spec` can finalize the contract for vague/product work.
+- `kickoff` can derive the contract from tracker issues.
+- `blueprint` can consume an approved contract.
+
+## Unknowns / Human Decisions
+- None blocking.
+
+## Risk Classification
+Medium — prompt changes span multiple skills and must stay concise.
+
+## Extension Slots
+
+```yaml
+scope_classification:
+  kind: unknown
+  rationale: "Initial #55 foundation; full classifier belongs to #56."
+  recommended_route: ""
+  requires_human_approval: false
+  requires_split: false
+  split_reason: null
+
+proof_requirements: []
+
+slice_plan: null
+children: []
+```
+
+## Ownership Boundary
+Beislið owns work-contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
+````
+
+Work Contract artifacts use existing lifecycle artifact actions. `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
+
 ## Lifecycle actions
 
 Lifecycle actions are configured side effects at named Beislið workflow events. They are distinct from quality gates: gates verify branch readiness; lifecycle actions update external systems or create user-approved records.

@@ -18,10 +18,11 @@ Invoke `blueprint` with:
 - domain context
 - team config constraints
 - scope decision and selected phase if any
+- approved Work Contract or derived Work Contract context when available
 - approved spec artifact status/path if `spec` returned one
 - open risks/questions
 
-Blueprint must produce an approved design before implementation begins. If blueprint discovers unclear product behavior, route back to `spec`; if it discovers the slice is too large, route to `break-spec`.
+Blueprint must produce an approved design before implementation begins. If blueprint discovers unclear product behavior or blocking Work Contract unknowns, route back to `spec`; if it discovers the slice is too large, route to `break-spec`.
 
 ## Exit
 

@@ -160,6 +160,7 @@ Also check gate soft constraints:
 Also check lifecycle action soft constraints:
 
 - `spec_approved`, `blueprint_approved`, `kickoff_context_ready`, and `implementation_plan_created` support only `type: artifact` in P0. Non-artifact actions under those events are reserved; warn that skills will skip them.
+- Work Contract artifacts do not have a separate v1 config key; validate them as ordinary `spec_approved` or `blueprint_approved` artifact actions when workflows configure them.
 - `review_feedback_loaded` and `ready_for_review_pre_submit` are reserved checkpoint artifact events; warn that no P0 skill executes them yet, but do not mark valid artifact action shape as failed.
 - `artifact` actions under other unsupported events are reserved; warn that no skill executes them yet.
 - `approval` omitted for artifact actions is valid and means `prompt`. `approval: auto` is valid and means create a missing target without prompting; existing targets still prompt at runtime.

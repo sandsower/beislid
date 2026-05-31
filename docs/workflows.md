@@ -28,8 +28,9 @@ flowchart LR
 Routing rules:
 
 - Start with `spec` when product behavior, success criteria, or scope are unclear.
+- Use `spec` to finalize a `work-contract-v1` section or artifact when the next skill needs stable requirements for automation handoff.
 - Use `poke-holes` after `spec` when the spec is still broad, unfocused, or needs pressure before implementation design.
-- Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question.
+- Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question; an approved Work Contract counts as that requirements input.
 - Use `break-spec` when the approved work is too large for one coherent PR.
 - Use `implement` after the design is approved. It creates the file-level execution plan and task list.
 - When configured, `spec` and `blueprint` write local planning artifacts after approval through lifecycle actions; default `plans/` paths feed downstream skills.
@@ -62,9 +63,10 @@ flowchart TD
 Use the routing this way:
 
 - `spec` when the ticket is vague, product behavior is unclear, success criteria are missing, or multiple interpretations are plausible.
+- `kickoff` may derive a `work-contract-v1` context packet from a tracker issue; missing contract fields stay as unknowns or human decisions.
 - `poke-holes` after `spec` when the shaped spec still needs pressure, focus, or detail refinement.
 - `break-spec` when the requirement is clear but too large for one PR.
-- `blueprint` when the desired behavior is known and the remaining work is implementation design.
+- `blueprint` when the desired behavior is known and the remaining work is implementation design; an approved Work Contract is a primary requirements handoff.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
 - If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.”
 - For Rondo-style durable run state, orchestrators can additionally use `beislid run-ledger ...`. The ledger stores run IDs, events, gate log indexes, interruptions, and final reports under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/`; it links to checkpoint artifacts instead of replacing them.

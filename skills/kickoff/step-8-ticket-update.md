@@ -15,6 +15,7 @@ Print the Step 8 entry one-liner from `kickoff-templates.md`.
 Compose a concise implementation-plan update:
 
 - approach summary
+- Work Contract status when one was derived or approved
 - key files/modules expected to change
 - tests/verification planned
 - risks/open questions
