@@ -136,7 +136,7 @@ See [Configuration](./docs/configuration.md) for details and [workflow.md format
 - **Execute safely:** `implement`, `debug`, `handoff`
 - **Check evidence:** `verify`, `review`, `fresh-eyes`, `rinse`, `show-me`
 - **Deliver work:** `ready-for-review`, `review-response`, `pr-patrol`, `walk-the-diff`
-- **Manage config:** `setup`, `doctor`
+- **Manage config:** `setup`, `doctor`, `retro`
 
 See [Skills](./docs/skills.md) for the full catalog and [Workflows](./docs/workflows.md) for lifecycle diagrams.
 

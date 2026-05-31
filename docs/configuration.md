@@ -253,7 +253,7 @@ Doctor validates `beislid:action_policy` as config, not as an external probe. It
 
 Policy decisions recorded in run summaries or the durable ledger should preserve the evaluator envelope shape: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When an `ask` decision is accepted or declined, summaries should record the human outcome separately from the original evaluator decision. Denied actions should include the remediation hint and stop point.
 
-In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, and `review-response`. They use the same envelope rather than duplicating policy tables in skill prose.
+In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, and `review-response`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
 
 ## Work Contract v1
 
@@ -558,9 +558,10 @@ These skills read `workflow.md`:
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.
 - `doctor`: all configured capabilities.
+- `retro`: current workflow config plus available run/session evidence, producing recommendations only; accepted config changes route through `setup`.
 - `setup`: writes and updates config.
 
-If `workflow.md` is missing, these flows should stop and tell you to run `setup`.
+If `workflow.md` is missing, repo-aware execution flows should stop and tell you to run `setup`; `setup` creates it, and `retro` can still recommend setup-oriented next steps.
 
 ## Probe cache
 
