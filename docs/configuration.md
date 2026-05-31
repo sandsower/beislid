@@ -270,7 +270,7 @@ A Work Contract is Markdown with stable fields and headings:
 - `Acceptance Outcomes`: user-reviewable outcomes that prove the contract is satisfied.
 - `Unknowns / Human Decisions`: unresolved product choices; agents must not invent these to unblock implementation.
 - `Risk Classification`: low, medium, high, or critical, with a short reason.
-- `scope_classification`: intentionally shallow in #55; #56 fully defines the classifier. Broad/project work should not jump directly to scaffolding by default.
+- `scope_classification`: intentionally shallow in #55; #56 fully defines the classifier. In #55, agents may record only obvious lightweight scope; use `kind: unknown` when scope is not obvious, keep all six fields present, and explain the deferral in `rationale`. Broad/project work should not jump directly to scaffolding by default.
 - `proof_requirements`: reserved list for Proof Requirement v1 from #57.
 - `slice_plan`: reserved for break-spec child contract output from #58.
 - `children`: reserved for child Work Contracts or child slice references from #58.
