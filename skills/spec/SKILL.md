@@ -69,6 +69,7 @@ Before writing an artifact, present the proposed spec in concise sections and as
 - User stories / acceptance outcomes
 - Key decisions
 - Out of scope
+- Work Contract fields when downstream automation needs a stable handoff
 
 Do not proceed until the user approves the product direction.
 
@@ -99,6 +100,20 @@ What this spec explicitly does not cover.
 </spec-template>
 
 The approved spec text is the source for any artifact. Do not add implementation details while writing an artifact.
+
+When the next workflow needs stable requirements, finalize a `work-contract-v1` section in or alongside the spec.
+
+Required structure:
+- Headings: `Kind`, `Status`, `Source`, `Problem`, `Desired Outcome`, `Constraints`, `Acceptance Outcomes`, `Unknowns / Human Decisions`, `Risk Classification`, `Extension Slots`, and `Ownership Boundary`.
+- `Extension Slots` YAML keys: `scope_classification`, `proof_requirements`, `slice_plan`, and `children`.
+
+Population rules:
+- `scope_classification` is intentionally shallow for #55 but must include `kind`, `rationale`, `recommended_route`, `requires_human_approval`, `requires_split`, and `split_reason`.
+- `proof_requirements: []` is reserved for #57.
+- `slice_plan: null` and `children: []` are reserved for #58.
+- Broad/project work should not jump directly to scaffolding by default.
+- Missing product decisions belong under `Unknowns / Human Decisions`; do not invent them to unblock `blueprint`.
+- Work Contracts are Beislið planning semantics, not Rondo execution/proof/run state or Memento curated memory.
 
 ## Step 7: Run `spec_approved` artifact actions
 

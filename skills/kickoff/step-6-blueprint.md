@@ -18,10 +18,11 @@ Invoke `blueprint` with:
 - domain context
 - team config constraints
 - scope decision and selected phase if any
+- approved Work Contract or derived Work Contract context when available
 - approved spec artifact status/path if `spec` returned one
 - open risks/questions
 
-Blueprint must produce an approved design before implementation begins. If blueprint discovers unclear product behavior, route back to `spec`; if it discovers the slice is too large, route to `break-spec`.
+Blueprint must produce an approved design before implementation begins. Blocking Work Contract unknowns are gaps that prevent choosing an implementation approach or change the `Problem`, `Desired Outcome`, `Constraints`, or acceptance outcomes; route those back to `spec`. Non-blocking unknowns, such as optional details, UI copy, or implementation-specific choices, may stay recorded in `Unknowns / Human Decisions`. If the slice is too large, route to `break-spec`.
 
 ## Exit
 

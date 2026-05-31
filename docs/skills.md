@@ -4,10 +4,10 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 ## Plan
 
-- `kickoff`: fetch a ticket and route to the right workflow; may write a configured context checkpoint.
-- `spec`: brainstorm and shape lightweight product specs; may write approved spec artifacts when configured.
+- `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.
+- `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and write approved spec artifacts when configured.
 - `break-spec`: break large specs into vertical implementation phases.
-- `blueprint`: design before implementation; may write approved design artifacts when configured.
+- `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
 - `poke-holes`: adversarial plan stress-test.
 
 ## Execute
@@ -40,10 +40,10 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 | Skill           | Category                    | Use when                                                                                                                  | Usually followed by                                           |
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec writing; runs configured spec artifact actions after approval           | `break-spec` or `blueprint`                                   |
+| `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec or Work Contract writing; runs configured spec artifact actions after approval | `break-spec` or `blueprint`                                   |
 | `break-spec`    | Product decomposition       | A spec is too large for one coherent PR                                                                                   | `blueprint` for one phase                                     |
-| `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
-| `blueprint`     | Implementation design gate  | Desired behavior is known; code approach is not; runs configured design artifact actions after approval                    | `implement`                                                   |
+| `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may derive a Work Contract and write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
+| `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design artifact actions after approval | `implement`                                                   |
 | `implement`     | Execution planning          | Implementation design is approved; may write configured implementation-plan checkpoints                                    | code changes + `verify`                                       |
 | `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |
 | `debug`         | Debugging gate              | Bug, failing test, or unexpected behavior                                                                                 | fix + `verify`                                                |

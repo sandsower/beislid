@@ -11,7 +11,7 @@ Use this when:
 - Desired behavior is known
 - You need to choose an implementation approach
 - You need to identify files/modules/data flow/tests
-- A `spec` or `break-spec` phase is ready for implementation design
+- A `spec`, approved Work Contract, or `break-spec` phase is ready for implementation design
 
 Do not use this when:
 - The problem, user/workflow, or success criteria are unclear — route to `spec`
@@ -23,8 +23,8 @@ Do NOT write any implementation code, scaffold, or take implementation actions u
 
 ## Process
 
-1. **Load context** — if the handoff includes an explicit spec/PRD/phase artifact path, read it as your primary input. Otherwise, if a handoff artifact exists in `plans/` (spec, PRD, phase structure), read it as your primary input. Otherwise, check relevant files, docs, recent commits.
-2. **Requirements check** — if product behavior or acceptance criteria are unclear, stop and route to `spec` with the missing questions. Do not patch over vague requirements with implementation guesses.
+1. **Load context** — if the handoff includes an explicit Work Contract, spec/PRD, or phase artifact path, read it as your primary input. Otherwise, if a handoff artifact exists in `plans/` (Work Contract, spec, PRD, phase structure), read it as your primary input. Otherwise, check relevant files, docs, recent commits.
+2. **Requirements check** — if product behavior or acceptance criteria are unclear, stop and route to `spec` with the missing questions. When a Work Contract is present, proceed only when `Status` is `approved`; route `draft` or `needs-human-decision` back to `spec`. Treat unknowns as blocking when they affect implementation approach or acceptance criteria. Verify `scope_classification` has all six #55 keys, and reserved slots still match #55 defaults (`proof_requirements: []`, `slice_plan: null`, `children: []`) unless a later ticket explicitly populated them. Broad/project work should not jump directly to scaffolding by default. Do not patch over vague requirements with implementation guesses.
 3. **Scope check** — if the work is too large for one coherent PR, stop and route to `break-spec`.
 4. **Ask implementation questions one at a time** — prefer multiple choice. Focus on architecture, data flow, boundaries, edge cases, and tests.
 5. **Propose 2–3 implementation approaches** — include trade-offs and your recommendation. Lead with the recommended option and say why.
