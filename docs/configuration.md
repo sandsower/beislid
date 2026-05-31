@@ -461,9 +461,10 @@ These skills read `workflow.md`:
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.
 - `doctor`: all configured capabilities.
+- `retro`: current workflow config plus available run/session evidence, producing recommendations only; accepted config changes route through `setup`.
 - `setup`: writes and updates config.
 
-If `workflow.md` is missing, these flows should stop and tell you to run `setup`.
+If `workflow.md` is missing, repo-aware execution flows should stop and tell you to run `setup`; `setup` creates it, and `retro` can still recommend setup-oriented next steps.
 
 ## Probe cache
 
