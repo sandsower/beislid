@@ -22,6 +22,8 @@ If the input includes `scope_classification`, use it before phasing:
 
 Low-confidence or approval-required classifications should be confirmed before slice planning. Recommend refinement questions when clearer boundaries could avoid unnecessary decomposition.
 
+Examples: decompose a `multi_slice` settings revamp into shippable vertical phases; for a `project` such as a new product/repo, first name milestones and ownership boundaries before slice planning; for `atomic`/`single_pr`, decline decomposition unless the user explicitly expands scope.
+
 ## Step 3: Identify durable decisions
 
 Before phasing, call out the architectural decisions that span the entire feature and must be resolved first: routes, database schema, data models, auth boundaries, service interfaces. These are the skeleton everything else hangs on.

@@ -112,12 +112,15 @@ Population rules:
 - Valid kinds are `atomic`, `single_pr`, `multi_slice`, `project`, and draft-only `unknown`; valid confidence values are `low`, `medium`, and `high`.
 - Use `atomic` only for bounded, clear, low-branching work; use `single_pr` for one coherent PR; use `multi_slice` for multiple independently shippable slices; use `project` when milestones/contracts/ownership boundaries are needed before execution.
 - `unknown` is allowed only for `draft` or `needs-human-decision` contracts and routes to `spec_refinement` with `requires_human_approval: true`.
-- Require approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence high consequence. Prefer refinement questions that reduce approval burden over under-classifying.
+- Show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval.
+- Require extra approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence high consequence. Prefer refinement questions that reduce approval burden over under-classifying.
 - `proof_requirements: []` is reserved for #57.
 - `slice_plan: null` and `children: []` are reserved for #58.
 - Broad/project work should not jump directly to scaffolding by default.
 - Missing product decisions belong under `Unknowns / Human Decisions`; do not invent them to unblock `blueprint`.
 - Work Contracts are Beislið planning semantics, not Rondo execution/proof/run state or Memento curated memory.
+
+Examples: typo-level doc fix with no branching → `atomic`; one coherent skill behavior update → `single_pr`; multiple shippable workflow slices → `multi_slice`; broad new-product or cross-system initiative needing milestones/boundaries → `project`.
 
 ## Step 7: Run `spec_approved` artifact actions
 

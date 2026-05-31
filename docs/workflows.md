@@ -51,10 +51,13 @@ flowchart TD
   P -- "yes" --> Q["poke-holes<br/>Refine scope + details"]
   P -- "no" --> E{"Scope classification?"}
   Q --> E
-  E -- "multi_slice/project" --> F["break-spec"]
+  E -- "multi_slice" --> F["break-spec"]
+  E -- "project" --> R["spec refinement<br/>Approve project boundaries"]
   E -- "atomic/single_pr" --> G["blueprint"]
-  D -- "multi_slice/project" --> F
+  D -- "multi_slice" --> F
+  D -- "project" --> R
   D -- "atomic/single_pr" --> G
+  R --> F
   F --> H["Pick one phase"]
   H --> G
   G --> I["implement"]

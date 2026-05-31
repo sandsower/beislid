@@ -31,7 +31,9 @@ Classification rules:
 - `project`: needs milestones, contracts, or ownership boundaries before child execution; route to `spec_refinement` first in P0, then `break-spec`/slice planning after boundaries are approved. Do not scaffold by default.
 - `unknown`: draft-only; route to `spec_refinement`, set `confidence: low`, and do not proceed to automation as approved.
 
-Require human approval when classification triggers decomposition, fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. If approval is required because boundaries are broad, recommend refinement questions that could narrow the route.
+Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval. Require it when classification triggers decomposition, fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. If approval is required because boundaries are broad, recommend refinement questions that could narrow the route.
+
+Examples: typo-level doc fix with no branching → `atomic`; one coherent skill behavior update → `single_pr`; multiple shippable workflow slices → `multi_slice`; broad initiative needing milestones/boundaries → `project`.
 
 Derived prose may still say `fits one PR` for `atomic`/`single_pr` or `needs decomposition` for `multi_slice`/`project`, but the four-way classifier is canonical.
 

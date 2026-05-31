@@ -302,7 +302,7 @@ Classifier vocabulary:
 - `project`: broad work needing milestones, contracts, or ownership boundaries before child execution. In P0, route to `spec_refinement` first; once boundaries are approved, route to `break_spec`/slice planning. Do not scaffold by default.
 - `unknown`: temporary draft state only. Use `confidence: low`, `recommended_route: spec_refinement`, and `requires_human_approval: true`; do not use it in approved automation handoffs.
 
-Human approval is required when classification triggers decomposition, automation fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. When approval is required because the scope is broad or low-confidence, recommend the smallest refinement that would reduce ambiguity rather than under-classifying the work to avoid approval.
+Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval, and is required when classification triggers decomposition, automation fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. When approval is required because the scope is broad or low-confidence, recommend the smallest refinement that would reduce ambiguity rather than under-classifying the work to avoid approval.
 
 Example:
 
