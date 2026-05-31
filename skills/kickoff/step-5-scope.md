@@ -28,10 +28,10 @@ Classification rules:
 - `atomic`: bounded, clear, low-branching work; route to `minimal_blueprint` or `blueprint`; do not over-decompose.
 - `single_pr`: one coherent reviewable PR; route to `blueprint`.
 - `multi_slice`: known direction with multiple independently shippable vertical slices; route to `break-spec` and require `split_reason`.
-- `project`: needs milestones, contracts, or ownership boundaries before child execution; route to `spec_refinement` first in P0, then `break-spec`/slice planning after boundaries are approved. Do not scaffold by default.
+- `project`: needs milestones, contracts, or ownership boundaries before child execution; use `recommended_route: spec_refinement` while boundaries are unresolved, then `project_planning` after boundaries are approved before `break-spec`/slice planning. Do not scaffold by default.
 - `unknown`: draft-only; route to `spec_refinement`, set `confidence: low`, and do not proceed to automation as approved.
 
-Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval. Require it when classification triggers decomposition, fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. If approval is required because boundaries are broad, recommend refinement questions that could narrow the route.
+Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval. Require it when classification triggers decomposition, fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. When true, stop, present the classifier and proposed route, wait for explicit approval, record approved/declined, and do not invoke downstream automation until approved. If approval is required because boundaries are broad, recommend refinement questions that could narrow the route.
 
 Examples: typo-level doc fix with no branching → `atomic`; one coherent skill behavior update → `single_pr`; multiple shippable workflow slices → `multi_slice`; broad initiative needing milestones/boundaries → `project`.
 

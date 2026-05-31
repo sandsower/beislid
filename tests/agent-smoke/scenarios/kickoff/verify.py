@@ -26,7 +26,8 @@ REQUIRED_PATTERNS = [
     ("fixture code explored", r"src/summary\.py|test_summary\.py"),
     ("explore skill marker", r"skill-only-context-token-44"),
     ("blueprint route", r"blueprint"),
-    ("single PR scope", r"single[- ]PR|fits one PR|one coherent PR"),
+    ("scope classifier", r"scope_classification|scope classification"),
+    ("single_pr kind", r"kind:\s*single_pr|\bsingle_pr\b"),
     ("implement handoff", r"implement"),
 ]
 
@@ -100,7 +101,11 @@ def verify(run_dir: Path) -> list[str]:
         ("tests", r"test|verification"),
         ("risks", r"risk|open question"),
         ("explore skill marker", r"skill-only-context-token-44"),
-        ("single PR scope", r"Scope:\s*single PR"),
+        ("scope classification", r"scope_classification|scope classification"),
+        ("single_pr kind", r"kind:\s*single_pr|\bsingle_pr\b"),
+        ("blueprint route", r"recommended_route:\s*blueprint|recommended route:\s*blueprint"),
+        ("approval field", r"requires_human_approval:\s*false|requires human approval:\s*false"),
+        ("split field", r"requires_split:\s*false|requires split:\s*false"),
     ]:
         if not re.search(pattern, body, re.IGNORECASE):
             fail(errors, f"ticket update body missing {label} content")
@@ -135,7 +140,7 @@ def self_test() -> int:
         write(run_dir / "gh.log", f"2026-01-01T00:00:00Z\tcwd={repo}\tgh issue view 123 --json number,title,body,state,labels\n")
         write(run_dir / "ticket-comment.log", f"2026-01-01T00:00:01Z\tcwd={repo}\tticket-comment 123 /tmp/body.md\n")
         write(run_dir / "lifecycle-action.log", f"2026-01-01T00:00:01Z\tcwd={repo}\tlifecycle-action 123 123 123-kickoff-smoke kickoff_start\n")
-        write(run_dir / "ticket-comment-body.md", "Approach summary\nskill-only-context-token-44\nScope: single PR\nFiles: src/summary.py and tests/test_summary.py\nTests: pytest\nRisks: none\n")
+        write(run_dir / "ticket-comment-body.md", "Approach summary\nskill-only-context-token-44\nscope_classification:\n  kind: single_pr\n  recommended_route: blueprint\n  requires_human_approval: false\n  requires_split: false\nFiles: src/summary.py and tests/test_summary.py\nTests: pytest\nRisks: none\n")
         prompt_only = "\n".join(REQUIRED_STAMPS)
         write(run_dir / "prompt-only.log", f"$ host command with multiline prompt\n\n{prompt_only}\n\n")
         prompt_errors = verify(run_dir)

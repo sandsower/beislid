@@ -299,7 +299,7 @@ Classifier vocabulary:
 - `atomic`: tightly bounded, clear, low-branching work. It is not merely a tiny diff; a small risky or ambiguous change may still be `single_pr` or require refinement. Route to `minimal_blueprint` or `blueprint`, and do not over-decompose.
 - `single_pr`: one coherent reviewable PR. Route to `blueprint`.
 - `multi_slice`: known direction with multiple independently shippable vertical slices. Route to `break_spec` and require a split reason.
-- `project`: broad work needing milestones, contracts, or ownership boundaries before child execution. In P0, route to `spec_refinement` first; once boundaries are approved, route to `break_spec`/slice planning. Do not scaffold by default.
+- `project`: broad work needing milestones, contracts, or ownership boundaries before child execution. In P0, use `recommended_route: spec_refinement` while boundaries are unresolved; use `project_planning` only after boundaries are approved and before `break_spec`/slice planning. Do not scaffold by default.
 - `unknown`: temporary draft state only. Use `confidence: low`, `recommended_route: spec_refinement`, and `requires_human_approval: true`; do not use it in approved automation handoffs.
 
 Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval, and is required when classification triggers decomposition, automation fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. When approval is required because the scope is broad or low-confidence, recommend the smallest refinement that would reduce ambiguity rather than under-classifying the work to avoid approval.

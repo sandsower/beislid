@@ -20,7 +20,7 @@ If the input includes `scope_classification`, use it before phasing:
 - `atomic` or `single_pr`: push back before decomposing; ask why this needs a split and proceed only with explicit user approval.
 - `unknown`: route back to spec refinement; do not create child slices from an unknown classification.
 
-Low-confidence or approval-required classifications should be confirmed before slice planning. Recommend refinement questions when clearer boundaries could avoid unnecessary decomposition.
+Low-confidence or approval-required classifications are a hard gate before slice planning: present the classifier and proposed route, wait for explicit approval, record approved/declined, and do not decompose until approved. Recommend refinement questions when clearer boundaries could avoid unnecessary decomposition.
 
 Examples: decompose a `multi_slice` settings revamp into shippable vertical phases; for a `project` such as a new product/repo, first name milestones and ownership boundaries before slice planning; for `atomic`/`single_pr`, decline decomposition unless the user explicitly expands scope.
 
