@@ -24,7 +24,7 @@ check_symlink() {
   fi
 }
 
-for skill in ready-for-review kickoff review-response implement; do
+for skill in ready-for-review kickoff review-response implement retro; do
   check_symlink "skills/$skill/action-policy-protocol.md" "../../.beislid/action-policy-protocol.md"
 done
 
