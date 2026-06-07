@@ -68,7 +68,7 @@ Use the routing this way:
 - `spec` when the ticket is vague, product behavior is unclear, success criteria are missing, or multiple interpretations are plausible.
 - `kickoff` may derive a `work-contract-v1` context packet from a tracker issue; missing contract fields stay as unknowns or human decisions.
 - `poke-holes` after `spec` when the shaped spec still needs pressure, focus, or detail refinement.
-- `scope_classification` is canonical when present: `atomic` and `single_pr` route to `blueprint`; `multi_slice` routes to `break-spec`; `project` routes to spec refinement first, then slice planning once boundaries are approved.
+- `scope_classification` is canonical when present: `atomic` and `single_pr` route to `blueprint`; `multi_slice` routes to `break-spec`; `project` routes to spec refinement first, then slice planning once boundaries are approved; `unknown` routes to continued refinement, not automation handoff.
 - `break-spec` when the requirement is classified as `multi_slice`, or as `project` after project boundaries are approved.
 - `blueprint` when the desired behavior is known and the remaining work is implementation design; an approved Work Contract is a primary requirements handoff.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.

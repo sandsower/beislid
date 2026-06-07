@@ -113,7 +113,7 @@ Population rules:
 - Use `atomic` only for bounded, clear, low-branching work; use `single_pr` for one coherent PR; use `multi_slice` for multiple independently shippable slices; use `project` when milestones/contracts/ownership boundaries are needed before execution.
 - `unknown` is allowed only for `draft` or `needs-human-decision` contracts and routes to `spec_refinement` with `requires_human_approval: true`.
 - Show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval.
-- Require extra approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence high consequence. When true, stop, present the classifier and proposed route, wait for explicit approval, record approved/declined, and do not invoke downstream automation until approved. Prefer refinement questions that reduce approval burden over under-classifying.
+- Require extra approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence, high-consequence impact. When true, stop, present the classifier and proposed route, wait for explicit approval, record approved/declined, and do not invoke downstream automation until approved. Prefer refinement questions that reduce approval burden over under-classifying.
 - `proof_requirements: []` is reserved for #57.
 - `slice_plan: null` and `children: []` are reserved for #58.
 - Broad/project work should not jump directly to scaffolding by default.

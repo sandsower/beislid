@@ -22,7 +22,7 @@ Invoke `blueprint` with:
 - approved spec artifact status/path if `spec` returned one
 - open risks/questions
 
-Blueprint must produce an approved design before implementation begins. Blocking Work Contract unknowns are gaps that prevent choosing an implementation approach or change the `Problem`, `Desired Outcome`, `Constraints`, or acceptance outcomes; route those back to `spec`. Non-blocking unknowns, such as optional details, UI copy, or implementation-specific choices, may stay recorded in `Unknowns / Human Decisions`. If `scope_classification.kind` is `multi_slice` or `project`, route to `break-spec` or spec refinement unless an approved selected phase/slice is present.
+Blueprint must produce an approved design before implementation begins. Blocking Work Contract unknowns are gaps that prevent choosing an implementation approach or change the `Problem`, `Desired Outcome`, `Constraints`, or acceptance outcomes; route those back to `spec`. Non-blocking unknowns, such as optional details, UI copy, or implementation-specific choices, may stay recorded in `Unknowns / Human Decisions`. If `scope_classification.kind` is `multi_slice`, route to `break-spec`; if `scope_classification.kind` is `project` with unresolved boundaries, route to `spec_refinement`; if `scope_classification.kind` is `project` with approved boundaries but no selected phase/slice, route to `break-spec`. An approved selected phase/slice bypasses this routing.
 
 ## Exit
 
