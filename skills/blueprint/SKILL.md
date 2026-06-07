@@ -15,7 +15,7 @@ Use this when:
 
 Do not use this when:
 - The problem, user/workflow, or success criteria are unclear — route to `spec`
-- The work is too large for one coherent PR — route to `break-spec`
+- `scope_classification.kind` is `multi_slice`, `project`, or `unknown` without an approved selected phase/slice — route to `break-spec` or `spec` refinement as appropriate
 
 <HARD-GATE>
 Do NOT write any implementation code, scaffold, or take implementation actions until you have presented an implementation design and the user has approved it. This is non-negotiable.
@@ -24,8 +24,8 @@ Do NOT write any implementation code, scaffold, or take implementation actions u
 ## Process
 
 1. **Load context** — if the handoff includes an explicit Work Contract, spec/PRD, or phase artifact path, read it as your primary input. Otherwise, if a handoff artifact exists in `plans/` (Work Contract, spec, PRD, phase structure), read it as your primary input. Otherwise, check relevant files, docs, recent commits.
-2. **Requirements check** — if product behavior or acceptance criteria are unclear, stop and route to `spec` with the missing questions. When a Work Contract is present, proceed only when `Status` is `approved`; route `draft` or `needs-human-decision` back to `spec`. Treat unknowns as blocking when they affect implementation approach or acceptance criteria. Verify `scope_classification` has all six #55 keys, `proof_requirements` is a list (possibly empty), and reserved slots still match #55 defaults (`slice_plan: null`, `children: []`) unless a later ticket explicitly populated them. Broad/project work should not jump directly to scaffolding by default. Do not patch over vague requirements with implementation guesses.
-3. **Scope check** — if the work is too large for one coherent PR, stop and route to `break-spec`.
+2. **Requirements check** — if product behavior or acceptance criteria are unclear, stop and route to `spec` with the missing questions. When a Work Contract is present, proceed only when `Status` is `approved`; route `draft` or `needs-human-decision` back to `spec`. Treat unknowns as blocking when they affect implementation approach or acceptance criteria. Verify `scope_classification` has the seven #56 keys (`kind`, `confidence`, `rationale`, `recommended_route`, `requires_human_approval`, `requires_split`, `split_reason`), `proof_requirements` is a list (possibly empty), and reserved slots still match defaults (`slice_plan: null`, `children: []`) unless later tickets explicitly populated them. Broad/project work should not jump directly to scaffolding by default. Do not patch over vague requirements with implementation guesses.
+3. **Scope check** — use `scope_classification` when present. `atomic` and `single_pr` may proceed. `multi_slice` must route to `break-spec` unless a selected phase/slice is already provided. `project` must route to spec refinement/project boundary approval first in P0, then slice planning; do not scaffold by default. `unknown` or low-confidence high-consequence classifications route back to `spec` for refinement.
 4. **Ask implementation questions one at a time** — prefer multiple choice. Focus on architecture, data flow, boundaries, edge cases, and tests.
 5. **Propose 2–3 implementation approaches** — include trade-offs and your recommendation. Lead with the recommended option and say why.
 6. **Present the design** — scale to complexity. A few sentences for simple changes, detailed sections for complex ones. Get approval section by section. Offer: "Want to stress-test this design before we finalize?" (invokes `poke-holes`).

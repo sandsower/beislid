@@ -17,12 +17,12 @@ Invoke `blueprint` with:
 - codebase findings and likely files/tests
 - domain context
 - team config constraints
-- scope decision and selected phase if any
+- `scope_classification`, derived route summary, and selected phase/slice if any
 - approved Work Contract or derived Work Contract context when available
 - approved spec artifact status/path if `spec` returned one
 - open risks/questions
 
-Blueprint must produce an approved design before implementation begins. Blocking Work Contract unknowns are gaps that prevent choosing an implementation approach or change the `Problem`, `Desired Outcome`, `Constraints`, or acceptance outcomes; route those back to `spec`. Non-blocking unknowns, such as optional details, UI copy, or implementation-specific choices, may stay recorded in `Unknowns / Human Decisions`. If the slice is too large, route to `break-spec`.
+Blueprint must produce an approved design before implementation begins. Blocking Work Contract unknowns are gaps that prevent choosing an implementation approach or change the `Problem`, `Desired Outcome`, `Constraints`, or acceptance outcomes; route those back to `spec`. Non-blocking unknowns, such as optional details, UI copy, or implementation-specific choices, may stay recorded in `Unknowns / Human Decisions`. If `scope_classification.kind` is `multi_slice`, route to `break-spec`; if `scope_classification.kind` is `project` with unresolved boundaries, route to `spec_refinement`; if `scope_classification.kind` is `project` with approved boundaries but no selected phase/slice, route to `break-spec`. An approved selected phase/slice bypasses this routing.
 
 ## Exit
 

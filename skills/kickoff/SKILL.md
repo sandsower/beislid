@@ -80,7 +80,7 @@ Read `action-policy-protocol.md` before Step 1 side effects. Verbose mode prints
 3. **Team guidance** — read `step-3-team-guidance.md`. Outputs: team config status and constraints.
 4. **Readiness** — read `step-4-readiness.md`. Outputs: route to `spec` or blueprint path, with rationale.
 4b. **Checkpoint** — read `step-4-checkpoint.md`. Outputs: `kickoff_context_ready` artifact/pointer status; ledger checkpoint if active.
-5. **Scope** — read `step-5-scope.md`. Outputs: `single PR` or `needs breakdown`, with selected phase if any.
+5. **Scope** — read `step-5-scope.md`. Outputs: `scope_classification`, derived route summary, approval/split fields, and selected phase if any.
 6. **Blueprint** — read `step-6-blueprint.md`. Outputs: approved design summary, expected files/modules, tests, risks/open questions.
 7. **Discoveries** — read `step-7-discoveries.md`. Outputs: discovery status and any durable notes recorded.
 8. **Ticket update** — read `step-8-ticket-update.md`. Outputs: update status/body and implement handoff context; ledger final checkpoint/report if active.

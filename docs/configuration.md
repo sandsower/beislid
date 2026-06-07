@@ -270,7 +270,7 @@ A Work Contract is Markdown with stable fields and headings:
 - `Acceptance Outcomes`: user-reviewable outcomes that prove the contract is satisfied.
 - `Unknowns / Human Decisions`: unresolved product choices; agents must not invent these to unblock implementation.
 - `Risk Classification`: low, medium, high, or critical, with a short reason.
-- `scope_classification`: intentionally shallow in #55; #56 fully defines the classifier. In #55, agents may record only obvious lightweight scope; use `kind: unknown` when scope is not obvious, keep all six fields present, and explain the deferral in `rationale`. Broad/project work should not jump directly to scaffolding by default.
+- `scope_classification`: the canonical scope and routing classifier. Keep every field present. Use `kind: unknown` only in `draft` or `needs-human-decision` contracts; approved automation handoffs must classify as `atomic`, `single_pr`, `multi_slice`, or `project`.
 - `proof_requirements`: list of `proof-requirement-v1` items that define what evidence makes the contract done.
 - `slice_plan`: reserved for break-spec child contract output from #58.
 - `children`: reserved for child Work Contracts or child slice references from #58.
@@ -280,10 +280,11 @@ Stable extension slots:
 
 ```yaml
 scope_classification:
-  kind: unknown # later: atomic | single_pr | multi_slice | project
+  kind: unknown # atomic | single_pr | multi_slice | project | unknown
+  confidence: low # low | medium | high
   rationale: ""
-  recommended_route: ""
-  requires_human_approval: false
+  recommended_route: spec_refinement # spec_refinement | minimal_blueprint | blueprint | break_spec | project_planning
+  requires_human_approval: true
   requires_split: false
   split_reason: null
 
@@ -292,6 +293,16 @@ proof_requirements: [] # list of proof-requirement-v1 items; [] means none ident
 slice_plan: null       # populated for multi_slice/project work in #58
 children: []           # child Work Contracts / child slice references in #58
 ```
+
+Classifier vocabulary:
+
+- `atomic`: tightly bounded, clear, low-branching work. It is not merely a tiny diff; a small risky or ambiguous change may still be `single_pr` or require refinement. Route to `minimal_blueprint` or `blueprint`, and do not over-decompose.
+- `single_pr`: one coherent reviewable PR. Route to `blueprint`.
+- `multi_slice`: known direction with multiple independently shippable vertical slices. Route to `break_spec` and require a split reason.
+- `project`: broad work needing milestones, contracts, or ownership boundaries before child execution. In P0, use `recommended_route: spec_refinement` while boundaries are unresolved; then use `project_planning` as an intermediate route before proceeding to `break_spec` (slice planning). Do not scaffold by default.
+- `unknown`: temporary draft state only. Use `confidence: low`, `recommended_route: spec_refinement`, and `requires_human_approval: true`; do not use it in approved automation handoffs.
+
+Always show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval, and is required when classification triggers decomposition, automation fanout, project planning, contradicts the user's expected route, or has low confidence with high consequence. When approval is required because the scope is broad or low-confidence, recommend the smallest refinement that would reduce ambiguity rather than under-classifying the work to avoid approval.
 
 Example:
 
@@ -333,9 +344,10 @@ Medium — prompt changes span multiple skills and must stay concise.
 
 ```yaml
 scope_classification:
-  kind: unknown
-  rationale: "Initial #55 foundation; full classifier belongs to #56."
-  recommended_route: ""
+  kind: single_pr
+  confidence: high
+  rationale: "One coherent Work Contract foundation change across docs and skill guidance."
+  recommended_route: blueprint
   requires_human_approval: false
   requires_split: false
   split_reason: null

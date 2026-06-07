@@ -30,7 +30,7 @@ Each phase prints an entry summary on its way in and an exit summary on its way 
 **Phase 2 — Quality gates:**
 ```
 🔄 Phase 2: Quality gates — running <N> gate(s) across <S> scope(s).
-✓ Phase 2: proof satisfied; pre-pr gates green in <duration>; <K> gate(s) skipped.
+✓ Phase 2: pre-pr proof satisfied in <duration>; <K> proof item(s) not applicable.
 ⚡ Phase 2: fast-path ran <N> safe gate(s) in parallel; all green in <duration>.
 ⚠️ Phase 2: <N> gate(s) needed autofix; resumed after fixes.
 ```
@@ -213,9 +213,9 @@ When `BEISLID_VERBOSE=1` is set, ready-for-review appends structured stamps unde
 After each phase summary line:
 
 ```
-✓ Phase 2: selected pre-pr gates green in 38s; 0 staged/non-computational gate(s) skipped.
+✓ Phase 2: selected pre-pr proof satisfied in 38s; 0 staged/non-computational proof item(s) not applicable.
 ---
-🎯 Phase 2 exit check: all selected pre-pr gates ran; <K> staged/non-computational gate(s) skipped; <N> autofixes applied.
+🎯 Phase 2 exit check: required pre-pr proof satisfied; <K> staged/non-computational proof item(s) not applicable; <N> autofixes applied.
 ✓ probe scopes.frontend.gates[0].command — cli:pnpm (probed <ISO-8601>)
 ✓ probe scopes.frontend.gates[1].command — cli:pnpm (cached, hash-matched)
 — scopes.backend (not touched)

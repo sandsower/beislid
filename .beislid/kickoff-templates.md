@@ -26,7 +26,7 @@ Entry:
 🔄 Step 3: Team guidance — checking local team notes if present.
 🔄 Step 4: Readiness — deciding whether this needs spec first.
 🔄 Step 4b: Checkpoint — writing kickoff context artifact if configured.
-🔄 Step 5: Scope — checking whether this fits one PR.
+🔄 Step 5: Scope — classifying work and selecting the safe route.
 🔄 Step 6: Blueprint — designing the implementation.
 🔄 Step 7: Discoveries — recording new domain knowledge if configured.
 🔄 Step 8: Ticket update — posting or printing the approved plan.
@@ -40,7 +40,7 @@ Exit:
 ✓ Step 3: Team guidance <found|not configured>.
 ✓ Step 4: Readiness decided — <spec|blueprint>.
 ✓ Step 4b: Checkpoint <status>.
-✓ Step 5: Scope decided — <single PR|needs breakdown>.
+✓ Step 5: Scope classified — <atomic|single_pr|multi_slice|project|unknown>.
 ✓ Step 6: Blueprint approved.
 ✓ Step 7: Discoveries <recorded|skipped>.
 ✓ Step 8: Plan <posted|printed>; handing to implement.
