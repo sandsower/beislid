@@ -202,7 +202,7 @@ _lavish_plugin_write_state() {
     exit 1
   fi
   python3 - <<'PY' "$state_path" "$enabled" "$command_value" "$artifact_root"
-import json, sys
+import json, os, sys
 from datetime import datetime, timezone
 path, enabled, command, artifact_root = sys.argv[1:]
 data = {
@@ -214,9 +214,11 @@ data = {
     "artifact_root": artifact_root,
     "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
-with open(path, "w", encoding="utf-8") as f:
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
+os.chmod(path, 0o600)
 PY
 }
 
@@ -246,6 +248,10 @@ PY
 
 _lavish_plugin_first_binary() {
   local command_value="$1"
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf '\n'
+    return 0
+  fi
   python3 - <<'PY' "$command_value"
 import shlex, sys
 try:
@@ -258,6 +264,10 @@ PY
 
 _lavish_plugin_deep_check() {
   local command_value="$1"
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "deep_check: failed (python3 unavailable)"
+    return 1
+  fi
   python3 - <<'PY' "$command_value"
 import shlex, subprocess, sys
 command = sys.argv[1]

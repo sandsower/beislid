@@ -916,6 +916,15 @@ test_cli_plugin_enable_lavish_writes_state() {
   assert_json_field "$STATE/plugins/lavish.json" enabled True
   assert_json_field "$STATE/plugins/lavish.json" command "npx -y lavish-axi"
   assert_json_field "$STATE/plugins/lavish.json" artifact_root ".lavish"
+  local mode
+  mode="$(python3 - <<'PY' "$STATE/plugins/lavish.json"
+import os, stat, sys
+print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))
+PY
+)"
+  if [[ "$mode" != "0o600" ]]; then
+    note_fail "expected Lavish plugin state mode 0o600, got $mode"
+  fi
 }
 
 test_cli_plugin_status_lavish_reports_light_probe() {
