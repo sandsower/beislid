@@ -905,6 +905,80 @@ test_cli_status() {
   assert_stdout_contains "✓ verify"
 }
 
+test_cli_plugin_enable_lavish_writes_state() {
+  run_cli plugin enable lavish
+  assert_stdout_contains "Lavish plugin enabled"
+  assert_stdout_contains "default command is 'npx -y lavish-axi'"
+  assert_file_exists "$STATE/plugins/lavish.json"
+  assert_json_field "$STATE/plugins/lavish.json" schema 1
+  assert_json_field "$STATE/plugins/lavish.json" name lavish
+  assert_json_field "$STATE/plugins/lavish.json" provider lavish-axi
+  assert_json_field "$STATE/plugins/lavish.json" enabled True
+  assert_json_field "$STATE/plugins/lavish.json" command "npx -y lavish-axi"
+  assert_json_field "$STATE/plugins/lavish.json" artifact_root ".lavish"
+  local mode
+  mode="$(python3 - <<'PY' "$STATE/plugins/lavish.json"
+import os, stat, sys
+print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))
+PY
+)"
+  if [[ "$mode" != "0o600" ]]; then
+    note_fail "expected Lavish plugin state mode 0o600, got $mode"
+  fi
+}
+
+test_cli_plugin_status_lavish_reports_light_probe() {
+  cat >"$TMP/bin/npx" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+  chmod +x "$TMP/bin/npx"
+  run_cli plugin enable lavish
+  run_cli plugin status lavish
+  assert_stdout_contains "beislid plugin status lavish"
+  assert_stdout_contains "enabled: True"
+  assert_stdout_contains "command: npx -y lavish-axi"
+  assert_stdout_contains "artifact_root: .lavish"
+  assert_stdout_contains "light_probe: ok (npx)"
+}
+
+test_cli_plugin_disable_lavish_preserves_state() {
+  run_cli plugin enable lavish --command lavish-axi --artifact-root .custom-lavish
+  run_cli plugin disable lavish
+  assert_stdout_contains "Lavish plugin disabled"
+  assert_json_field "$STATE/plugins/lavish.json" enabled False
+  assert_json_field "$STATE/plugins/lavish.json" command lavish-axi
+  assert_json_field "$STATE/plugins/lavish.json" artifact_root ".custom-lavish"
+}
+
+test_cli_plugin_status_lavish_deep_check() {
+  cat >"$TMP/bin/npx" <<'SH'
+#!/usr/bin/env bash
+printf 'fake lavish help\n'
+printf '%s\n' "$@" >"$BEISLID_FAKE_PI_LOG"
+exit 0
+SH
+  chmod +x "$TMP/bin/npx"
+  BEISLID_FAKE_PI_LOG="$TMP/deep-check.log" run_cli plugin enable lavish
+  BEISLID_FAKE_PI_LOG="$TMP/deep-check.log" run_cli plugin status lavish --check
+  assert_stdout_contains "deep_check: ok"
+  assert_file_contains "$TMP/deep-check.log" "-y"
+  assert_file_contains "$TMP/deep-check.log" "lavish-axi"
+  assert_file_contains "$TMP/deep-check.log" "--help"
+}
+
+test_cli_plugin_errors_are_clear() {
+  if run_cli plugin enable nope; then
+    note_fail "expected unknown plugin enable to fail"
+  fi
+  assert_stderr_contains "Unknown plugin: nope"
+
+  if run_cli plugin status lavish --bogus; then
+    note_fail "expected unknown plugin status flag to fail"
+  fi
+  assert_stderr_contains "Unknown plugin status flag: --bogus"
+}
+
 test_cli_legacy_flag_guidance() {
   if run_cli --status; then
     note_fail "expected beislid --status to exit non-zero"
@@ -1441,6 +1515,11 @@ run_test "Homebrew formula draft installs runtime subset"       test_homebrew_fo
 run_test "CLI install user delegates to user install"          test_cli_install_user
 run_test "CLI ignores ambient option flags"                    test_cli_ignores_ambient_option_flags
 run_test "CLI status delegates to status"                      test_cli_status
+run_test "CLI plugin enable lavish writes state"               test_cli_plugin_enable_lavish_writes_state
+run_test "CLI plugin status lavish reports light probe"        test_cli_plugin_status_lavish_reports_light_probe
+run_test "CLI plugin disable lavish preserves state"           test_cli_plugin_disable_lavish_preserves_state
+run_test "CLI plugin status lavish deep check"                 test_cli_plugin_status_lavish_deep_check
+run_test "CLI plugin errors are clear"                         test_cli_plugin_errors_are_clear
 run_test "v0.2 migration repoints previous install"            test_migrate_v0_2_repoints_previous_manifest_install
 run_test "CLI v0.2 migration delegates"                        test_cli_migrate_v0_2_delegates_to_shared_migration
 run_test "legacy CLI flags print guidance"                     test_cli_legacy_flag_guidance

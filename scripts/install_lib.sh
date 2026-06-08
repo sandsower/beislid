@@ -188,6 +188,220 @@ install_pi_show_me() {
   echo "ok:   pi package installed for show-me extension"
 }
 
+_lavish_plugin_state_path() {
+  printf '%s/plugins/lavish.json\n' "$BEISLID_STATE"
+}
+
+_lavish_plugin_write_state() {
+  local enabled="$1" command_value="$2" artifact_root="$3"
+  local state_path
+  state_path="$(_lavish_plugin_state_path)"
+  mkdir -p "$(dirname "$state_path")"
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "error: beislid plugin lavish requires python3 to write state" >&2
+    exit 1
+  fi
+  python3 - <<'PY' "$state_path" "$enabled" "$command_value" "$artifact_root"
+import json, os, sys
+from datetime import datetime, timezone
+path, enabled, command, artifact_root = sys.argv[1:]
+data = {
+    "schema": 1,
+    "name": "lavish",
+    "provider": "lavish-axi",
+    "enabled": enabled == "1",
+    "command": command,
+    "artifact_root": artifact_root,
+    "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+}
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+os.chmod(path, 0o600)
+PY
+}
+
+_lavish_plugin_read_field() {
+  local field="$1" fallback="$2" state_path
+  state_path="$(_lavish_plugin_state_path)"
+  if [[ ! -f "$state_path" ]] || ! command -v python3 >/dev/null 2>&1; then
+    printf '%s\n' "$fallback"
+    return
+  fi
+  python3 - <<'PY' "$state_path" "$field" "$fallback"
+import json, sys
+path, field, fallback = sys.argv[1:]
+try:
+    data = json.load(open(path, encoding="utf-8"))
+    value = data
+    for part in field.split("."):
+        value = value[part]
+except Exception:
+    value = fallback
+if isinstance(value, bool):
+    print("True" if value else "False")
+else:
+    print(value)
+PY
+}
+
+_lavish_plugin_first_binary() {
+  local command_value="$1"
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf '\n'
+    return 0
+  fi
+  python3 - <<'PY' "$command_value"
+import shlex, sys
+try:
+    parts = shlex.split(sys.argv[1])
+except ValueError:
+    parts = []
+print(parts[0] if parts else "")
+PY
+}
+
+_lavish_plugin_deep_check() {
+  local command_value="$1"
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "deep_check: failed (python3 unavailable)"
+    return 1
+  fi
+  python3 - <<'PY' "$command_value"
+import shlex, subprocess, sys
+command = sys.argv[1]
+try:
+    argv = shlex.split(command)
+except ValueError as exc:
+    print(f"deep_check: failed (invalid command: {exc})")
+    sys.exit(1)
+if not argv:
+    print("deep_check: failed (empty command)")
+    sys.exit(1)
+try:
+    result = subprocess.run([*argv, "--help"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+except FileNotFoundError:
+    print(f"deep_check: failed ({argv[0]} not found)")
+    sys.exit(1)
+except subprocess.TimeoutExpired:
+    print("deep_check: failed (timed out)")
+    sys.exit(1)
+if result.returncode == 0:
+    print("deep_check: ok")
+    sys.exit(0)
+summary = (result.stderr or result.stdout or "").strip().splitlines()
+reason = summary[0] if summary else f"exit {result.returncode}"
+print(f"deep_check: failed ({reason})")
+sys.exit(1)
+PY
+}
+
+beislid_plugin_lavish_enable() {
+  local command_value="npx -y lavish-axi" artifact_root=".lavish"
+  while (($#)); do
+    case "$1" in
+      --command)
+        shift
+        if [[ -z "${1:-}" ]]; then
+          echo "Missing value for --command" >&2
+          exit 2
+        fi
+        command_value="$1"
+        ;;
+      --artifact-root)
+        shift
+        if [[ -z "${1:-}" ]]; then
+          echo "Missing value for --artifact-root" >&2
+          exit 2
+        fi
+        artifact_root="$1"
+        ;;
+      -h|--help)
+        echo "Usage: beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]"
+        return 0
+        ;;
+      *)
+        echo "Unknown plugin enable flag: $1" >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+
+  _lavish_plugin_write_state 1 "$command_value" "$artifact_root"
+  echo "Lavish plugin enabled"
+  echo "  state: $(_lavish_plugin_state_path)"
+  echo "  command: $command_value"
+  echo "  artifact_root: $artifact_root"
+  echo "  note: default command is 'npx -y lavish-axi'. First real use or 'beislid plugin status lavish --check' may touch npm, network, and local package cache. Lavish runtime behavior is owned by Lavish; configure a pinned/local command if your environment needs that boundary."
+}
+
+beislid_plugin_lavish_disable() {
+  if (($#)); then
+    case "${1:-}" in
+      -h|--help)
+        echo "Usage: beislid plugin disable lavish"
+        return 0
+        ;;
+      *)
+        echo "Unknown plugin disable flag: $1" >&2
+        exit 2
+        ;;
+    esac
+  fi
+  local command_value artifact_root
+  command_value="$(_lavish_plugin_read_field command "npx -y lavish-axi")"
+  artifact_root="$(_lavish_plugin_read_field artifact_root ".lavish")"
+  _lavish_plugin_write_state 0 "$command_value" "$artifact_root"
+  echo "Lavish plugin disabled"
+  echo "  state: $(_lavish_plugin_state_path)"
+}
+
+beislid_plugin_lavish_status() {
+  local deep_check=0
+  while (($#)); do
+    case "$1" in
+      --check) deep_check=1 ;;
+      -h|--help)
+        echo "Usage: beislid plugin status lavish [--check]"
+        return 0
+        ;;
+      *)
+        echo "Unknown plugin status flag: $1" >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+
+  local state_path enabled command_value artifact_root binary
+  state_path="$(_lavish_plugin_state_path)"
+  enabled="$(_lavish_plugin_read_field enabled False)"
+  command_value="$(_lavish_plugin_read_field command "npx -y lavish-axi")"
+  artifact_root="$(_lavish_plugin_read_field artifact_root ".lavish")"
+  binary="$(_lavish_plugin_first_binary "$command_value")"
+
+  echo "beislid plugin status lavish"
+  echo "  state: $state_path"
+  echo "  enabled: $enabled"
+  echo "  provider: lavish-axi"
+  echo "  command: $command_value"
+  echo "  artifact_root: $artifact_root"
+  if [[ -n "$binary" ]] && command -v "$binary" >/dev/null 2>&1; then
+    echo "  light_probe: ok ($binary)"
+  elif [[ -n "$binary" ]]; then
+    echo "  light_probe: missing ($binary)"
+  else
+    echo "  light_probe: failed (empty command)"
+  fi
+  if [[ "$deep_check" == 1 ]]; then
+    echo "  deep_check_note: may invoke the configured Lavish command and touch npm/network/cache"
+    printf '  '
+    _lavish_plugin_deep_check "$command_value" || return 1
+  fi
+}
+
 _path_contains_dir() {
   local dir="$1"
   case ":${PATH:-}:" in

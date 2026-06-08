@@ -66,6 +66,7 @@ Usage:
   beislid install user [--with-security-hooks] [--with-pi-show-me] [--force]
   beislid install project [path] [--copy] [--write-gitignore] [--force]
   beislid status [project [path]]
+  beislid plugin <enable|disable|status> lavish [--check]
   beislid update [--force]
   beislid migrate v0.2 [--with-security-hooks] [--with-pi-show-me] [--force]
   beislid run-ledger <init|event|checkpoint|gate|interrupt|finalize|resume> [...]
@@ -240,6 +241,55 @@ case "$cmd" in
   action-policy)
     shift
     python3 "$BEISLID_ROOT/scripts/action_policy.py" "$@"
+    ;;
+  plugin)
+    shift
+    subcmd="${1:-}"
+    case "$subcmd" in
+      enable)
+        shift
+        plugin="${1:-}"
+        if [[ "$plugin" != "lavish" ]]; then
+          echo "Unknown plugin: ${plugin:-}" >&2
+          _usage >&2
+          exit 2
+        fi
+        shift
+        beislid_plugin_lavish_enable "$@"
+        ;;
+      disable)
+        shift
+        plugin="${1:-}"
+        if [[ "$plugin" != "lavish" ]]; then
+          echo "Unknown plugin: ${plugin:-}" >&2
+          _usage >&2
+          exit 2
+        fi
+        shift
+        beislid_plugin_lavish_disable "$@"
+        ;;
+      status)
+        shift
+        plugin="${1:-}"
+        if [[ "$plugin" != "lavish" ]]; then
+          echo "Unknown plugin: ${plugin:-}" >&2
+          _usage >&2
+          exit 2
+        fi
+        shift
+        beislid_plugin_lavish_status "$@"
+        ;;
+      "")
+        echo "Missing plugin subcommand." >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        echo "Unknown plugin subcommand: $subcmd" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
     ;;
   install)
     shift
