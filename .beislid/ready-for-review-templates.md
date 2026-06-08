@@ -31,7 +31,7 @@ Each phase prints an entry summary on its way in and an exit summary on its way 
 ```
 🔄 Phase 2: Quality gates — running <N> gate(s) across <S> scope(s).
 ✓ Phase 2: pre-pr proof satisfied in <duration>; <K> proof item(s) not applicable.
-⚡ Phase 2: fast-path ran <N> safe gate(s) in parallel; all green in <duration>.
+⚡ Phase 2: fast-path ran <N> safe proof gate(s) in parallel; proof satisfied in <duration>.
 ⚠️ Phase 2: <N> gate(s) needed autofix; resumed after fixes.
 ```
 
