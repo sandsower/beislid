@@ -254,6 +254,12 @@ Selectors may use `changed_file_selector.include` / `exclude` glob lists (or leg
 
 Output/parser metadata is declarative. `output.parser` may name parsers such as `generic-text` or `pytest`, but the full agent-readable result envelope is handled by the gate-result-envelope work. `failure` may declare `retryable`, `max_fix_iterations`, `stop_if_patterns`, and `hint`; P0 orchestrators surface this context in failure prompts but still require user direction before risky fixes or skips.
 
+## Gate metadata to Proof Requirement mapping
+
+A runnable gate can be exported as a `proof-requirement-v1` `command_gate` without depending on skill prose. Map `name` to `id`, `stage` to proof `stage`, selected path metadata to `applies_to.paths` / `applies_to.exclude`, and `output` to `expected_artifact`. Default `failure_policy` to `on_missing: block` and `on_failure: block`; copy `failure.retryable`, `max_fix_iterations`, `stop_if_patterns`, and `hint` when present. A passing gate envelope satisfies proof; failing, skipped, or missing required gates block readiness or create the configured human interrupt.
+
+Setup/pre commands are prerequisites, not proof. Code generation, dependency download, and other setup steps may block dependent gates when they fail, but they do not by themselves prove quality or done status.
+
 ## Gate-set selection shape
 
 `gate_sets` is the preferred model when a project needs deterministic changed-file-aware checks. It is optional and takes precedence over legacy `scopes` / top-level `gates` when configured; if absent, orchestrators keep the old fallback behavior.

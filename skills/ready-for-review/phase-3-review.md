@@ -56,7 +56,7 @@ Phase 3 may exit only when review plus enabled final check, fast-path combined r
 
 Print the Phase 3 exit one-liner from `ready-for-review-templates.md`, filling `<N>` with findings addressed across review/final-check or combined review. In verbose mode, append the Phase 3 exit check and transcript boundary.
 
-Outputs to Phase 4: review mode, final-check mode (`built-in`, `command`, or `disabled-by-workflow`), findings count, accepted/reduced-coverage notes, no unaccepted blockers, and confirmation applicable gates reran after functional review/final-check fixes.
+Outputs to Phase 4: review/fresh-eyes proof status, review mode, final-check mode (`built-in`, `command`, or `disabled-by-workflow`), findings count, accepted/reduced-coverage notes, no unaccepted blockers, and applicable gate rerun confirmation.
 
 ## Phase-local tripwires
 

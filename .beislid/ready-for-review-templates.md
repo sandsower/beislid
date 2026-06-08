@@ -30,8 +30,8 @@ Each phase prints an entry summary on its way in and an exit summary on its way 
 **Phase 2 — Quality gates:**
 ```
 🔄 Phase 2: Quality gates — running <N> gate(s) across <S> scope(s).
-✓ Phase 2: selected pre-pr gates green in <duration>; <K> staged/non-computational gate(s) skipped.
-⚡ Phase 2: fast-path ran <N> safe gate(s) in parallel; all green in <duration>.
+✓ Phase 2: pre-pr proof satisfied in <duration>; <K> proof item(s) not applicable.
+⚡ Phase 2: fast-path ran <N> safe proof gate(s) in parallel; proof satisfied in <duration>.
 ⚠️ Phase 2: <N> gate(s) needed autofix; resumed after fixes.
 ```
 
@@ -54,8 +54,8 @@ What now? fix / retry / accept risk / abort.
 ```
 🔄 Phase 3: Review — invoking review then final whole-diff check against <base>.
 🔄 Phase 3: Fast-path review — one combined review/final-check pass against <base>.
-✓ Phase 3: <N> findings addressed; no blocking issues remaining.
-⚡ Phase 3: combined review complete; no blocking issues remaining.
+✓ Phase 3: review/fresh-eyes proof satisfied; <N> findings addressed.
+⚡ Phase 3: combined review proof satisfied; no blockers.
 ```
 
 **Phase 4 — Submit:**
@@ -193,6 +193,8 @@ Title: `<title>`
 Base:  `<base>`
 Files: <N> changed, <K> additions, <M> deletions.
 
+Proof: <required/advisory proof status summary>.
+
 <optional inline notes from this run, e.g.:
 - 💭 Phase 4d skipped: domain capture not configured.
 - ⚠️ Translation files were AI-generated — flagged in the PR description for
@@ -211,9 +213,9 @@ When `BEISLID_VERBOSE=1` is set, ready-for-review appends structured stamps unde
 After each phase summary line:
 
 ```
-✓ Phase 2: selected pre-pr gates green in 38s; 0 staged/non-computational gate(s) skipped.
+✓ Phase 2: selected pre-pr proof satisfied in 38s; 0 staged/non-computational proof item(s) not applicable.
 ---
-🎯 Phase 2 exit check: all selected pre-pr gates ran; <K> staged/non-computational gate(s) skipped; <N> autofixes applied.
+🎯 Phase 2 exit check: required pre-pr proof satisfied; <K> staged/non-computational proof item(s) not applicable; <N> autofixes applied.
 ✓ probe scopes.frontend.gates[0].command — cli:pnpm (probed <ISO-8601>)
 ✓ probe scopes.frontend.gates[1].command — cli:pnpm (cached, hash-matched)
 — scopes.backend (not touched)

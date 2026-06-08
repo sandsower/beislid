@@ -6,7 +6,7 @@ Loaded just in time after Phase 1. If this file cannot be read, hard-fail; do no
 
 Inputs: base/branch/ticket/PR, merge/diff state, gate model (`gate_sets`/scopes/repo-root), configured gates, optional triggered skills/walkthrough, notes/warnings.
 
-Outputs: gate envelopes, status/duration/count, autofix count, user decisions, fast-path parallel status, new commits/changes, reviewer warnings, browser advisory result, walkthrough result, and resume route.
+Outputs: gate envelopes, proof status, skips, decisions, warnings, and resume route.
 
 Print Phase 2 entry/exit one-liners. Verbose mode emits aux/probe/gate summaries.
 
@@ -44,7 +44,7 @@ Execution:
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state for cache write-back. Plain git checks are not probe-cache entries.
 
-Track envelopes, skipped counts/reasons, gate model/areas, duration, autofix count, parallel mode, probe/cache updates, rich metadata, and approved exceptions.
+Track envelopes, skips/reasons, proof status, gate model, duration, autofix, probes, metadata, exceptions. Phase exits only after required proof is satisfied or handled by `failure_policy`.
 
 ## 2c. Translation sync
 

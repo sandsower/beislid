@@ -114,7 +114,7 @@ Population rules:
 - `unknown` is allowed only for `draft` or `needs-human-decision` contracts and routes to `spec_refinement` with `requires_human_approval: true`.
 - Show the classifier before using it to route downstream work. `requires_human_approval: true` means an extra approval boundary beyond normal spec/blueprint approval.
 - Require extra approval when classification triggers decomposition, fanout, project planning, contradicts the user's route, or has low-confidence, high-consequence impact. When true, stop, present the classifier and proposed route, wait for explicit approval, record approved/declined, and do not invoke downstream automation until approved. Prefer refinement questions that reduce approval burden over under-classifying.
-- `proof_requirements: []` is reserved for #57.
+- `proof_requirements` uses `proof-requirement-v1`; use `[]` only when no proof has been identified.
 - `slice_plan: null` and `children: []` are reserved for #58.
 - Broad/project work should not jump directly to scaffolding by default.
 - Missing product decisions belong under `Unknowns / Human Decisions`; do not invent them to unblock `blueprint`.

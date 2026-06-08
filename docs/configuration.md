@@ -271,7 +271,7 @@ A Work Contract is Markdown with stable fields and headings:
 - `Unknowns / Human Decisions`: unresolved product choices; agents must not invent these to unblock implementation.
 - `Risk Classification`: low, medium, high, or critical, with a short reason.
 - `scope_classification`: the canonical scope and routing classifier. Keep every field present. Use `kind: unknown` only in `draft` or `needs-human-decision` contracts; approved automation handoffs must classify as `atomic`, `single_pr`, `multi_slice`, or `project`.
-- `proof_requirements`: reserved list for Proof Requirement v1 from #57.
+- `proof_requirements`: list of `proof-requirement-v1` items that define what evidence makes the contract done.
 - `slice_plan`: reserved for break-spec child contract output from #58.
 - `children`: reserved for child Work Contracts or child slice references from #58.
 - `Ownership Boundary`: what Beislið owns versus Rondo execution/proof/run state and Memento curated memory.
@@ -288,7 +288,7 @@ scope_classification:
   requires_split: false
   split_reason: null
 
-proof_requirements: [] # populated by proof-requirement-v1 in #57
+proof_requirements: [] # list of proof-requirement-v1 items; [] means none identified yet
 
 slice_plan: null       # populated for multi_slice/project work in #58
 children: []           # child Work Contracts / child slice references in #58
@@ -363,6 +363,54 @@ Beislið owns work-contract semantics; Rondo owns execution/proof/run state; Mem
 ````
 
 Work Contract artifacts use existing lifecycle artifact actions. `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
+
+## Proof Requirement v1
+
+`proof-requirement-v1` is the portable done-evidence contract inside a Work Contract. It names the proof a human or agent must produce before the contract, slice, or child task can be treated as ready. Beislið defines the semantics; it does not store proof artifacts, ingest Rondo run state, or replace Memento curated memory.
+
+Proof requirements are YAML objects under `proof_requirements`. Required fields are `kind`, `id`, `type`, `stage`, `status`, `success_criteria`, `failure_policy`, and `expected_artifact`; optional fields include `description` and `applies_to`. Defaults: required `command_gate` proof uses `on_missing: block` and `on_failure: block`; advisory proof may use `warn`. Unknown `type`, `stage`, `status`, or result values are invalid for export.
+
+```yaml
+- kind: proof-requirement-v1
+  id: pre-pr-gates
+  type: command_gate
+  stage: pre-pr
+  status: required # required | advisory
+  description: Run configured pre-PR quality gates.
+  success_criteria:
+    - All selected gates return pass envelopes.
+  failure_policy:
+    on_missing: block # required: block | human_interrupt; advisory may warn
+    on_failure: block # required: block | human_interrupt; advisory may warn
+    retryable: true
+  applies_to:
+    paths: ['skills/**', '.beislid/**']
+    risk: medium
+  expected_artifact:
+    kind: gate_envelope
+    reference: run-ledger gate path or transcript-safe summary
+```
+
+Canonical proof `type` values:
+
+- `command_gate`: configured command gate or gate-set result.
+- `clean_eval`: independent clean worktree/container evaluation.
+- `review`: primary review contract result.
+- `fresh_eyes`: final whole-diff review result.
+- `screenshot_show_me`: screenshot, video, or Show Me deck evidence.
+- `docs_drift_check`: check that docs/config examples still match behavior.
+- `migration_dry_run`: migration or data-change dry run evidence.
+- `human_approval`: explicit human decision or risk acceptance.
+- `artifact_exists`: required local artifact path exists and is readable.
+- `ci_check`: provider CI check or required status result.
+
+`stage` names when the proof is expected, using the gate stages where possible (`preflight`, `per-edit`, `pre-commit`, `pre-pr`, `post-pr`, `continuous`, or `human-interrupt`). `status: required` proofs block readiness when missing or failing according to `failure_policy`; `status: advisory` proofs are reported but do not block unless a caller upgrades them by policy.
+
+Proof result status vocabulary is `satisfied`, `missing`, `failed`, `blocked`, `human_interrupt_required`, `advisory_warn`, and `not_applicable`. Orchestrators use `failure_policy.on_missing` and `failure_policy.on_failure` to turn `missing` or `failed` proof into a result: required proof may resolve only to `blocked` or `human_interrupt_required`; `advisory_warn` is only for advisory proof.
+
+`success_criteria` should be observable and reviewable. `expected_artifact` records a reference shape, not embedded proof content: command log path, gate envelope, CI URL/check name, Show Me deck path, screenshot path, migration dry-run log, review report, or human approval note.
+
+Existing gate metadata maps naturally to `command_gate` proof requirements: `name` becomes `id`, `stage` carries over, `changed_file_selector` / gate-set selector data becomes `applies_to.paths` plus `applies_to.exclude` when present, `output` guides the expected artifact parser, and `failure` maps into `failure_policy`. Exported command gates default to `on_missing: block` and `on_failure: block`; `failure.retryable`, `max_fix_iterations`, `stop_if_patterns`, and `hint` are copied when present. Setup/pre commands such as codegen, dependency install, or build prerequisites are not quality proof; they are prerequisites for running proofs, and their failure blocks dependent proof collection rather than satisfying done criteria.
 
 ## Lifecycle actions
 
