@@ -18,5 +18,7 @@ docs/*
 !docs/show-me-template.html
 !docs/assets/
 !docs/assets/**
+!docs/plans/
+!docs/plans/**/*.md
 !docs/show-me-example/
 !docs/show-me-example/**
