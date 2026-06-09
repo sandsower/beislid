@@ -76,7 +76,7 @@ Use the routing this way:
 - `blueprint` when the desired behavior is known and the remaining work is implementation design; an approved Work Contract is a primary requirements handoff.
 - `execution-envelope-v0` can then constrain AFK execution with explicit `allow` / `ask` / `deny`, proof requirements, pause conditions, dependencies, expected delivery, and ownership boundaries. External runners can consume that approved boundary instead of scraping chat, while Rondo or another runner owns execution/run evidence.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
-- If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.”
+- If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.” In Pi, managed Beislið extension commands can automatically start a fresh session from a readable checkpoint pointer at configured boundaries.
 - For Rondo-style durable run state, orchestrators can additionally use `beislid run-ledger ...`. The ledger stores run IDs, events, gate log indexes, interruptions, and final reports under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/`; it links to checkpoint artifacts instead of replacing them.
 
 ## Feedback loop
@@ -140,7 +140,7 @@ Examples:
 - "make a handoff for the migration"
 - "copy context for another agent to handle docs"
 
-For same-session resume, use a memory/checkpoint tool if your environment provides one. When workflow checkpoint artifacts are configured, boundary skills also update `.beislid/checkpoints/latest.json` so a fresh context can rediscover the latest checkpoint for the branch/ticket. For durable Rondo-style resume, use `beislid run-ledger resume --flow <flow> --ticket-id <id> --branch <branch>` to find the latest matching running/interrupted/failed run in external Beislið state. `handoff` is for cross-session or cross-agent transfer.
+For same-session resume, use a memory/checkpoint tool if your environment provides one. When workflow checkpoint artifacts are configured, boundary skills also update `.beislid/checkpoints/latest.json` so a fresh context can rediscover the latest checkpoint for the branch/ticket. In Pi, managed Beislið extension commands can use that pointer to create a replacement session automatically; Claude and other hosts keep the manual `/clear` or fresh-context guidance. For durable Rondo-style resume, use `beislid run-ledger resume --flow <flow> --ticket-id <id> --branch <branch>` to find the latest matching running/interrupted/failed run in external Beislið state. `handoff` is for cross-session or cross-agent transfer.
 
 ## Standalone pressure tools
 

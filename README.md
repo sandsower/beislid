@@ -193,7 +193,7 @@ Or from the Beislið checkout / CLI:
 beislid update
 ```
 
-Update fast-forwards the checkout with `git pull --ff-only`, aborts if the checkout has uncommitted local changes, preserves prior manifest install targets and opt-ins such as security hooks and Pi package extensions, then relinks skills/hooks as needed.
+Update fast-forwards the checkout with `git pull --ff-only`, aborts if the checkout has uncommitted local changes, preserves prior manifest install targets and opt-ins such as security hooks, then relinks skills/hooks as needed.
 
 For the v0.1.x → v0.2 history reset only, use the migration command from a fresh v0.2 checkout:
 
@@ -207,7 +207,6 @@ beislid migrate v0.2
 Flags:
 
 - `--with-security-hooks`: enable `credential_guard` for Claude Code
-- `--with-pi-show-me`: compatibility flag that runs `pi install <repo>` to expose Beislið Pi package extensions, including `show-me` and `babysit`
 - `--update`: fast-forward the Beislið checkout and re-run install
 - `--migrate-v0.2`: one-time migration from pre-v0.2 installs after cloning the clean v0.2 history
 - `--status`: print installed commit and symlink status
@@ -233,6 +232,8 @@ Invocation syntax depends on the host.
 - Use namespaced syntax when your host requires it: `/skill:spec`, `/skill:blueprint`.
 - Natural-language triggers work in some agents, but direct invocation is safest when a gate matters.
 
+When installed as a Pi package, Beislið includes a Pi extension that registers managed slash-command wrappers for the skill surface. Boundary workflows can automatically start a fresh Pi session from a readable checkpoint pointer and continue with a pointer-only prompt. Repo intent is configured with `beislid:pi_handoff`; local Pi settings are the final override. Claude and other hosts keep the existing manual checkpoint guidance.
+
 ## Docs
 
 - [How to use](./docs/how-to-use.md): first-run guide and common paths.
@@ -247,7 +248,7 @@ Invocation syntax depends on the host.
 ## Optional integrations
 
 - `credential_guard` hook: blocks bash commands that dump secrets. Claude Code-specific; the skills themselves are portable markdown.
-- `show-me` Pi extension: typed deck-builder tools, command evidence capture, asset ingestion, browser screenshots when Playwright is installed, and `/show-me doctor|list|open|clean`. The portable skill still works without Pi.
+- Beislið Pi extension: managed slash-command wrappers for Beislið skills plus automatic fresh-session handoff from checkpoint pointers when configured.
 - `workflow_signals`: optional local workflow-state fan-out; v1 can drive `tmux-glance` tab markers through `beislid workflow-signal` when configured.
 
 ## Philosophy

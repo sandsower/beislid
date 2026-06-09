@@ -67,4 +67,4 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 ## Optional integrations
 
 - `credential_guard` hook: blocks bash commands that dump secrets. Claude Code-specific; the skills themselves are portable markdown. See [Credential guard](./credential-guard.md).
-- `show-me` Pi extension: typed deck-builder tools, command evidence capture, asset ingestion, browser screenshots when Playwright is installed, and `/show-me doctor|list|open|clean`. The portable skill still works without Pi. See [Show Me](./show-me.md).
+- Beislið Pi extension: managed slash-command wrappers for the skill surface, plus automatic fresh-session handoff from checkpoint pointers when configured. Portable skills and Claude/manual fallback remain unchanged.

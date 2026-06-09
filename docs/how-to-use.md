@@ -63,6 +63,12 @@ Invocation syntax depends on the host.
 
 The installed names are short and unprefixed: `spec`, `blueprint`, `verify`, `ready-for-review`, and so on.
 
+### Pi managed commands
+
+When Beislið is installed as a Pi package, it includes a Pi extension with managed command wrappers for the Beislið skill surface. Commands such as `/kickoff`, `/implement`, `/verify`, and `/show-me` route to the portable skills while letting Pi handle host-specific behavior.
+
+For boundary workflows, the Pi extension can automatically start a fresh session from a readable checkpoint pointer and auto-continue with a pointer-only prompt. Configure repo intent with `beislid:pi_handoff` in `.beislid/workflow.md`; project-local `.pi/beislid.json` settings override user-global `~/.pi/agent/beislid.json` settings as the final override. Claude and other hosts keep the existing manual checkpoint guidance.
+
 ## CLI
 
 The CLI wraps user-level install, project install, status, and update:
