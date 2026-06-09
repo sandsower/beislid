@@ -41,6 +41,8 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   command: 'python3 scripts/check_skill_size_budgets.py'
 - name: validate-skills
   command: 'python3 scripts/validate_skills.py'
+- name: visual-surfaces-consistency
+  command: 'python3 scripts/check_visual_surfaces_consistency.py'
 ```
 
 Agent smoke is intentionally not a default quality gate because it spends model budget and can take several minutes. During `ready-for-review`, if the diff touches Beislið skill/protocol files (`skills/`, `.beislid/`), installer/test-install paths, or the smoke harness (`tests/agent-smoke/`), stop before running smoke and ask exactly: `This change touches Beislið skill/smoke paths. Run Codex agent smoke now? Claude support is temporarily unavailable; this uses broad fixture permissions, model budget, and can take several minutes. [y/N]`. Default is no; do not run on silence, ambiguity, or prior blanket approval. Recommend running it for medium/large skill changes, protocol changes, installer changes that affect skill discovery, and any change to the smoke harness itself. Record the answer in the ready-for-review summary. If accepted and the host supports background subagents/tasks, start the smoke command in a non-blocking subagent, continue other side-effect-free ready-for-review work while it runs, then join before PR creation; never push/open the PR until the smoke result is known or the user explicitly accepts skipping/ignoring it. If no background runner is available, run it in the main session. Use:
