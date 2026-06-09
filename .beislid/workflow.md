@@ -48,17 +48,34 @@ rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewe
 The repo has no scope separation (single markdown distribution). Top-level gates run skill size budgets and the skill frontmatter validator from the repo root.
 
 ```beislid:gates
+- name: diff-whitespace
+  command: 'git diff --check origin/main...HEAD'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 - name: skill-size-budgets
   command: 'python3 scripts/check_skill_size_budgets.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 - name: validate-skills
   command: 'python3 scripts/validate_skills.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 - name: visual-surfaces-consistency
   command: 'python3 scripts/check_visual_surfaces_consistency.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 - name: workflow-signals-consistency
   command: 'python3 scripts/check_workflow_signals_consistency.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 ```
 
-Agent smoke is intentionally not a default quality gate because it spends model budget and can take several minutes. During `ready-for-review`, if the diff touches Beislið skill/protocol files (`skills/`, `.beislid/`), installer/test-install paths, or the smoke harness (`tests/agent-smoke/`), stop before running smoke and ask exactly: `This change touches Beislið skill/smoke paths. Run Codex agent smoke now? Claude support is temporarily unavailable; this uses broad fixture permissions, model budget, and can take several minutes. [y/N]`. Default is no; do not run on silence, ambiguity, or prior blanket approval. Recommend running it for medium/large skill changes, protocol changes, installer changes that affect skill discovery, and any change to the smoke harness itself. Record the answer in the ready-for-review summary. If accepted and the host supports background subagents/tasks, start the smoke command in a non-blocking subagent, continue other side-effect-free ready-for-review work while it runs, then join before PR creation; never push/open the PR until the smoke result is known or the user explicitly accepts skipping/ignoring it. If no background runner is available, run it in the main session. Use:
+Agent smoke is intentionally not a default quality gate because it spends model budget and can take several minutes. During `ready-for-review`, ask about Codex agent smoke only when the diff includes medium/large Beislið skill changes, protocol changes (`skills/`, `.beislid/`), installer/test-install changes, or smoke harness changes (`tests/agent-smoke/`). For tiny docs-only skill prose changes, record `Codex agent smoke skipped by workflow: docs-only skill prose change` and continue without prompting. When smoke is required, stop before running it and ask exactly: `This change touches Beislið skill/smoke paths. Run Codex agent smoke now? Claude support is temporarily unavailable; this uses broad fixture permissions, model budget, and can take several minutes. [y/N]`. Default is no; do not run on silence, ambiguity, or prior blanket approval. If accepted and the host supports background subagents/tasks, start the smoke command in a non-blocking subagent, continue other side-effect-free ready-for-review work while it runs, then join before PR creation; never push/open the PR until the smoke result is known or the user explicitly accepts skipping/ignoring it. If no background runner is available, run it in the main session. Use:
 
 ```bash
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
@@ -74,7 +91,11 @@ modes:
     actions:
       # ticket.fetch is read-only and needed by orchestrators alongside review replies.
       ticket.fetch: allow
+      # Kickoff comments and approved PR handoff actions are low-friction in this repo.
+      ticket.comment: allow
       pr.review.reply: allow
+      git.push: allow
+      gh.pr.create: allow
 ```
 
 ## Translation sync
