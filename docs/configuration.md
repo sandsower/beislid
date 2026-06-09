@@ -32,6 +32,7 @@ setup
 - action policy overrides
 - per-skill model routing hints/requirements
 - visual surfaces such as optional Lavish routing
+- workflow signals such as optional tmux-glance tab markers
 - custom kickoff explore skills and triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 - probe cache settings
@@ -634,6 +635,36 @@ Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visu
 `command` and `artifact_root` are optional. The default command follows Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`. Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
 
 Use `beislid plugin enable lavish` to enable local plugin state and `beislid plugin status lavish` for the light status check. `beislid plugin status lavish --check` may invoke the configured command and can touch npm/network/cache, so doctor does not run that deep check automatically.
+
+## Workflow signals
+
+`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic signal; configured sinks decide how to present it locally. In v1 the supported sink is `tmux-glance`, which annotates the current tmux window/tab when the external `tmux-glance` CLI is available.
+
+````markdown
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: auto
+  poke-holes: auto
+```
+````
+
+Valid signal states are `working`, `waiting`, `verify`, `review`, `blocked`, `done`, `idle`, and `clear`. Emission is best-effort: if workflow signals are absent/off, the process is outside tmux, `tmux-glance` is missing, or a sink fails, the Beislið workflow continues silently.
+
+Skills should emit signals only where they have semantic knowledge. For example, `ready-for-review` can emit `verify` while gates run, `review` during review/fresh-eyes, `waiting` at approval boundaries, and `blocked` on hard failures. `poke-holes` can emit `waiting` before each interview question and `working` while interrogating or exploring code.
+
+Manual check/emission:
+
+```bash
+beislid workflow-signal status --skill ready-for-review
+beislid workflow-signal emit waiting --skill ready-for-review --phase approval
+```
+
+Future sink types are reserved. They should consume the same normalized signal with constrained, transcript-safe metadata and must not become tracker/PR side effects.
 
 ## Repo-aware orchestrators
 
