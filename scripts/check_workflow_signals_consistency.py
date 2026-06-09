@@ -44,8 +44,7 @@ REQUIRED_REFERENCES = {
     ],
     "skills/ready-for-review/SKILL.md": [
         "workflow-signal",
-        "waiting",
-        "verify",
+        "--skill ready-for-review",
     ],
     "skills/poke-holes/SKILL.md": [
         "workflow-signal",

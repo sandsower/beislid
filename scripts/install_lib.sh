@@ -547,7 +547,7 @@ beislid_workflow_signal() {
           skill_mode=*) skill_mode="${line#skill_mode=}" ;;
         esac
       done <<<"$config"
-      [[ "$saw_config" == 1 && "$mode" != "off" && "$skill_mode" != "off" ]] || return 0
+      [[ "$saw_config" == 1 && "$mode" == "auto" && "$skill_mode" == "auto" ]] || return 0
       while IFS= read -r line; do
         case "$line" in
           sink=tmux-glance)

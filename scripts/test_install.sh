@@ -1010,6 +1010,34 @@ SH
   fi
 }
 
+test_workflow_signal_invalid_modes_noop() {
+  local project="$TMP/workflow-signal-invalid-mode"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: prompt
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: disabled
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit waiting --skill ready-for-review
+  if [[ -e "$TMP/tmux-glance.log" ]]; then
+    note_fail "expected invalid workflow-signal modes not to invoke tmux-glance"
+  fi
+}
+
 test_cli_plugin_enable_lavish_writes_state() {
   run_cli plugin enable lavish
   assert_stdout_contains "Lavish plugin enabled"
@@ -1624,6 +1652,7 @@ run_test "workflow-signal noops when unconfigured"            test_workflow_sign
 run_test "workflow-signal tmux-glance requires tmux"           test_workflow_signal_tmux_glance_requires_tmux
 run_test "workflow-signal tmux-glance invokes sink"            test_workflow_signal_tmux_glance_invokes_sink
 run_test "workflow-signal skill override can disable"          test_workflow_signal_skill_override_can_disable
+run_test "workflow-signal invalid modes noop"                  test_workflow_signal_invalid_modes_noop
 run_test "CLI plugin enable lavish writes state"               test_cli_plugin_enable_lavish_writes_state
 run_test "CLI plugin status lavish reports light probe"        test_cli_plugin_status_lavish_reports_light_probe
 run_test "CLI plugin disable lavish preserves state"           test_cli_plugin_disable_lavish_preserves_state

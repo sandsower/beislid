@@ -48,7 +48,7 @@ Algorithm:
 
 Rules: never silently downgrade a configured capability to unconfigured behavior; never re-probe outside explicit retry; preserve `doctor_run_at` because doctor owns it; last-writer-wins is acceptable for v0.2.
 
-`workflow-signal` states: `working`, `waiting`, `verify`, `review`, `blocked`, `done`.
+`workflow-signal` shorthand means `beislid workflow-signal emit <state> --skill ready-for-review --phase <phase>`.
 
 ## Global tripwires
 
