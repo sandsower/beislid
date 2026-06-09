@@ -945,7 +945,7 @@ printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
 SH
   chmod +x "$TMP/bin/tmux-glance"
 
-  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX= run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX='' run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes
   if [[ -e "$TMP/tmux-glance.log" ]]; then
     note_fail "expected workflow-signal emit outside tmux not to invoke tmux-glance"
   fi

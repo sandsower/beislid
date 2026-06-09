@@ -18,7 +18,7 @@ REQUIRED_REFERENCES = {
         "Workflow signals",
         "workflow_signals",
         "tmux-glance",
-        "working | waiting | verify | review | blocked | done | idle | clear",
+        "working | blocked | waiting | verify | review | done | explore",
     ],
     ".beislid/probe-semantics.md": [
         "workflow_signals validation",

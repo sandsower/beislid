@@ -653,7 +653,7 @@ skills:
 ```
 ````
 
-Valid signal states are `working`, `waiting`, `verify`, `review`, `blocked`, `done`, `idle`, and `clear`. Emission is best-effort: if workflow signals are absent/off, the process is outside tmux, `tmux-glance` is missing, or a sink fails, the Beislið workflow continues silently.
+Valid signal states are `working`, `blocked`, `waiting`, `verify`, `review`, `done`, and `explore`. Emission is best-effort: if workflow signals are absent/off, the process is outside tmux, `tmux-glance` is missing, or a sink fails, the Beislið workflow continues silently.
 
 Skills should emit signals only where they have semantic knowledge. For example, `ready-for-review` can emit `verify` while gates run, `review` during review/fresh-eyes, `waiting` at approval boundaries, and `blocked` on hard failures. `poke-holes` can emit `waiting` before each interview question and `working` while interrogating or exploring code.
 
@@ -770,6 +770,8 @@ beislid install project [path]
 beislid install project [path] --copy
 beislid status
 beislid status project [path]
+beislid workflow-signal status
+beislid workflow-signal emit waiting --skill ready-for-review
 beislid update
 beislid migrate v0.2
 beislid help

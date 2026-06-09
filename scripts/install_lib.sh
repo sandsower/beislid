@@ -405,14 +405,14 @@ beislid_plugin_lavish_status() {
 _workflow_signal_usage() {
   cat <<'USAGE'
 Usage:
-  beislid workflow-signal emit <working|waiting|verify|review|blocked|done|idle|clear> [--skill NAME] [--phase NAME] [--event NAME] [--repo PATH]
+  beislid workflow-signal emit <working|blocked|waiting|verify|review|done|explore> [--skill NAME] [--phase NAME] [--event NAME] [--repo PATH]
   beislid workflow-signal status [--skill NAME] [--repo PATH]
 USAGE
 }
 
 _workflow_signal_state_valid() {
   case "$1" in
-    working|waiting|verify|review|blocked|done|idle|clear) return 0 ;;
+    working|blocked|waiting|verify|review|done|explore) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -431,7 +431,8 @@ _workflow_signal_repo_root() {
 }
 
 _workflow_signal_config_lines() {
-  local repo="$1" skill="$2" workflow="$repo/.beislid/workflow.md"
+  local repo="$1" skill="$2"
+  local workflow="$repo/.beislid/workflow.md"
   if [[ ! -f "$workflow" ]] || ! command -v python3 >/dev/null 2>&1; then
     return 0
   fi
@@ -511,7 +512,7 @@ beislid_workflow_signal() {
   shift || true
   case "$subcmd" in
     emit)
-      local state="${1:-}" skill="" phase="" event="" repo_arg=""
+      local state="${1:-}" skill="" repo_arg=""
       if [[ -z "$state" ]]; then
         _workflow_signal_usage >&2
         return 2
@@ -525,8 +526,8 @@ beislid_workflow_signal() {
       while (($#)); do
         case "$1" in
           --skill) shift; skill="${1:-}" ;;
-          --phase) shift; phase="${1:-}" ;;
-          --event) shift; event="${1:-}" ;;
+          # Reserved metadata flags: accepted for future sinks but intentionally unused in v1.
+          --phase|--event) shift; : "${1:-}" ;;
           --repo) shift; repo_arg="${1:-}" ;;
           -h|--help) _workflow_signal_usage; return 0 ;;
           *) echo "Unknown workflow-signal emit flag: $1" >&2; return 2 ;;
@@ -537,7 +538,7 @@ beislid_workflow_signal() {
         fi
         shift
       done
-      local repo config mode="off" skill_mode="off" line sink saw_config=0
+      local repo config mode="off" skill_mode="off" line saw_config=0
       repo="$(_workflow_signal_repo_root "$repo_arg")"
       config="$(_workflow_signal_config_lines "$repo" "$skill")"
       while IFS= read -r line; do

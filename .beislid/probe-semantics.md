@@ -114,7 +114,7 @@ No command, tool, path, skill, or network probe is run for this capability. Miss
 
 ### workflow_signals validation
 
-`beislid:workflow_signals` is validated as local signal routing config. Doctor checks shape only: `mode` must be `off` or `auto`; `sinks` must be a list; v1 executable sink type is `tmux-glance`; unknown sink types are reserved warnings unless the shape is invalid; optional `skills` must be a map whose values are `off` or `auto`. Valid states are `working | waiting | verify | review | blocked | done | idle | clear`. Doctor may recommend `beislid workflow-signal status`, but it must not invoke `tmux-glance` or emit test signals. Missing `tmux-glance` is graceful fallback guidance, not a config failure when the workflow shape is valid.
+`beislid:workflow_signals` is validated as local signal routing config. Doctor checks shape only: `mode` must be `off` or `auto`; `sinks` must be a list; v1 executable sink type is `tmux-glance`; unknown sink types are reserved warnings unless the shape is invalid; optional `skills` must be a map whose values are `off` or `auto`. Valid states are `working | blocked | waiting | verify | review | done | explore`. Doctor may recommend `beislid workflow-signal status`, but it must not invoke `tmux-glance` or emit test signals. Missing `tmux-glance` is graceful fallback guidance, not a config failure when the workflow shape is valid.
 
 ### model_routing validation
 
