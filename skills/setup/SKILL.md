@@ -245,6 +245,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
 - **PR description formatter** — *Pass drafted PR descriptions through a formatter skill before showing them for approval.*
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
+- **Visual surfaces** — *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
@@ -356,6 +357,30 @@ overrides:
 ```
 
 Never create duplicate `beislid:model_routing` blocks; update or remove the existing one.
+
+### Visual surfaces
+
+Configure the canonical `beislid:visual_surfaces` block under `Visual surfaces`. Explain that repo config is required for proactive visual routing; user-level plugin enablement alone is not enough. The only v1 provider is `lavish-axi`, and doctor validates config shape without deep-invoking Lavish.
+
+Ask:
+
+```text
+Configure visual surfaces? (off / suggest / prompt / auto / skip)
+```
+
+For any mode except `skip`, ask whether to use the default Lavish command/artifact root or override them. Defaults are `npx -y lavish-axi` and `.lavish`. Ask for optional per-workflow overrides only when the user wants them; valid override values are also `off / suggest / prompt / auto`.
+
+```beislid:visual_surfaces
+provider: lavish-axi
+mode: prompt
+command: 'npx -y lavish-axi'
+artifact_root: .lavish
+workflows:
+  spec: prompt
+  blueprint: suggest
+```
+
+Never create duplicate `beislid:visual_surfaces` blocks; update or remove the existing one.
 
 ### Fresh-eyes final review
 

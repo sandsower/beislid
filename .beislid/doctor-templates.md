@@ -135,6 +135,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
       "value": "default: sonnet/prefer; overrides: 2; required routes: 1"
+    },
+    "visual_surfaces": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "validation",
+      "value": "provider: lavish-axi; mode: prompt; artifact_root: .lavish; workflow overrides: 2; plugin: enabled"
     }
   }
 }

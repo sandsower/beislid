@@ -116,6 +116,10 @@ No command, tool, path, skill, or network probe is run for this capability. Miss
 
 `beislid:model_routing` is validated, not probed as an external dependency. Doctor checks shape only: optional `defaults`, ordered `overrides[]`, route `model`/`models` candidates, `mode: prefer|require`, and override `skills[]`. It should record `probe_kind: validation` and summarize default candidates, override count, and required-route count. Runtime hosts decide whether candidates are supported; doctor may warn on unknown bare strings but must not spend model budget probing availability. `when` is reserved for future conditional routing and should warn as inactive v1 config rather than narrowing a route.
 
+### visual_surfaces validation
+
+`beislid:visual_surfaces` is validated, not deep-probed as an external provider. Doctor checks shape only: `provider` must be `lavish-axi`; `mode` and every `workflows.*` override must be one of `off`, `suggest`, `prompt`, or `auto`; optional `command` must be a non-empty string; optional `artifact_root` must be a relative repo-local path with no `..` segments; optional `workflows` must be a map. It should record `probe_kind: validation` and summarize provider, mode, override count, artifact root, and Lavish plugin state guidance. Doctor may read user-level Lavish plugin state and may recommend `beislid plugin status lavish`, but it must not run a deep provider check or invoke the configured command. Missing or disabled plugin state is graceful fallback guidance, not a config failure when the workflow shape is valid.
+
 ### type=artifact lifecycle actions
 
 Artifact actions under `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:

@@ -31,6 +31,7 @@ setup
 - scopes
 - action policy overrides
 - per-skill model routing hints/requirements
+- visual surfaces such as optional Lavish routing
 - custom kickoff explore skills and triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 - probe cache settings
@@ -60,7 +61,7 @@ Doctor checks:
 - duplicate or unknown config keys
 - disabled vs missing capabilities
 - whether configured commands/tools are reachable in the current host session
-- validation-only config such as action policy and model routing
+- validation-only config such as action policy, model routing, and visual surfaces
 - probe cache freshness
 
 Doctor reports gaps in prose. It is an audit tool, not a fixer.
@@ -608,6 +609,31 @@ mode: enhance
 ````
 
 `enhance` runs default codebase exploration and merges skill findings. `replace` runs the skill instead of default exploration; if the skill is unavailable, kickoff asks whether to retry, fall back to default exploration for this session, or abort.
+
+## Visual surfaces
+
+`visual_surfaces` lets a repo opt into optional local visual surfaces while keeping Markdown/chat artifacts canonical. Beislið owns workflow routing, config validation, prompt semantics, and fallback guidance; the provider owns the local runtime. In v1 the supported provider is Lavish via `lavish-axi`.
+
+````markdown
+## Visual surfaces
+
+```beislid:visual_surfaces
+provider: lavish-axi
+mode: prompt
+command: 'npx -y lavish-axi'
+artifact_root: .lavish
+workflows:
+  spec: prompt
+  blueprint: suggest
+  show-me: auto
+```
+````
+
+Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visual surface may help; `prompt` asks before invoking one; `auto` permits configured workflows to use the visual surface without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent.
+
+`command` and `artifact_root` are optional. The default command follows Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`. Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
+
+Use `beislid plugin enable lavish` to enable local plugin state and `beislid plugin status lavish` for the light status check. `beislid plugin status lavish --check` may invoke the configured command and can touch npm/network/cache, so doctor does not run that deep check automatically.
 
 ## Repo-aware orchestrators
 

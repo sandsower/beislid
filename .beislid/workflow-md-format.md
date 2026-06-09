@@ -29,6 +29,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Domain capture`
 - `PR description`
 - `Guided walkthrough`
+- `Visual surfaces`
 - `Model routing`
 - `Probe cache`
 - `Skill-specific overrides`
@@ -92,6 +93,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Action policy:**
 - `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
 
+**Visual surfaces:**
+- `visual_surfaces` — optional visual-surface routing config. Fields: `provider` (`lavish-axi` in v1), `mode` (`off | suggest | prompt | auto`, default `suggest`), optional `command` (string override for the provider command), optional `artifact_root` (repo-relative path, default `.lavish`), and optional `workflows` map for per-workflow mode overrides. Workflow override keys are Beislið workflow/skill names such as `spec`, `blueprint`, `poke-holes`, `show-me`, `review`, `ready-for-review`, `walk-the-diff`, and `handoff`; override values use the same mode enum. Proactive routing requires repo `visual_surfaces` config; user-level plugin enablement alone is not enough.
+
 **Model routing:**
 - `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), and `skills` (required on overrides). `when` is reserved for future conditional routing and is not executable in v1.
 
@@ -117,6 +121,27 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `probe_cache` — fields: `ttl_hours` (integer; defaults to 24 when absent)
 
 Capabilities not in this list are unknown — doctor reports them with a `💭` inline note and continues.
+
+## Visual surfaces shape
+
+`visual_surfaces` lets a repo opt into optional visual review/planning surfaces without making user-level plugin state surprising. Beislið owns config, routing decisions, prompt semantics, and fallback guidance; the provider owns local editor/runtime behavior. In v1 the only provider is `lavish-axi`.
+
+````markdown
+## Visual surfaces
+
+```beislid:visual_surfaces
+provider: lavish-axi
+mode: prompt
+command: 'npx -y lavish-axi'
+artifact_root: .lavish
+workflows:
+  spec: prompt
+  blueprint: suggest
+  show-me: auto
+```
+````
+
+`mode` controls proactive use: `off` disables visual routing, `suggest` mentions that a visual surface may help, `prompt` asks before opening/invoking one, and `auto` allows configured workflows to open/invoke without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. `command` defaults to the enabled Lavish plugin command, then `npx -y lavish-axi`; doctor validates shape but should not deep-invoke the command. `artifact_root` defaults to `.lavish` and must be a relative repo-local path with no `..` segments. Repo config is required for proactive routing; user-level plugin enablement alone is not enough.
 
 ## Model routing shape
 
