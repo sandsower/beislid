@@ -12,7 +12,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 ## Execute
 
-- `implement`: TDD-first file-level implementation plan; may consume an approved `execution-envelope-v0` autonomy boundary and write a configured pre-code checkpoint.
+- `implement`: TDD-first file-level implementation plan; may consume an approved `execution-envelope-v0` autonomy boundary for an agent or external runner and write a configured pre-code checkpoint.
 - `debug`: no fix without root cause.
 - `handoff`: paste-ready context packet for another agent/session/worktree.
 
