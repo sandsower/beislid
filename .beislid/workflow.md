@@ -6,15 +6,26 @@ This is the Beislið distribution repo's own workflow config. It dogfoods the v0
 
 ## Issue tracker
 
-GitHub Issues on `sandsower/beislid`, accessed via the `gh` CLI. Issue IDs are bare numbers (e.g. `#11`), no ticket-prefix scheme.
+Linear issues in the personal `teotl` workspace, team `beislid`, accessed via Linear MCP. Issue IDs use the `BEI-<number>` key scheme.
 
 ```beislid:ticket_source
-type: cli
-command: 'gh issue view {id} --json number,title,body,state,labels'
-id_pattern: '^#?\d+$'
+type: mcp
+tool: mcp__linear_personal__get_issue
+id_pattern: '^BEI-\d+$'
+link_template: 'https://linear.app/teotl/issue/{id}'
 ```
 
-No project-wide branch pattern — taumar branches use a mix of `victor/<topic>`, `phase-N-<feature>`, and `release/<name>`. Skipping `branch_pattern` means orchestrators ask for the ticket ID at the start of each run when they need one.
+Linear-created branches use lowercase issue keys such as `vic/bei-56-...`; the branch pattern lets orchestrators recover and normalize the ticket ID when present. Other branch shapes still fall back to asking for the ticket ID.
+
+```beislid:branch_pattern
+^[^/]+/([a-z]+-\d+)
+```
+
+```beislid:ticket_update
+type: mcp
+comment_tool: mcp__linear_personal__save_comment
+issue_tool: mcp__linear_personal__save_issue
+```
 
 ## PR reviews
 
