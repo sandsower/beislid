@@ -31,6 +31,7 @@ setup
 - scopes
 - action policy overrides
 - per-skill model routing hints/requirements
+- Pi automatic fresh-session handoff intent for the Beislið Pi extension
 - visual surfaces such as optional Lavish routing
 - workflow signals such as optional tmux-glance tab markers
 - custom kickoff explore skills and triggered checks such as translation sync or browser compatibility
@@ -43,7 +44,7 @@ Setup shows diffs before destructive writes. It should not silently overwrite pr
 
 Use `setup update` or `/setup update` to update the installed Beislið distribution from an agent host. This is separate from project config setup: it reads the install manifest, confirms the Beislið checkout path, then runs `<beislid-repo>/install.sh --update`.
 
-The updater fast-forwards the Beislið checkout with `git pull --ff-only`, aborts on uncommitted local changes, preserves previous manifest install targets and opt-ins such as security hooks and Pi show-me, then relinks installed skills/hooks. It does not read or write project-owned `.beislid/workflow.md` files.
+The updater fast-forwards the Beislið checkout with `git pull --ff-only`, aborts on uncommitted local changes, preserves previous manifest install targets and opt-ins such as security hooks, then relinks installed skills/hooks. It does not read or write project-owned `.beislid/workflow.md` files.
 
 ## Doctor
 
@@ -732,6 +733,34 @@ beislid run-ledger resume --flow kickoff --ticket-id 15 --branch victor/15-run-l
 
 The ledger may link to workflow-configured checkpoint artifacts, but it does not replace them. `.beislid/checkpoints/latest.json` remains a lightweight repo-local rediscovery pointer; the ledger is the durable run history with run IDs, event history, gate log indexes, interruptions, approved risks, and final reports.
 
+## Pi handoff
+
+When installed as a Pi package, Beislið includes a Pi extension that registers managed command wrappers for the Beislið skill surface. Boundary workflows can automatically start a fresh Pi session after a configured checkpoint boundary, then auto-continue with a pointer-only prompt that tells the new session to read `.beislid/checkpoints/latest.json` and the referenced artifact.
+
+Repo workflow config declares team intent:
+
+````markdown
+## Pi handoff
+
+```beislid:pi_handoff
+enabled: true
+events: all
+exclude: []
+```
+````
+
+`enabled` defaults to true when the Pi extension is active. `events` can be `all` or a list of lifecycle/checkpoint event names; `exclude` removes events from that set. Local Pi extension settings are the final authority and can disable or narrow the behavior for a developer's machine. Auto-handoff requires a readable checkpoint pointer/artifact and loop protection; if the pointer is missing or unreadable, Beislið keeps the existing manual checkpoint guidance used by Claude and other non-Pi hosts.
+
+Local Pi overrides are extension-owned JSON files. User-global settings live at `~/.pi/agent/beislid.json`; project-local settings live at `.pi/beislid.json` and win over user-global settings:
+
+```json
+{
+  "autoHandoff": true,
+  "events": "all",
+  "exclude": []
+}
+```
+
 ## Model routing
 
 `model_routing` lets a repo describe which host model candidates should run each Beislið skill. It is a host hint plus enforcement contract, not a guarantee that every host can switch the currently running model. Hosts should report whether routing was honored, unsupported, fallen back, or blocked.
@@ -969,7 +998,6 @@ Legacy installer flags remain supported:
 
 ```bash
 ./install.sh --with-security-hooks
-./install.sh --with-pi-show-me
 ./install.sh --update
 ./install.sh --migrate-v0.2
 ./install.sh --status
@@ -979,7 +1007,6 @@ Legacy installer flags remain supported:
 ```
 
 - `--with-security-hooks`: enable the Claude Code `credential_guard` hook.
-- `--with-pi-show-me`: install the Pi extension for `show-me`.
 - `--update`: fast-forward the Beislið checkout and re-run install, preserving previous manifest install targets and opt-ins.
 - `--migrate-v0.2`: one-time migration from a pre-v0.2 install after cloning the clean v0.2 repository history.
 - `--status`: print installed commit and symlink status.

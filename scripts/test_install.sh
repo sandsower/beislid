@@ -230,7 +230,6 @@ run_installer_with_option_env() {
   BEISLID_FAKE_PI_LOG="${BEISLID_FAKE_PI_LOG:-}" \
   FORCE=1 \
   WITH_SECURITY_HOOKS=1 \
-  WITH_PI_SHOW_ME=1 \
   PATH="$TMP/bin:$PATH" \
     "$INSTALL" "$@" >"$STDOUT" 2>"$STDERR" || rc=$?
   return "$rc"
@@ -265,7 +264,6 @@ run_cli_with_option_env() {
   BEISLID_FAKE_PI_LOG="${BEISLID_FAKE_PI_LOG:-}" \
   FORCE=1 \
   WITH_SECURITY_HOOKS=1 \
-  WITH_PI_SHOW_ME=1 \
   PATH="$TMP/bin:$PATH" \
     "$REPO_DIR/bin/beislid" "$@" >"$STDOUT" 2>"$STDERR" || rc=$?
   return "$rc"
@@ -531,7 +529,6 @@ PY
   assert_json_field "$manifest" skill_dirs.codex "$CODEX_SKILLS"
   assert_json_field "$manifest" hooks_dir "$HOOKS"
   assert_json_field "$manifest" security_hooks "True"
-  assert_json_field "$manifest" pi_show_me "False"
   assert_json_field "$manifest" bin_dir "$BIN_DIR"
   assert_json_field "$manifest" cli_path "$BIN_DIR/beislid"
   assert_stdout_contains "manifest: $manifest"
@@ -555,23 +552,18 @@ test_install_sh_ignores_ambient_beislid_home() {
 }
 
 test_install_sh_ignores_ambient_option_flags() {
-  fake_pi
   local other="$TMP/other-beislid-cli"
   printf '#!/usr/bin/env bash\n' >"$other"
   ln -s "$other" "$BIN_DIR/beislid"
 
-  BEISLID_FAKE_PI_LOG="$TMP/pi.log" run_installer_with_option_env
+  run_installer_with_option_env
 
   assert_symlink_to "$BIN_DIR/beislid" "$other"
   assert_stderr_contains "beislid CLI symlinked elsewhere"
   if [[ -e "$HOOKS/credential_guard.py" || -e "$HOOKS/credential_guard.json" ]]; then
     note_fail "expected ambient WITH_SECURITY_HOOKS not to install hooks"
   fi
-  if [[ -e "$TMP/pi.log" ]]; then
-    note_fail "expected ambient WITH_PI_SHOW_ME not to call pi"
-  fi
   assert_json_field "$STATE/install.json" security_hooks "False"
-  assert_json_field "$STATE/install.json" pi_show_me "False"
 }
 
 test_cli_bin_dir_override() {
@@ -634,7 +626,6 @@ data = {
     "skill_dirs": {"claude": claude, "agents": agents, "codex": codex},
     "hooks_dir": hooks,
     "security_hooks": True,
-    "pi_show_me": False,
     "bin_dir": bin_dir,
     "cli_path": os.path.join(bin_dir, "beislid"),
 }
@@ -707,33 +698,39 @@ test_cli_migrate_v0_2_delegates_to_shared_migration() {
   assert_symlink_to "$BIN_DIR/beislid" "$REPO_DIR/bin/beislid"
 }
 
-fake_pi() {
-  cat >"$TMP/bin/pi" <<'SH'
-#!/usr/bin/env bash
-echo "$@" >>"$BEISLID_FAKE_PI_LOG"
-SH
-  chmod +x "$TMP/bin/pi"
+
+test_pi_package_manifest_includes_default_extensions() {
+  python3 - <<'PY' "$REPO_DIR/package.json" || note_fail "expected pi package manifest to include Beislið extension"
+import json, sys
+package = json.load(open(sys.argv[1], encoding='utf-8'))
+extensions = package.get('pi', {}).get('extensions', [])
+expected = {'extensions/beislid'}
+missing = expected.difference(extensions)
+if missing:
+    raise SystemExit(f"missing pi extensions: {sorted(missing)}")
+if 'extensions/show-me' in extensions:
+    raise SystemExit('legacy Show Me Pi extension should not be packaged by default')
+PY
 }
 
 
-test_pi_show_me_is_opt_in() {
-  fake_pi
-  BEISLID_FAKE_PI_LOG="$TMP/pi.log" run_installer
-  if [[ -e "$TMP/pi.log" ]]; then
-    note_fail "expected pi not to be called without --with-pi-show-me"
-  fi
-  assert_json_field "$STATE/install.json" pi_show_me "False"
+test_pi_beislid_command_registry_matches_skills() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Beislið Pi command registry to match skills directory"
+from pathlib import Path
+import re, sys
+root = Path(sys.argv[1])
+skills = sorted(p.name for p in (root / 'skills').iterdir() if (p / 'SKILL.md').is_file())
+source = (root / 'extensions' / 'beislid' / 'skill-commands.ts').read_text(encoding='utf-8')
+match = re.search(r'BEISLID_SKILLS = \[(.*?)\] as const', source, re.S)
+if not match:
+    raise SystemExit('BEISLID_SKILLS array not found')
+registered = sorted(re.findall(r'"([^"]+)"', match.group(1)))
+if registered != skills:
+    raise SystemExit(f'registry mismatch\nskills={skills}\nregistered={registered}')
+PY
 }
 
 
-test_pi_show_me_installs_package_when_requested() {
-  fake_pi
-  BEISLID_FAKE_PI_LOG="$TMP/pi.log" run_installer --with-pi-show-me
-  assert_file_contents "$TMP/pi.log" "install $REPO_DIR"
-  assert_json_field "$STATE/install.json" pi_show_me "True"
-  assert_stdout_contains "Pi show-me extension:"
-  assert_stdout_contains "ok:   pi package installed for show-me extension"
-}
 
 test_status_after_install() {
   run_installer
@@ -877,23 +874,18 @@ test_cli_install_user() {
 }
 
 test_cli_ignores_ambient_option_flags() {
-  fake_pi
   local other="$TMP/other-beislid-cli"
   printf '#!/usr/bin/env bash\n' >"$other"
   ln -s "$other" "$BIN_DIR/beislid"
 
-  BEISLID_FAKE_PI_LOG="$TMP/pi.log" run_cli_with_option_env install user
+  run_cli_with_option_env install user
 
   assert_symlink_to "$BIN_DIR/beislid" "$other"
   assert_stderr_contains "beislid CLI symlinked elsewhere"
   if [[ -e "$HOOKS/credential_guard.py" || -e "$HOOKS/credential_guard.json" ]]; then
     note_fail "expected ambient WITH_SECURITY_HOOKS not to install hooks via CLI"
   fi
-  if [[ -e "$TMP/pi.log" ]]; then
-    note_fail "expected ambient WITH_PI_SHOW_ME not to call pi via CLI"
-  fi
   assert_json_field "$STATE/install.json" security_hooks "False"
-  assert_json_field "$STATE/install.json" pi_show_me "False"
 }
 
 test_cli_status() {
@@ -1455,7 +1447,7 @@ test_install_sh_project_rejects_user_only_flags() {
     note_fail "expected --project with user-only flags to fail"
   fi
 
-  assert_stderr_contains "user-install flags"
+  assert_stderr_contains "user-install flag"
   if [[ -e "$project/.beislid/project-install.json" ]]; then
     note_fail "expected rejected project install not to write manifest"
   fi
@@ -1588,13 +1580,11 @@ test_update_aborts_on_dirty_tree() {
 
 test_update_preserves_manifest_opt_ins_and_targets() {
   setup_update_git_fixture
-  fake_pi
-  BEISLID_FAKE_PI_LOG="$TMP/pi-initial.log" run_installer --with-security-hooks --with-pi-show-me
+  run_installer --with-security-hooks
   commit_update_fixture_change "preserve-opt-ins-marker"
 
-  BEISLID_FAKE_PI_LOG="$TMP/pi-update.log" run_installer_without_target_env --update
+  run_installer_without_target_env --update
   assert_json_field "$STATE/install.json" security_hooks "True"
-  assert_json_field "$STATE/install.json" pi_show_me "True"
   assert_json_field "$STATE/install.json" skill_dirs.claude "$CLAUDE_SKILLS"
   assert_json_field "$STATE/install.json" skill_dirs.agents "$AGENTS_SKILLS"
   assert_json_field "$STATE/install.json" skill_dirs.codex "$CODEX_SKILLS"
@@ -1606,9 +1596,7 @@ test_update_preserves_manifest_opt_ins_and_targets() {
   assert_symlink_to "$CODEX_SKILLS/verify" "$REPO_DIR/skills/verify"
   assert_symlink_to "$HOOKS/credential_guard.py" "$REPO_DIR/hooks/credential_guard.py"
   assert_symlink_to "$BIN_DIR/beislid" "$REPO_DIR/bin/beislid"
-  assert_file_contents "$TMP/pi-update.log" "install $REPO_DIR"
   assert_stdout_contains "preserve: security hooks enabled from install manifest"
-  assert_stdout_contains "preserve: pi show-me enabled from install manifest"
   assert_stdout_contains "preserve: Claude skills dir from install manifest"
   assert_stdout_contains "preserve: agents skills dir from install manifest"
   assert_stdout_contains "preserve: Codex skills dir from install manifest"
@@ -1686,8 +1674,8 @@ run_test "install.sh --project rejects user-only flags"        test_install_sh_p
 run_test "repo ignores project manifest path"                  test_repo_ignores_project_manifest_path
 run_test "CLI project status reports manifest and counts"      test_cli_project_status_reports_manifest_and_counts
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
-run_test "pi show-me extension install is opt-in"              test_pi_show_me_is_opt_in
-run_test "pi show-me extension installs when requested"        test_pi_show_me_installs_package_when_requested
+run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
+run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks

@@ -20,7 +20,7 @@
   "repository": "https://github.com/sandsower/beislid",
   "pi": {
     "extensions": [
-      "extensions/show-me"
+      "extensions/beislid"
     ],
     "skills": [
       "skills"

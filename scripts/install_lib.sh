@@ -20,7 +20,6 @@ BEISLID_BIN_DIR_RESOLVED="${BEISLID_BIN_DIR:-$HOME/.local/bin}"
 BEISLID_CLI_PATH="$BEISLID_BIN_DIR_RESOLVED/beislid"
 
 WITH_SECURITY_HOOKS=0
-WITH_PI_SHOW_ME=0
 FORCE=0
 PROJECT_MODE="symlink"
 PROJECT_WRITE_GITIGNORE=0
@@ -174,18 +173,6 @@ link_hook() {
   fi
 
   _link "$src" "$dst" "hook $name"
-}
-
-install_pi_show_me() {
-  if ! command -v pi >/dev/null 2>&1; then
-    echo "error: --with-pi-show-me requires pi on PATH" >&2
-    echo "       Install pi first, or run 'pi install $SCRIPT_DIR' manually from a pi-enabled shell." >&2
-    exit 1
-  fi
-  echo
-  echo "Pi show-me extension:"
-  pi install "$SCRIPT_DIR"
-  echo "ok:   pi package installed for show-me extension"
 }
 
 _lavish_plugin_state_path() {
@@ -647,9 +634,9 @@ _write_manifest() {
   version="$(_current_version)"
   commit="$(_current_commit)"
   installed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  python3 - <<'PY' "$MANIFEST" "$installed_at" "$SCRIPT_DIR" "$version" "$commit" "$CLAUDE_SKILLS" "$AGENTS_SKILLS" "$CODEX_SKILLS" "$CLAUDE_HOOKS" "$WITH_SECURITY_HOOKS" "$WITH_PI_SHOW_ME" "$BEISLID_CLI_LINK_OK" "$BEISLID_BIN_DIR_RESOLVED" "$BEISLID_CLI_PATH"
+  python3 - <<'PY' "$MANIFEST" "$installed_at" "$SCRIPT_DIR" "$version" "$commit" "$CLAUDE_SKILLS" "$AGENTS_SKILLS" "$CODEX_SKILLS" "$CLAUDE_HOOKS" "$WITH_SECURITY_HOOKS" "$BEISLID_CLI_LINK_OK" "$BEISLID_BIN_DIR_RESOLVED" "$BEISLID_CLI_PATH"
 import json, sys
-manifest, installed_at, repo, version, commit, claude, agents, codex, hooks, security, pi_show_me, cli_ok, bin_dir, cli_path = sys.argv[1:]
+manifest, installed_at, repo, version, commit, claude, agents, codex, hooks, security, cli_ok, bin_dir, cli_path = sys.argv[1:]
 data = {
     "installed_at": installed_at,
     "repo": repo,
@@ -662,7 +649,6 @@ data = {
     },
     "hooks_dir": hooks,
     "security_hooks": security == "1",
-    "pi_show_me": pi_show_me == "1",
 }
 if cli_ok == "1":
     data["bin_dir"] = bin_dir
@@ -693,7 +679,6 @@ except Exception:
     print("  current_commit: unknown")
     print("  repo: unknown")
     print("  security_hooks: False")
-    print("  pi_show_me: False")
     print("__BEISLID_SECURITY_HOOKS__=0")
     sys.exit(0)
 try:
@@ -709,7 +694,6 @@ print(f"  repo: {data.get('repo', 'unknown')}")
 if data.get("cli_path"):
     print(f"  cli_path: {data.get('cli_path')}")
 print(f"  security_hooks: {data.get('security_hooks', False)}")
-print(f"  pi_show_me: {data.get('pi_show_me', False)}")
 print("__BEISLID_SECURITY_HOOKS__=" + ("1" if data.get("security_hooks") is True else "0"))
 PY
 )"
@@ -1416,7 +1400,7 @@ _preserve_manifest_for_update() {
     return
   fi
 
-  local manifest_values security pi_show_me manifest_claude manifest_agents manifest_codex manifest_hooks manifest_bin_dir
+  local manifest_values security manifest_claude manifest_agents manifest_codex manifest_hooks manifest_bin_dir
   manifest_values="$(python3 - <<'PY' "$MANIFEST"
 import json, sys
 try:
@@ -1425,7 +1409,6 @@ except Exception:
     data = {}
 skill_dirs = data.get("skill_dirs") or {}
 print("1" if data.get("security_hooks") is True else "0")
-print("1" if data.get("pi_show_me") is True else "0")
 print(skill_dirs.get("claude") or "")
 print(skill_dirs.get("agents") or "")
 print(skill_dirs.get("codex") or "")
@@ -1434,20 +1417,15 @@ print(data.get("bin_dir") or "")
 PY
 )"
   security="$(sed -n '1p' <<<"$manifest_values")"
-  pi_show_me="$(sed -n '2p' <<<"$manifest_values")"
-  manifest_claude="$(sed -n '3p' <<<"$manifest_values")"
-  manifest_agents="$(sed -n '4p' <<<"$manifest_values")"
-  manifest_codex="$(sed -n '5p' <<<"$manifest_values")"
-  manifest_hooks="$(sed -n '6p' <<<"$manifest_values")"
-  manifest_bin_dir="$(sed -n '7p' <<<"$manifest_values")"
+  manifest_claude="$(sed -n '2p' <<<"$manifest_values")"
+  manifest_agents="$(sed -n '3p' <<<"$manifest_values")"
+  manifest_codex="$(sed -n '4p' <<<"$manifest_values")"
+  manifest_hooks="$(sed -n '5p' <<<"$manifest_values")"
+  manifest_bin_dir="$(sed -n '6p' <<<"$manifest_values")"
 
   if [[ "$security" == "1" && "$WITH_SECURITY_HOOKS" == 0 ]]; then
     WITH_SECURITY_HOOKS=1
     echo "preserve: security hooks enabled from install manifest"
-  fi
-  if [[ "$pi_show_me" == "1" && "$WITH_PI_SHOW_ME" == 0 ]]; then
-    WITH_PI_SHOW_ME=1
-    echo "preserve: pi show-me enabled from install manifest"
   fi
   if [[ -z "${CLAUDE_SKILLS_DIR+x}" && -n "$manifest_claude" ]]; then
     CLAUDE_SKILLS="$manifest_claude"
@@ -1519,9 +1497,8 @@ values = {
     "bin_dir": bin_dir,
     "cli_path": cli_path,
     "security_hooks": "True" if data.get("security_hooks") is True else "False",
-    "pi_show_me": "True" if data.get("pi_show_me") is True else "False",
 }
-for key in ("repo", "version", "claude", "agents", "codex", "hooks", "bin_dir", "cli_path", "security_hooks", "pi_show_me"):
+for key in ("repo", "version", "claude", "agents", "codex", "hooks", "bin_dir", "cli_path", "security_hooks"):
     print(values[key])
 PY
 }
@@ -1580,7 +1557,7 @@ beislid_migrate_v0_2() {
     return
   fi
 
-  local snapshot old_repo old_version old_claude old_agents old_codex old_hooks old_bin_dir old_cli_path old_security old_pi_show_me
+  local snapshot old_repo old_version old_claude old_agents old_codex old_hooks old_bin_dir old_cli_path old_security
   if ! snapshot="$(_manifest_snapshot_lines)"; then
     echo "warn: could not read previous install manifest; running a normal user install" >&2
     echo
@@ -1596,7 +1573,6 @@ beislid_migrate_v0_2() {
   old_bin_dir="$(sed -n '7p' <<<"$snapshot")"
   old_cli_path="$(sed -n '8p' <<<"$snapshot")"
   old_security="$(sed -n '9p' <<<"$snapshot")"
-  old_pi_show_me="$(sed -n '10p' <<<"$snapshot")"
 
   echo "manifest: $MANIFEST"
   echo "previous_repo: ${old_repo:-unknown}"
@@ -1605,10 +1581,6 @@ beislid_migrate_v0_2() {
   if _manifest_bool_is_true "$old_security" && [[ "$WITH_SECURITY_HOOKS" == 0 ]]; then
     WITH_SECURITY_HOOKS=1
     echo "preserve: security hooks enabled from install manifest"
-  fi
-  if _manifest_bool_is_true "$old_pi_show_me" && [[ "$WITH_PI_SHOW_ME" == 0 ]]; then
-    WITH_PI_SHOW_ME=1
-    echo "preserve: pi show-me enabled from install manifest"
   fi
   if [[ -z "${CLAUDE_SKILLS_DIR+x}" && -n "$old_claude" ]]; then
     CLAUDE_SKILLS="$old_claude"
@@ -1676,7 +1648,6 @@ beislid_update_repo() {
 
   local rerun_args=()
   [[ "$WITH_SECURITY_HOOKS" == 1 ]] && rerun_args+=(--with-security-hooks)
-  [[ "$WITH_PI_SHOW_ME" == 1 ]] && rerun_args+=(--with-pi-show-me)
   [[ "$FORCE" == 1 ]] && rerun_args+=(--force)
 
   local rerun_display=""
@@ -1734,10 +1705,6 @@ beislid_install_user() {
     echo
     echo "NOTE: you still need to register the hook in settings.json."
     echo "See docs/credential-guard.md for the snippet."
-  fi
-
-  if [[ "$WITH_PI_SHOW_ME" == 1 ]]; then
-    install_pi_show_me
   fi
 
   echo

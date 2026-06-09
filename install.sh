@@ -28,7 +28,6 @@ Flags:
   --copy                  Copy project-local skills instead of symlinking them
   --write-gitignore       Create or update the managed project .gitignore block
   --with-security-hooks   Install credential_guard hook (opt-in; user install only)
-  --with-pi-show-me       Run 'pi install <repo>' to expose the show-me Pi extension (opt-in; user install only)
   --update                Fast-forward this Beislið repo, then re-run install
                           while preserving previous manifest opt-ins
   --migrate-v0.2          One-time migration from pre-v0.2 installs after
@@ -61,7 +60,6 @@ EOF
 while (($#)); do
   case "$1" in
     --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
-    --with-pi-show-me) WITH_PI_SHOW_ME=1 ;;
     --force|--repoint) FORCE=1 ;;
     --status) STATUS=1 ;;
     --update) UPDATE=1 ;;
@@ -115,8 +113,8 @@ if [[ "$PROJECT" == 1 && "$STATUS" == 1 ]]; then
   exit 2
 fi
 
-if [[ "$PROJECT" == 1 && ( "$WITH_SECURITY_HOOKS" == 1 || "$WITH_PI_SHOW_ME" == 1 ) ]]; then
-  echo "error: --with-security-hooks and --with-pi-show-me are user-install flags and cannot be combined with --project" >&2
+if [[ "$PROJECT" == 1 && "$WITH_SECURITY_HOOKS" == 1 ]]; then
+  echo "error: --with-security-hooks is a user-install flag and cannot be combined with --project" >&2
   exit 2
 fi
 

@@ -23,6 +23,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Quality gates`
 - `Gate sets`
 - `Lifecycle actions`
+- `Pi handoff`
 - `Action policy`
 - `Translation sync`
 - `Browser compat`
@@ -91,6 +92,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Lifecycle actions:**
 - `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; spec/design approval events and checkpoint events support `type: artifact` only. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command` and require `approval` (`auto` / `prompt`). Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and placeholders `{feature}`, `{kind}`, `{ticket_id}`, and `{event}` where documented for checkpoint artifacts. Actions run in order.
 
+**Pi handoff:**
+- `pi_handoff` — Pi-extension-only context handoff policy. Fields: `enabled` (bool, default true when the Beislið Pi extension is active), `events` (`all` or list of lifecycle/checkpoint event names, default `all`), and `exclude` (list of event names to suppress). Repo workflow declares team intent; local Pi extension settings are the final override. Portable skills do not execute this key directly.
+
 **Action policy:**
 - `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
 
@@ -125,6 +129,22 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `probe_cache` — fields: `ttl_hours` (integer; defaults to 24 when absent)
 
 Capabilities not in this list are unknown — doctor reports them with a `💭` inline note and continues.
+
+## Pi handoff shape
+
+`pi_handoff` lets a repo declare team intent for the Beislið Pi extension's automatic fresh-session handoff behavior. It is host-specific policy for Pi-managed command wrappers; portable skills still write/read checkpoint artifacts and print manual fresh-context guidance for Claude and other hosts.
+
+````markdown
+## Pi handoff
+
+```beislid:pi_handoff
+enabled: true
+events: all
+exclude: []
+```
+````
+
+`enabled` defaults to true when the Beislið Pi extension is active. `events` may be `all` or a list of lifecycle/checkpoint event names; `exclude` suppresses specific events from that set. The Pi extension only auto-switches sessions when it owns the managed workflow run and can validate a readable `.beislid/checkpoints/latest.json` pointer or equivalent checkpoint input. Local Pi extension settings are the final override over repo workflow intent. Missing or unreadable checkpoint artifacts fall back to the existing manual guidance; the extension must not synthesize continuation context from live session history.
 
 ## Visual surfaces shape
 

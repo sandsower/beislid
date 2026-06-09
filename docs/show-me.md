@@ -164,20 +164,8 @@ Screenshots, videos, and GIFs may contain sensitive data. Treat them as local/pr
 
 ## Pi tooling
 
-The portable skill works without Pi-specific tooling by writing files manually. Install the Pi extension explicitly with:
+The portable skill works without Pi-specific tooling by writing files manually. In Pi, Beislið's managed command extension routes `/show-me` to this portable skill like the rest of the skill surface.
 
-```bash
-./install.sh --with-pi-show-me
-```
-
-or, from a Pi-enabled shell:
-
-```bash
-pi install .
-```
-
-When installed in Pi, the `show-me` extension provides typed-block builder tools, command evidence capture, asset ingestion, media blocks, browser screenshot capture when Playwright is already available, text redaction, `/show-me doctor`, `/show-me list`, `/show-me open`, `/show-me clean`, a file-backed store, and a renderer.
-
-`/show-me doctor` reports a capability matrix for builder features and optional capture tools such as Playwright, platform screenshot utilities, ffmpeg, gifski, and asciinema. Missing capture tools are not fatal; helpers should add `NEEDS_CAPTURE` blocks when evidence cannot be captured automatically.
+Older Beislið builds included a separate Show Me Pi deck-builder extension. That extension is no longer packaged by default; keep using the portable skill workflow unless a future package reintroduces dedicated deck-builder tools.
 
 Window/screen capture, terminal recording, video/GIF conversion helpers, and richer capture automation are planned for later phases.
