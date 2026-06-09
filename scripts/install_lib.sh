@@ -183,9 +183,9 @@ install_pi_show_me() {
     exit 1
   fi
   echo
-  echo "Pi show-me extension:"
+  echo "Pi extensions:"
   pi install "$SCRIPT_DIR"
-  echo "ok:   pi package installed for show-me extension"
+  echo "ok:   pi package installed for Beislið Pi extensions"
 }
 
 _lavish_plugin_state_path() {

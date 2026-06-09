@@ -30,6 +30,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 - `walk-the-diff`: interactive walkthrough of your own diff for a human reviewer.
 - `ready-for-review`: review-ready PR flow driven by `workflow.md`; runs `review` and the configured final check before new PR creation.
 - `review-response`: handle PR/QA feedback after someone reviews or tests your work.
+- `babysit`: goal-backed PR babysitting loop that keeps using configured review-response, gates, and optional closeout automation until the PR is green or blocked. Claude includes `/goal`; Pi requires `pi-goal`.
 
 ## Manage
 
@@ -54,6 +55,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | `pr-patrol`     | Inbound PR review           | You are reviewing someone else's PR and may post approved comments                                                        | posted review or draft comments                               |
 | `ready-for-review`       | Review handoff flow               | Branch is ready for a new PR or an existing PR update; reads `<repo>/.beislid/workflow.md` and probes capabilities lazily | new PR or pushed update                                       |
 | `review-response`    | Feedback loop               | PR review or QA feedback needs handling from workflow.md-configured sources                                               | push/reply                                                    |
+| `babysit`       | PR babysitting flow         | Current PR should be monitored and advanced through configured review-response/gates until green or configured closeout; requires `/goal` support | green/merged PR or blocked handoff                            |
 | `poke-holes`    | Pressure tool               | You want a design or plan challenged                                                                                      | revised design/plan                                           |
 | `walk-the-diff` | Review walkthrough          | You want to tour local changes interactively                                                                              | feedback doc                                                  |
 | `handoff`       | Parallel work utility       | You want to hand a scoped slice to another agent/session/worktree                                                         | paste into the receiving session                              |

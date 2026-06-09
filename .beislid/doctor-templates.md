@@ -149,6 +149,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
       "value": "mode: auto; sinks: tmux-glance; skill overrides: 2; tmux-glance: present"
+    },
+    "babysit": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "validation",
+      "value": "goal: 50k; review-response loop: on; gates before push: on; merge/memento/retro: ask/ask/ask"
     }
   }
 }
@@ -190,6 +197,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
 ✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 10)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
+✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)
 cache file:        <path>
 cache valid until: <ISO-8601>
 workflow_hash:     <hash>

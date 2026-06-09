@@ -28,7 +28,7 @@ Flags:
   --copy                  Copy project-local skills instead of symlinking them
   --write-gitignore       Create or update the managed project .gitignore block
   --with-security-hooks   Install credential_guard hook (opt-in; user install only)
-  --with-pi-show-me       Run 'pi install <repo>' to expose the show-me Pi extension (opt-in; user install only)
+  --with-pi-show-me       Compatibility flag: run 'pi install <repo>' to expose Beislið Pi extensions (opt-in; user install only)
   --update                Fast-forward this Beislið repo, then re-run install
                           while preserving previous manifest opt-ins
   --migrate-v0.2          One-time migration from pre-v0.2 installs after

@@ -24,7 +24,7 @@ check_symlink() {
   fi
 }
 
-for skill in ready-for-review kickoff review-response implement retro; do
+for skill in ready-for-review kickoff review-response implement retro babysit; do
   check_symlink "skills/$skill/action-policy-protocol.md" "../../.beislid/action-policy-protocol.md"
 done
 
@@ -37,6 +37,8 @@ check_contains "skills/implement/SKILL.md" 'Evaluate action policy before worksp
 check_contains "skills/retro/SKILL.md" 'evaluate action id `file.write` with class `workspace-write`'
 check_contains "skills/review-response/phase-2-fix.md" 'Evaluate action policy for the workspace write'
 check_contains "skills/review-response/phase-3-push.md" 'Policy-check `git.push`'
+check_contains "skills/babysit/SKILL.md" 'Policy-check closeout side effects'
+check_contains "skills/babysit/SKILL.md" '`gh.pr.merge` or `pr.merge` as `git-remote`'
 check_contains "docs/configuration.md" "repo-aware orchestrators enforce action policy"
 
 if (( fail > 0 )); then
