@@ -12,6 +12,7 @@ Beislið has multiple review-oriented skills because "review" can mean different
 | You want to review someone else's PR                            | `pr-patrol`     | Fetches PR context/diff, runs the review contract, drafts comments, and posts only approved comments.                                                 |
 | You want to explain your own diff to a human                    | `walk-the-diff` | Runs an interactive walkthrough and saves feedback notes.                                                                                             |
 | Someone already left PR comments or QA feedback on your work    | `review-response`    | Fetches/categorizes feedback, helps fix or push back, verifies, then pushes/replies.                                                                  |
+| An open PR needs goal-backed monitoring through review/CI        | `babysit`       | Requires `/goal`; loops through configured review-response/gates until green, then performs configured closeout automation when policy allows.          |
 | A new branch is ready for review                                   | `ready-for-review`       | Runs quality gates, invokes `review` then the configured final check, and handles PR creation. Existing-PR updates take the fast path.                 |
 
 ## Review primitives
@@ -31,11 +32,12 @@ This boundary is intentional. Findings should be safe to ask for even when you a
 
 ## Review orchestrators
 
-`rinse`, `pr-patrol`, `review-response`, and `ready-for-review` decide what to do with findings after user approval.
+`rinse`, `pr-patrol`, `review-response`, `babysit`, and `ready-for-review` decide what to do with findings after user approval.
 
 - `rinse` loops through review findings, approved fixes, verification, and reruns.
 - `pr-patrol` reviews someone else's PR and posts only comments you approve.
 - `review-response` handles feedback already left on your work.
+- `babysit` requires goal mode and keeps rechecking an open PR, delegating feedback fixes/replies to `review-response`, running configured gates, and performing configured closeout steps when safe.
 - `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates.
 
 ## Pre-PR hardening
@@ -73,6 +75,16 @@ review-response → debug if needed → fix → verify → push or reply
 ```
 
 `review-response` is for response work, not for opening a new PR or reviewing someone else's PR.
+
+## Babysitting an open PR
+
+Use `babysit` when a PR is already open and you want Beislið to keep monitoring CI/review state until it is green or blocked:
+
+```text
+babysit → review-response loop → configured gates → green PR or configured closeout
+```
+
+`babysit` requires `/goal` support. Claude includes `/goal`; Pi users need the `pi-goal` package enabled. Closeout actions such as merge, memento capture, and retro are opt-in/config-driven and still respect action policy.
 
 ## Reviewing someone else's PR
 

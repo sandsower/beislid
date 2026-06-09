@@ -36,6 +36,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Skill-specific overrides`
 - `Ready-for-review`
 - `Review-response`
+- `Babysit`
 - `Kickoff` (put `beislid:explore` here or under `Skill-specific overrides`)
 
 Section order is irrelevant to parsing. Sections that aren't in this list are ignored with a `💭` inline note from doctor; their fenced blocks are skipped.
@@ -113,6 +114,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 
 **Ready-for-review final review:**
 - `fresh_eyes` — optional replacement/disable for the final `fresh-eyes` pass only. Fields: `enabled` (optional bool, defaults true); when enabled and replacing built-in behavior, `type: command` plus `command` are required. `enabled: false` is explicit project policy to skip the final whole-diff pass; the primary `review` pass still runs.
+
+**Babysit:**
+- `babysit` — optional PR babysitting policy used by the `babysit` skill and Pi `/babysit` command. Fields: `goal.token_budget` (optional string such as `50k`), `loop.use_review_response` (bool, default true), `loop.run_configured_gates_before_push` (bool, default true), `loop.wait_interval_seconds` (positive integer, default 60), `loop.timeout_minutes` (positive integer, optional), `closeout.merge.mode` (`off` / `ask` / `auto`, default off), `closeout.merge.method` (`squash` / `merge` / `rebase` / `repo-default`, default repo-default), `closeout.merge.delete_branch` (bool, default false), `closeout.memento.mode` (`off` / `ask` / `auto`, default off), `closeout.retro.mode` (`off` / `ask` / `auto`, default off), and `closeout.retro.apply_findings` (`off` / `ask` / `auto`, default ask). `auto` removes routine prompts only when action policy allows; policy `ask` still asks and policy `deny` still stops.
 
 **Paired (Phase 4d of ready-for-review):**
 - `domain_expert.agent` — domain expert name (paired with `knowledge_store.path`); kickoff resolves it as a subagent first and, on hosts without a subagent mechanism, may fall back to an installed Beislið skill with the same name
@@ -196,6 +200,38 @@ overrides:
 ````
 
 `model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
+
+## Babysit shape
+
+`babysit` config controls the persistent PR babysitting loop and optional closeout automation. The skill still requires host goal support, live PR evidence, and action-policy handling at every side-effect boundary.
+
+````markdown
+## Babysit
+
+```beislid:babysit
+goal:
+  token_budget: 50k
+loop:
+  use_review_response: true
+  run_configured_gates_before_push: true
+  wait_interval_seconds: 60
+  timeout_minutes: 60
+closeout:
+  merge:
+    mode: ask
+    method: squash
+    delete_branch: true
+  memento:
+    mode: ask
+  retro:
+    mode: ask
+    apply_findings: ask
+```
+````
+
+Closeout mode values are `off`, `ask`, and `auto`. `off` disables that closeout step. `ask` stops for explicit approval. `auto` proceeds without an extra babysit prompt only when action policy allows the specific side effect; policy `ask` still asks and policy `deny` still stops. Invocation args can override config for a single run, for example `stop when green`, `don't merge`, `merge then stop`, `skip memento`, or `skip retro`.
+
+`loop.use_review_response: true` means `babysit` delegates actionable PR feedback handling to `review-response` rather than reimplementing categorization, fixing, safe replies, commits, and pushes. `false` means `babysit` stops with the loaded feedback summary and asks the user how to proceed instead of fixing, replying, committing, or pushing automatically. `loop.run_configured_gates_before_push: true` means babysit-owned pushes and merge preparation must use the same configured gates/scopes/gate sets as other Beislið PR workflows.
 
 ## Fresh-eyes replacement shape
 

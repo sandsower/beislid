@@ -247,6 +247,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
 - **Visual surfaces** — *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
 - **Workflow signals** — *Configure optional local workflow-state signals, starting with tmux-glance tab markers for semantically instrumented skills.*
+- **Babysit** — *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
@@ -405,6 +406,56 @@ skills:
 ```
 
 Explain that signal emission is best-effort: outside tmux, without `tmux-glance`, or when a sink fails, Beislið continues silently. Never create duplicate `beislid:workflow_signals` blocks; update or remove the existing one.
+
+### Babysit
+
+Configure the canonical `beislid:babysit` block under `Babysit` or `Skill-specific overrides`. Explain that `/babysit` requires `/goal`; this config only controls the goal budget, PR loop behavior, and closeout automation.
+
+Ask whether to configure a goal token budget or leave it unlimited. Accept values such as `50k`, `100000`, or `1m`; omit the field when unlimited.
+
+Ask for loop behavior:
+
+```text
+Use review-response for actionable feedback? (Y/n)
+Run configured gates before babysit-owned pushes? (Y/n)
+Wait interval seconds? [60]
+Timeout minutes? [none]
+```
+
+Ask for closeout modes:
+
+```text
+Merge after green? (off / ask / auto)
+Merge method? (repo-default / squash / merge / rebase)
+Delete branch after merge? (y/N)
+Run memento capture after closeout? (off / ask / auto)
+Run retro after closeout? (off / ask / auto)
+Apply accepted retro findings? (off / ask / auto)
+```
+
+Explain that `auto` removes routine babysit prompts only when action policy allows the side effect. If policy asks, the skill asks; if policy denies, it stops.
+
+```beislid:babysit
+goal:
+  token_budget: 50k
+loop:
+  use_review_response: true
+  run_configured_gates_before_push: true
+  wait_interval_seconds: 60
+  timeout_minutes: 60
+closeout:
+  merge:
+    mode: ask
+    method: squash
+    delete_branch: true
+  memento:
+    mode: ask
+  retro:
+    mode: ask
+    apply_findings: ask
+```
+
+Never create duplicate `beislid:babysit` blocks; update or remove the existing one.
 
 ### Fresh-eyes final review
 

@@ -164,7 +164,7 @@ Screenshots, videos, and GIFs may contain sensitive data. Treat them as local/pr
 
 ## Pi tooling
 
-The portable skill works without Pi-specific tooling by writing files manually. Install the Pi extension explicitly with:
+The portable skill works without Pi-specific tooling by writing files manually. Install the Beislið Pi package extensions explicitly with the compatibility flag:
 
 ```bash
 ./install.sh --with-pi-show-me
@@ -176,7 +176,7 @@ or, from a Pi-enabled shell:
 pi install .
 ```
 
-When installed in Pi, the `show-me` extension provides typed-block builder tools, command evidence capture, asset ingestion, media blocks, browser screenshot capture when Playwright is already available, text redaction, `/show-me doctor`, `/show-me list`, `/show-me open`, `/show-me clean`, a file-backed store, and a renderer.
+When installed in Pi, the `show-me` extension provides typed-block builder tools, command evidence capture, asset ingestion, media blocks, browser screenshot capture when Playwright is already available, text redaction, `/show-me doctor`, `/show-me list`, `/show-me open`, `/show-me clean`, a file-backed store, and a renderer. The same package install may expose other Beislið Pi commands such as `/babysit`.
 
 `/show-me doctor` reports a capability matrix for builder features and optional capture tools such as Playwright, platform screenshot utilities, ffmpeg, gifski, and asciinema. Missing capture tools are not fatal; helpers should add `NEEDS_CAPTURE` blocks when evidence cannot be captured automatically.
 

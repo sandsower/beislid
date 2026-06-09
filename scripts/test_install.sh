@@ -731,8 +731,8 @@ test_pi_show_me_installs_package_when_requested() {
   BEISLID_FAKE_PI_LOG="$TMP/pi.log" run_installer --with-pi-show-me
   assert_file_contents "$TMP/pi.log" "install $REPO_DIR"
   assert_json_field "$STATE/install.json" pi_show_me "True"
-  assert_stdout_contains "Pi show-me extension:"
-  assert_stdout_contains "ok:   pi package installed for show-me extension"
+  assert_stdout_contains "Pi extensions:"
+  assert_stdout_contains "ok:   pi package installed for Beislið Pi extensions"
 }
 
 test_status_after_install() {
@@ -1686,8 +1686,8 @@ run_test "install.sh --project rejects user-only flags"        test_install_sh_p
 run_test "repo ignores project manifest path"                  test_repo_ignores_project_manifest_path
 run_test "CLI project status reports manifest and counts"      test_cli_project_status_reports_manifest_and_counts
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
-run_test "pi show-me extension install is opt-in"              test_pi_show_me_is_opt_in
-run_test "pi show-me extension installs when requested"        test_pi_show_me_installs_package_when_requested
+run_test "pi package extension install is opt-in"             test_pi_show_me_is_opt_in
+run_test "pi package extensions install when requested"        test_pi_show_me_installs_package_when_requested
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks
