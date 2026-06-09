@@ -404,6 +404,8 @@ slice:
   id: docs-contract-fixture
   include:
     - docs/configuration.md
+    - docs/skills.md
+    - docs/workflows.md
     - skills/implement/SKILL.md
   exclude:
     - Teotl runtime/service work
@@ -415,7 +417,7 @@ autonomy:
     - Run configured local validation gates and inspect diffs.
   ask:
     - Change action-policy defaults, workflow config semantics, or lifecycle behavior.
-    - Post external updates beyond the approved tracker comment.
+    - Post any external updates.
     - Expand scope beyond the named files or contract fixture examples.
   deny:
     - Introduce a Teotl runtime, service, parser, daemon, or database.

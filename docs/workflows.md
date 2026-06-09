@@ -17,7 +17,8 @@ flowchart LR
   C --> E["Pick one phase"]
   E --> D
   D --> F["implement<br/>Plan execution"]
-  F --> G["Build / change code"]
+  F --> X["optional execution-envelope-v0<br/>Approve AFK boundary"]
+  X --> G["Build / change code"]
   G --> H["verify<br/>Evidence before claims"]
   H --> K{"Want pre-PR<br/>hardening loop?"}
   K -- "yes" --> L["rinse<br/>Review / fix / verify"]
@@ -62,6 +63,7 @@ flowchart TD
   F --> H["Pick one phase"]
   H --> G
   G --> I["implement"]
+  I --> J["optional execution-envelope-v0<br/>Approve AFK boundary"]
 ```
 
 Use the routing this way:
