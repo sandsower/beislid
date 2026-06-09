@@ -460,6 +460,100 @@ ownership:
   teotl: "Deferred; no runtime/service responsibility in v0."
 ```
 
+### External runner ProcessProvider boundary
+
+External runners can use an approved execution envelope as Beislið's ProcessProvider contract. The provider boundary is process information, not an execution API: Beislið exports what has been approved, what evidence is required, what local workflow capabilities are available, and where a runner must stop for human input. The runner decides how to execute the work and how to store run evidence.
+
+A runner may consume these Beislið-owned semantics:
+
+- approved Work Contracts, selected slices, and execution envelopes;
+- proof requirements plus selected gate, guide, and review expectations;
+- action-policy evaluation boundaries, including `allow`, `ask`, and `deny` decisions that must be honored before side effects;
+- model-routing hints and whether they are preferences or requirements;
+- capability/probe metadata, including unsupported features and session-only skips;
+- lifecycle artifact and checkpoint references that seed safe resume or handoff points.
+
+Guide selection is intentionally metadata, not a runtime dispatcher. It can name Beislið skills, workflow guide rails, walkthrough expectations, or human review prompts that should shape execution. If a named guide is unsupported, the runner reports that capability gap and follows the envelope fallback or pauses when the missing guide is required.
+
+Fallback behavior:
+
+- Without an external runner, Beislið skills remain useful through chat, local artifacts, configured gates, and the run ledger.
+- Without Rondo, runner-specific fields are ignored unless the envelope marks them as required dependencies.
+- Without a required capability, the runner must pause or return an unsupported-feature result instead of silently widening autonomy.
+- Memento memory and Rondo run evidence are not Beislið proof stores; envelopes may reference their outputs, but ownership stays separate.
+
+Approved BEI-47 envelope for an external runner ProcessProvider contract:
+
+```yaml
+kind: execution-envelope-v0
+status: approved
+source:
+  type: linear_issue
+  id: BEI-57
+  related_work: "BEI-47 / GitHub sandsower/beislid#21"
+objective: "Document the external-runner ProcessProvider boundary for consuming Beislið process semantics."
+slice:
+  id: external-runner-process-provider-contract
+  include:
+    - docs/configuration.md
+    - docs/workflows.md
+    - docs/skills.md
+    - skills/implement/SKILL.md
+  exclude:
+    - Rondo internal agent adapter fields
+    - Beislið execution engine work
+    - parser, daemon, service, database, or durable proof-store implementation
+    - Memento memory ingestion outside configured memory workflows
+autonomy:
+  allow:
+    - Document the generic ProcessProvider boundary and approved envelope example.
+    - Map approved contracts, slices, proof, gates, guides, model hints, action policy, and probe metadata to runner-consumable semantics.
+    - Run configured local validation gates and inspect the resulting diff.
+  ask:
+    - Add new workflow.md keys, runtime validation, parser behavior, or executable provider APIs.
+    - Make Rondo a required dependency or encode Rondo-only adapter internals.
+    - Post to external trackers or create follow-up issues.
+  deny:
+    - Make Beislið own execution, run evidence, or Rondo adapter internals.
+    - Treat Memento as a proof store or Beislið run ledger.
+    - Continue when required capability/probe data is missing or unsupported without reporting the gap.
+proof_requirements:
+  - kind: proof-requirement-v1
+    id: configured-pre-pr-gates
+    type: command_gate
+    stage: pre-pr
+    status: required
+    success_criteria:
+      - "Configured Beislið validation gates pass for the changed files."
+    failure_policy:
+      on_missing: block
+      on_failure: block
+      retryable: true
+    expected_artifact:
+      kind: gate_envelope
+      reference: "validation transcript or run-ledger gate path"
+pause_conditions:
+  - Required proof fails or cannot run.
+  - The work needs a runtime service, parser, new config key, or Rondo-specific adapter contract.
+  - Guide, model, action-policy, or probe semantics cannot be represented without inventing execution behavior.
+dependencies:
+  - Approved BEI-56 execution-envelope-v0 fixture.
+  - BEI-47 / GitHub #21 external-runner ProcessProvider requirements.
+  - Existing Work Contract, proof requirement, gate, action-policy, model-routing, probe, checkpoint, and run-ledger docs.
+expected_delivery:
+  summary: "ProcessProvider boundary, approved envelope, changed files, verification evidence, and remaining risks."
+  artifacts:
+    - changed_files
+    - gate_results
+    - unsupported_or_deferred_capabilities
+  next_step: "ready-for-review or a follow-up ticket for executable provider/export work"
+ownership:
+  beislid: "Defines process, contract, envelope, proof, gate, guide, action-policy, model-hint, and capability semantics."
+  rondo: "Owns external execution, runner adapters, and run evidence produced while carrying out the envelope."
+  memento: "Owns durable memory and learning capture, not proof storage."
+  teotl: "Deferred; no runtime/service responsibility in v0."
+```
+
 ## Proof Requirement v1
 
 `proof-requirement-v1` is the portable done-evidence contract inside a Work Contract. It names the proof a human or agent must produce before the contract, slice, or child task can be treated as ready. Beislið defines the semantics; it does not store proof artifacts, ingest Rondo run state, or replace Memento curated memory.
