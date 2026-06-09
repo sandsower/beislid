@@ -168,19 +168,33 @@ proof_requirements:
       kind: gate_envelope
       reference: "python3 scripts/validate_skills.py transcript or run-ledger gate path"
   - kind: proof-requirement-v1
-    id: workflow-surface-consistency
+    id: visual-surfaces-consistency
     type: command_gate
     stage: pre-pr
     status: required
     success_criteria:
-      - "Workflow signal and visual surface consistency checks exit successfully."
+      - "Visual surface consistency checks exit successfully."
     failure_policy:
       on_missing: block
       on_failure: block
       retryable: true
     expected_artifact:
       kind: gate_envelope
-      reference: "visual/workflow consistency check transcript or run-ledger gate path"
+      reference: "python3 scripts/check_visual_surfaces_consistency.py transcript or run-ledger gate path"
+  - kind: proof-requirement-v1
+    id: workflow-signals-consistency
+    type: command_gate
+    stage: pre-pr
+    status: required
+    success_criteria:
+      - "Workflow signal consistency checks exit successfully."
+    failure_policy:
+      on_missing: block
+      on_failure: block
+      retryable: true
+    expected_artifact:
+      kind: gate_envelope
+      reference: "python3 scripts/check_workflow_signals_consistency.py transcript or run-ledger gate path"
 pause_conditions:
   - BEI-17 requires exporter runtime behavior, parser/validator enforcement, CLI
     commands, daemon/service work, or durable storage rather than contract docs.
