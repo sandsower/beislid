@@ -12,7 +12,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 ## Execute
 
-- `implement`: TDD-first file-level implementation plan; may write a configured pre-code checkpoint.
+- `implement`: TDD-first file-level implementation plan; may consume an approved `execution-envelope-v0` autonomy boundary and write a configured pre-code checkpoint.
 - `debug`: no fix without root cause.
 - `handoff`: paste-ready context packet for another agent/session/worktree.
 
@@ -45,7 +45,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | `break-spec`    | Product decomposition       | A spec or Work Contract is classified as `multi_slice`, or `project` boundaries are approved for slicing                  | `blueprint` for one phase                                     |
 | `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may derive a Work Contract and write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
 | `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design artifact actions after approval | `implement`                                                   |
-| `implement`     | Execution planning          | Implementation design is approved; may write configured implementation-plan checkpoints                                    | code changes + `verify`                                       |
+| `implement`     | Execution planning          | Implementation design is approved; may consume approved execution envelopes and write configured implementation-plan checkpoints | code changes + `verify`                                       |
 | `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |
 | `debug`         | Debugging gate              | Bug, failing test, or unexpected behavior                                                                                 | fix + `verify`                                                |
 | `review`        | Review primitive            | Local or supplied diff needs first-pass findings and a readiness verdict                                                  | caller decides: fix, post, loop, or submit                      |

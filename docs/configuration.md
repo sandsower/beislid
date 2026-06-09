@@ -366,6 +366,100 @@ Beislið owns work-contract semantics; Rondo owns execution/proof/run state; Mem
 
 Work Contract artifacts use existing lifecycle artifact actions. `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
 
+## Execution Envelope v0
+
+`execution-envelope-v0` is a provisional, human-approvable boundary for low-risk automation slices. It packages the approved planning context, autonomy limits, required proof, pause conditions, dependencies, expected delivery, and ownership before an agent or external runner works AFK. It is a contract fixture, not a Teotl runtime, parser, service, or durable run store.
+
+Use an execution envelope when a Work Contract or selected slice is clear enough to execute, but the human still needs to approve what automation may do without live steering. The envelope is deliberately small and can be rendered as prose for approval or YAML for machines.
+
+Fields:
+
+- `kind`: `execution-envelope-v0`.
+- `status`: `draft`, `approved`, `paused`, `completed`, or `superseded`.
+- `source`: the originating Work Contract, ticket, phase, PR feedback, or user request.
+- `objective`: the observable slice outcome, not a broad project goal.
+- `slice`: optional selected phase/slice identifier, scope, and exclusions.
+- `autonomy`: explicit `allow`, `ask`, and `deny` lists. `allow` is the pre-approved action set; `ask` requires human approval before continuing; `deny` must not run.
+- `proof_requirements`: `proof-requirement-v1` items or references that must be satisfied before completion.
+- `pause_conditions`: events that stop AFK execution and require human attention, such as failed required proof, ambiguity, unsafe side effects, missing dependencies, or scope drift.
+- `dependencies`: required inputs, credentials, branches, fixtures, tools, services, or upstream decisions.
+- `expected_delivery`: what the runner should return, including changed files, proof artifacts, run/evidence references, and next-step recommendation.
+- `ownership`: boundary between Beislið planning/proof semantics, Rondo execution/run evidence, Memento memory/learning, and deferred Teotl responsibilities.
+
+Human-readable example:
+
+> Execute the approved BEI-56 docs slice AFK. You may edit `docs/configuration.md` and targeted skill prose, run configured validation gates, and report the diff plus gate evidence. Ask before changing workflow policy, adding runtime validation, touching unrelated skills, or posting to external systems. Do not create a Teotl service, parser, daemon, or durable run store. Pause if required gates fail, the missing source plan becomes blocking, or the work expands beyond contract fixture docs. Deliver a concise summary, changed files, proof results, and any follow-up tickets.
+
+Machine-readable example:
+
+```yaml
+kind: execution-envelope-v0
+status: approved
+source:
+  type: linear_issue
+  id: BEI-56
+  work_contract: "Define execution-envelope-v0 contract fixture"
+objective: "Document a provisional execution envelope contract with human and YAML examples."
+slice:
+  id: docs-contract-fixture
+  include:
+    - docs/configuration.md
+    - docs/skills.md
+    - docs/workflows.md
+    - skills/implement/SKILL.md
+  exclude:
+    - Teotl runtime/service work
+    - parser or validator implementation
+    - durable run-ledger storage changes
+autonomy:
+  allow:
+    - Edit documentation and targeted skill guidance within the approved slice.
+    - Run configured local validation gates and inspect diffs.
+  ask:
+    - Change action-policy defaults, workflow config semantics, or lifecycle behavior.
+    - Post any external updates.
+    - Expand scope beyond the named files or contract fixture examples.
+  deny:
+    - Introduce a Teotl runtime, service, parser, daemon, or database.
+    - Treat Rondo run evidence as Beislið planning state.
+    - Store curated memory outside Memento-owned flows.
+proof_requirements:
+  - kind: proof-requirement-v1
+    id: validate-skills
+    type: command_gate
+    stage: pre-pr
+    status: required
+    success_criteria:
+      - "Skill validation exits successfully."
+    failure_policy:
+      on_missing: block
+      on_failure: block
+      retryable: true
+    expected_artifact:
+      kind: gate_envelope
+      reference: "validation transcript or run-ledger gate path"
+pause_conditions:
+  - Required proof is missing or failed.
+  - The source plan absence changes the approved boundary.
+  - Implementation needs credentials, external writes, or unrelated repo changes.
+dependencies:
+  - Linear issue BEI-56 acceptance criteria.
+  - Existing Work Contract and proof-requirement docs.
+  - Local validation scripts available on PATH.
+expected_delivery:
+  summary: "What changed and why."
+  artifacts:
+    - changed_files
+    - gate_results
+    - open_risks
+  next_step: "ready-for-review or human follow-up"
+ownership:
+  beislid: "Defines planning, autonomy, and proof semantics."
+  rondo: "Owns execution and run evidence produced while carrying out the envelope."
+  memento: "Owns durable memory and learning captured from completed work."
+  teotl: "Deferred; no runtime/service responsibility in v0."
+```
+
 ## Proof Requirement v1
 
 `proof-requirement-v1` is the portable done-evidence contract inside a Work Contract. It names the proof a human or agent must produce before the contract, slice, or child task can be treated as ready. Beislið defines the semantics; it does not store proof artifacts, ingest Rondo run state, or replace Memento curated memory.

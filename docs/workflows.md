@@ -17,7 +17,8 @@ flowchart LR
   C --> E["Pick one phase"]
   E --> D
   D --> F["implement<br/>Plan execution"]
-  F --> G["Build / change code"]
+  F --> X["optional execution-envelope-v0<br/>Approve AFK boundary"]
+  X --> G["Build / change code"]
   G --> H["verify<br/>Evidence before claims"]
   H --> K{"Want pre-PR<br/>hardening loop?"}
   K -- "yes" --> L["rinse<br/>Review / fix / verify"]
@@ -29,6 +30,7 @@ Routing rules:
 
 - Start with `spec` when product behavior, success criteria, or scope are unclear.
 - Use `spec` to finalize a `work-contract-v1` section or artifact when the next skill needs stable requirements for automation handoff.
+- Use an `execution-envelope-v0` fixture when a clear slice needs human-approved autonomy, proof, pause, dependency, delivery, and ownership boundaries before AFK execution.
 - Use `poke-holes` after `spec` when the spec is still broad, unfocused, or needs pressure before implementation design.
 - Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question; an approved Work Contract counts as that requirements input.
 - Use Work Contract `scope_classification` for routing: `atomic`/`single_pr` go to `blueprint`, `multi_slice` goes to `break-spec`, and `project` starts with spec refinement before slice planning.
@@ -61,6 +63,7 @@ flowchart TD
   F --> H["Pick one phase"]
   H --> G
   G --> I["implement"]
+  I --> J["optional execution-envelope-v0<br/>Approve AFK boundary"]
 ```
 
 Use the routing this way:
@@ -71,6 +74,7 @@ Use the routing this way:
 - `scope_classification` is canonical when present: `atomic` and `single_pr` route to `blueprint`; `multi_slice` routes to `break-spec`; `project` routes to spec refinement first, then slice planning once boundaries are approved; `unknown` routes to continued refinement, not automation handoff.
 - `break-spec` when the requirement is classified as `multi_slice`, or as `project` after project boundaries are approved.
 - `blueprint` when the desired behavior is known and the remaining work is implementation design; an approved Work Contract is a primary requirements handoff.
+- `execution-envelope-v0` can then constrain AFK execution with explicit `allow` / `ask` / `deny`, proof requirements, pause conditions, dependencies, expected delivery, and ownership boundaries.
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
 - If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.”
 - For Rondo-style durable run state, orchestrators can additionally use `beislid run-ledger ...`. The ledger stores run IDs, events, gate log indexes, interruptions, and final reports under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/`; it links to checkpoint artifacts instead of replacing them.
