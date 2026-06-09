@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, normalize } from "node:path";
 
 export type LatestCheckpointEntry = {
 	event?: string;
@@ -31,11 +31,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeEntry(value: unknown): LatestCheckpointEntry | undefined {
+async function normalizeEntry(cwd: string, value: unknown): Promise<LatestCheckpointEntry | undefined> {
 	if (!isObject(value)) return undefined;
 	const entry = value as LatestCheckpointEntry;
 	if (typeof entry.event !== "string" || typeof entry.path !== "string") return undefined;
-	return entry;
+	const artifactPath = normalize(entry.path);
+	if (isAbsolute(artifactPath) || artifactPath === ".." || artifactPath.startsWith(`..${"/"}`)) return undefined;
+	try {
+		await readFile(join(cwd, artifactPath), "utf8");
+	} catch {
+		return undefined;
+	}
+	return { ...entry, path: artifactPath };
 }
 
 export function identityForEntry(entry: LatestCheckpointEntry): BoundaryIdentity | undefined {
@@ -71,7 +78,9 @@ export async function readLatestCheckpoint(cwd: string): Promise<CheckpointPoint
 	}
 	if (!isObject(parsed) || !isObject(parsed.latest)) return undefined;
 
-	const entries = Object.values(parsed.latest).map(normalizeEntry).filter((entry) => entry !== undefined);
+	const entries = (await Promise.all(Object.values(parsed.latest).map((entry) => normalizeEntry(cwd, entry)))).filter(
+		(entry) => entry !== undefined,
+	);
 	const identities = entries.map(identityForEntry).filter((identity) => identity !== undefined);
 	return { latestPath: ".beislid/checkpoints/latest.json", entries, identities };
 }
