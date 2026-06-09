@@ -1,6 +1,6 @@
 {
   "name": "beislid",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Opinionated workflow skills. Hard gates, not suggestions. Spec through blueprint, implementation, verification, and shipping -- the skills refuse to let you skip steps.",
   "author": {
     "name": "Vic Valenzuela",
