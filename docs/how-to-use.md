@@ -48,8 +48,9 @@ Beislið is repo-local. It installs portable skills, but the skills are only the
    | A bunch of work done but not yet proven       | `verify`     |
    | A branch that is ready for PR                 | `ready-for-review`    |
    | PR review or QA feedback came back            | `review-response` |
+   | An open PR needs babysitting through CI/review | `babysit` |
 
-Basic planning, debugging, verification, and review skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, and `review-response` need project setup when they must read tickets, run configured gates, or interact with PR review sources.
+Basic planning, debugging, verification, and review skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` need project setup when they must read tickets, run configured gates, or interact with PR review sources. `babysit` also requires `/goal`: Claude includes it; Pi users need the `pi-goal` package enabled.
 
 ## Invocation
 
@@ -130,6 +131,14 @@ review-response → debug if needed → fix → verify → push or reply
 
 Use `review-response` after someone reviews or QA-tests your work. It categorizes feedback, helps fix or push back with evidence, then follows the configured update path.
 
+### Babysit an open PR
+
+```text
+babysit → review-response loop → configured gates → green PR or configured closeout
+```
+
+Use `babysit` when an open PR needs a goal-backed loop that keeps checking CI, review comments, mergeability, and configured closeout policy. It requires `/goal`; Claude has `/goal` built in, while Pi needs the `pi-goal` package enabled.
+
 **Note:** These are only some of the recommended workflows, each skill is composable and orchestrator skills like `ready-for-review` enforce rules but you can also call the smaller skills individually as needed.
 
 ## What Beislið will and won't do
@@ -156,7 +165,7 @@ Beislið won't:
 - [Workflows](./workflows.md): detailed lifecycle diagrams and routing rules.
 - [Skills](./skills.md): full skill catalog.
 - [Configuration](./configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, and probe cache.
-- [Review workflows](./review-workflows.md): `review`, `fresh-eyes`, `rinse`, `pr-patrol`, `walk-the-diff`, `review-response`, and `ready-for-review` review behavior.
+- [Review workflows](./review-workflows.md): `review`, `fresh-eyes`, `rinse`, `pr-patrol`, `walk-the-diff`, `review-response`, `babysit`, and `ready-for-review` review behavior.
 - [FAQ](./faq.md): positioning, Superpowers/GSD comparisons, autonomy, team use, and workflow philosophy.
 - [Show Me](./show-me.md): local HTML evidence and explanation decks.
 - [Credential guard](./credential-guard.md): optional Claude Code hook for blocking secret-dumping commands.

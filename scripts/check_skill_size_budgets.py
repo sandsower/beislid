@@ -20,6 +20,7 @@ BUDGETS = {
     "skills/ready-for-review/phase-2-gates.md": 7_000,
     "skills/ready-for-review/phase-3-review.md": 5_000,
     "skills/ready-for-review/phase-4-submit.md": 7_000,
+    "skills/babysit/SKILL.md": 8_000,
     "skills/kickoff/SKILL.md": 7_000,
     "skills/kickoff/step-1-ticket.md": 4_000,
     "skills/kickoff/step-2-context.md": 4_000,

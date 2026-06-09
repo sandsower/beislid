@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/sandsower/beislid/actions/workflows/validate.yml"><img alt="validate" src="https://img.shields.io/github/actions/workflow/status/sandsower/beislid/validate.yml?branch=main&label=validate"></a>
   <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/sandsower/beislid"></a>
-  <img alt="skills" src="https://img.shields.io/badge/skills-19-22d3ee">
+  <img alt="skills" src="https://img.shields.io/badge/skills-21-22d3ee">
   <img alt="hosts" src="https://img.shields.io/badge/hosts-Claude%20%7C%20Pi%20%7C%20Codex-a78bfa">
   <img alt="status" src="https://img.shields.io/badge/status-v0.2.0-f59e0b">
 </p>
@@ -98,6 +98,7 @@ Then open a project repo and pick the right entry point:
 | Work is done but not proven               | `verify`     |
 | Branch is ready for PR                    | `ready-for-review`    |
 | PR review or QA feedback came back        | `review-response` |
+| Open PR needs babysitting through CI/review | `babysit` |
 
 For repo-aware ticket, PR, and quality-gate workflows, configure the project first:
 
@@ -105,7 +106,7 @@ For repo-aware ticket, PR, and quality-gate workflows, configure the project fir
 setup → doctor → kickoff or ready-for-review
 ```
 
-Basic skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, and `review-response` need `.beislid/workflow.md` when they must read tickets, run configured gates, or interact with PR review sources.
+Basic skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` need `.beislid/workflow.md` when they must read tickets, run configured gates, or interact with PR review sources. `babysit` also requires host goal support: Claude includes `/goal`; Pi users need the `pi-goal` package enabled.
 
 See [How to use](./docs/how-to-use.md) for more information.
 
@@ -125,6 +126,7 @@ A workflow can define:
 - PR target and review source
 - ticket or PR update commands
 - scopes and quality gates
+- PR babysitting and optional closeout automation
 - triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 
@@ -135,7 +137,7 @@ See [Configuration](./docs/configuration.md) for details and [workflow.md format
 - **Shape work:** `spec`, `break-spec`, `blueprint`, `poke-holes`
 - **Execute safely:** `implement`, `debug`, `handoff`
 - **Check evidence:** `verify`, `review`, `fresh-eyes`, `rinse`, `show-me`
-- **Deliver work:** `ready-for-review`, `review-response`, `pr-patrol`, `walk-the-diff`
+- **Deliver work:** `ready-for-review`, `review-response`, `babysit`, `pr-patrol`, `walk-the-diff`
 - **Manage config:** `setup`, `doctor`, `retro`
 
 See [Skills](./docs/skills.md) for the full catalog and [Workflows](./docs/workflows.md) for lifecycle diagrams.

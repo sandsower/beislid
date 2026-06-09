@@ -1,4 +1,5 @@
 export const BEISLID_SKILLS = [
+	"babysit",
 	"blueprint",
 	"break-spec",
 	"debug",

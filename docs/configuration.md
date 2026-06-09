@@ -5,7 +5,7 @@ Beislið has two layers:
 1. **Installed skills** in the agent host.
 2. **Repo-local workflow config** in `<repo>/.beislid/workflow.md`.
 
-Basic skills such as `spec`, `blueprint`, `debug`, `verify`, and `review` can work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, and `review-response` use `workflow.md` when they need ticket, PR, quality-gate, scope, or team-specific behavior.
+Basic skills such as `spec`, `blueprint`, `debug`, `verify`, and `review` can work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` use `workflow.md` when they need ticket, PR, quality-gate, scope, or team-specific behavior.
 
 ## Setup
 
@@ -25,6 +25,7 @@ setup
 - PR host
 - PR review source and update path
 - ticket update path
+- PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
 - planning artifacts written after approved specs/designs
 - quality gates
@@ -207,6 +208,36 @@ When orchestrators run gates, they summarize each result as an agent-readable en
 
 Generic text output and pytest-style output have built-in parser guidance in the shared output templates; `output.parser: generic-text` or `output.parser: pytest` metadata can guide parser selection where supported.
 
+## Babysit
+
+`babysit` uses host goal mode to keep monitoring and responding to the current PR until configured live evidence says it is green. Claude already includes `/goal`; Pi users need the separate `pi-goal` package enabled before `/babysit` can run. Configure optional babysit policy when you want predictable closeout behavior beyond the defaults.
+
+````markdown
+## Babysit
+
+```beislid:babysit
+goal:
+  token_budget: 50k
+loop:
+  use_review_response: true
+  run_configured_gates_before_push: true
+  wait_interval_seconds: 60
+  timeout_minutes: 60
+closeout:
+  merge:
+    mode: ask # off | ask | auto
+    method: squash # squash | merge | rebase | repo-default
+    delete_branch: true
+  memento:
+    mode: ask # off | ask | auto
+  retro:
+    mode: ask # off | ask | auto
+    apply_findings: ask # off | ask | auto
+```
+````
+
+Defaults are conservative when this block is absent: goal has no token budget, `review-response` is used for feedback handling, configured gates run before pushes, and merge/memento/retro closeout steps are off. Set `loop.use_review_response: false` only when you want `babysit` to stop with a feedback summary instead of fixing, replying, committing, or pushing automatically. `auto` closeout removes routine prompts only where action policy allows the side effect; if policy asks or denies, the skill asks or stops.
+
 ## Action policy
 
 Action policy is the deterministic risk model repo-aware orchestrators use before risky side effects. It is evaluated by:
@@ -256,7 +287,7 @@ Doctor validates `beislid:action_policy` as config, not as an external probe. It
 
 Policy decisions recorded in run summaries or the durable ledger should preserve the evaluator envelope shape: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When an `ask` decision is accepted or declined, summaries should record the human outcome separately from the original evaluator decision. Denied actions should include the remediation hint and stop point.
 
-In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, and `review-response`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
+In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, `review-response`, and `babysit`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
 
 ## Work Contract v1
 
@@ -890,6 +921,7 @@ These skills read `workflow.md`:
 - `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
 - `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
+- `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.
 - `doctor`: all configured capabilities.
 - `retro`: current workflow config plus available run/session evidence, producing recommendations only; accepted config changes route through `setup`.

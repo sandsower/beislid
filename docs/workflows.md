@@ -98,6 +98,24 @@ flowchart LR
 
 It is not for writing reviews on other people's PRs, starting new ticket work, or opening a fresh PR.
 
+## PR babysitting loop
+
+Use `babysit` when a PR is already open and should be monitored through review comments, configured gates, CI, mergeability, and optional closeout automation.
+
+```mermaid
+flowchart LR
+  A["Open PR"] --> B["babysit<br/>requires /goal"]
+  B --> C{"Actionable feedback?"}
+  C -- "yes" --> D["review-response"]
+  D --> E["Configured gates + push/reply"]
+  E --> B
+  C -- "no" --> F{"Checks green<br/>and mergeable?"}
+  F -- "no" --> B
+  F -- "yes" --> G["Configured closeout<br/>merge / memento / retro"]
+```
+
+`babysit` requires goal support. Claude includes `/goal`; Pi users need the `pi-goal` package enabled. Closeout automation is controlled by `beislid:babysit` and action policy, so `auto` still stops on policy denials, unsafe conflicts, red/pending checks, missing credentials, or judgment calls.
+
 ## Split-work handoff
 
 Use `handoff` when part of the work needs to move to another agent, session, or worktree.
@@ -136,6 +154,7 @@ Use these directly when the situation calls for them:
 | Local or supplied diff needs review | `review` |
 | Post-fix whole diff needs a final pass | `fresh-eyes` |
 | Review findings need a fix/verify loop | `rinse` |
+| Open PR needs goal-backed babysitting | `babysit` |
 | Someone else's PR needs review | `pr-patrol` |
 | Your own diff needs a human walkthrough | `walk-the-diff` |
 | Parallel session needs context | `handoff` |
@@ -145,4 +164,4 @@ Use these directly when the situation calls for them:
 
 `review` and `fresh-eyes` are primitives. They do not edit files, commit, push, post comments, update tickets, or create PRs.
 
-Orchestration skills such as `rinse`, `pr-patrol`, `review-response`, and `ready-for-review` decide what to do with findings after user approval.
+Orchestration skills such as `rinse`, `pr-patrol`, `review-response`, `babysit`, and `ready-for-review` decide what to do with findings after user approval.

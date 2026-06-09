@@ -57,7 +57,7 @@ Not for every skill.
 
 Basic skills such as `spec`, `blueprint`, `debug`, `verify`, and `review` can work after install.
 
-You need `.beislid/workflow.md` when you want repo-aware orchestrators such as `kickoff`, `ready-for-review`, and `review-response` to use ticket sources, branch patterns, PR targets, quality gates, review sources, or update commands.
+You need `.beislid/workflow.md` when you want repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` to use ticket sources, branch patterns, PR targets, quality gates, review sources, update commands, or babysit closeout policy.
 
 ## What does Beislið change in my repo?
 
