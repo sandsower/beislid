@@ -72,6 +72,8 @@ beislid install project [path]
 beislid install project [path] --copy
 beislid status
 beislid status project [path]
+beislid workflow-signal status
+beislid workflow-signal emit waiting --skill ready-for-review
 beislid update
 beislid help
 ```

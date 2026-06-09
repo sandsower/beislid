@@ -246,6 +246,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **PR description formatter** — *Pass drafted PR descriptions through a formatter skill before showing them for approval.*
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
 - **Visual surfaces** — *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
+- **Workflow signals** — *Configure optional local workflow-state signals, starting with tmux-glance tab markers for semantically instrumented skills.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
@@ -381,6 +382,29 @@ workflows:
 ```
 
 Never create duplicate `beislid:visual_surfaces` blocks; update or remove the existing one.
+
+### Workflow signals
+
+Configure the canonical `beislid:workflow_signals` block under `Workflow signals`. Explain that this is local workflow-state fan-out, not tracker updates, host lifecycle hooks, or quality gates. The only v1 executable sink is `tmux-glance`; future sink types are reserved.
+
+Ask:
+
+```text
+Configure workflow signals? (auto / off / skip)
+```
+
+For `auto`, write a `sinks` list with `type: tmux-glance`. Ask whether to enable the default semantically instrumented skills (`ready-for-review` and `poke-holes`) or customize per-skill overrides. Valid modes are `off / auto`.
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: auto
+  poke-holes: auto
+```
+
+Explain that signal emission is best-effort: outside tmux, without `tmux-glance`, or when a sink fails, Beislið continues silently. Never create duplicate `beislid:workflow_signals` blocks; update or remove the existing one.
 
 ### Fresh-eyes final review
 

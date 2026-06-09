@@ -4,7 +4,7 @@ Loaded just in time at Phase 1 entry. If unreadable, hard-fail instead of runnin
 
 ## Entry / exit output
 
-Print the Phase 1 entry/exit one-liners from `ready-for-review-templates.md`; in verbose mode, append the aux-load stamp and transcript boundary. Before Phase 1 exits, verbose mode must have either an initialized transcript path or the one-time transcript-write warning recorded.
+Print Phase 1 entry/exit one-liners; emit workflow-signal `working` on entry. In verbose mode, append aux-load/transcript boundaries and ensure transcript is initialized or warning recorded before exit.
 
 ## Phase outputs
 
@@ -22,12 +22,12 @@ Ticket association is explicit-only:
 
 - If `branch_pattern` captures an id, store it; normalize against `ticket_source.id_pattern` when configured.
 - If the user already said no ticket / maintenance / `none`, store `ticket_id = none` and do not ask again.
-- Otherwise ask: `What is the ticket ID? Reply with an ID, or \`none\` for maintenance/no-ticket work.`
+- Otherwise emit workflow-signal `waiting`, then ask: `What is the ticket ID? Reply with an ID, or \`none\` for maintenance/no-ticket work.`
 - Do not list/search open issues to guess. Only use a ticket id after branch/user confirmation.
 
 Determine `base` from `pr_base.default` when configured, otherwise `main`; if a stacked/non-default base is likely, ask the user and update `base`.
 
-If `branch == base` or the configured default branch and local changes exist, stop before gates or push. Show concise `git status --short`, explain direct PR handoff from base is unsafe, then ask for branch name and include set (`all`, selected paths, or abort). Selected paths require exact confirmation and a commit message; untracked files are excluded unless named. Create the branch and commit only approved paths before continuing. If there are no local changes and no branch diff, stop: nothing to prepare for review.
+If `branch == base` or the configured default branch and local changes exist, emit workflow-signal `blocked`, then stop before gates/push. Show concise `git status --short`, explain direct PR handoff from base is unsafe, then ask for branch name and include set (`all`, selected paths, or abort). Selected paths require exact confirmation and a commit message; untracked files are excluded unless named. Create the branch and commit only approved paths before continuing. If there are no local changes and no branch diff, stop: nothing to prepare for review.
 
 If on a feature branch with committed diff plus uncommitted files, warn that uncommitted files are excluded from the PR unless the user commits them.
 

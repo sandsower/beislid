@@ -4,7 +4,7 @@ Phase 3 is reached only on the normal new-PR path. Existing-PR fast path skips t
 
 ## Entry / inputs
 
-Print the Phase 3 entry one-liner from `ready-for-review-templates.md`. In verbose mode, emit the aux-load stamp and phase-entry transcript boundary per the main verbose contract.
+Print Phase 3 entry; emit workflow-signal `review`. In verbose mode, emit aux-load and phase-entry transcript stamps.
 
 Inputs: `base`, full diff against `base`, ticket/spec/design context, Phase 2 gate results and warnings, fast-path state, changed-file/scope mapping for gate reruns, and accumulated user decisions.
 
@@ -14,7 +14,7 @@ Apply this policy to `review`, enabled final checks, and fast-path combined revi
 
 - Announce the review start and that progress will be reported every 60s.
 - Poll/report every 60s while the host supports it.
-- At 5 minutes, ask: continue waiting, cancel-and-salvage, or abort ready-for-review.
+- At 5 minutes, emit workflow-signal `waiting`, then ask: continue waiting, cancel-and-salvage, or abort ready-for-review.
 - Never silently skip review coverage; fast-path combined review must be explicit.
 - Cancellation is not a pass.
 
@@ -26,7 +26,7 @@ If `fast_path_eligible=true`, skip this subsection and go directly to 3b combine
 
 Handle findings by severity:
 
-- Critical findings must be addressed before PR handoff.
+- Critical findings must be addressed before PR handoff; emit `blocked` before unresolved Criticals.
 - Important findings must be addressed before PR handoff unless the user explicitly accepts the risk.
 - Minor findings are optional.
 

@@ -112,6 +112,10 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 
 No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
 
+### workflow_signals validation
+
+`beislid:workflow_signals` is validated as local signal routing config. Doctor checks shape only: `mode` must be `off` or `auto`; `sinks` must be a list; v1 executable sink type is `tmux-glance`; unknown sink types are reserved warnings unless the shape is invalid; optional `skills` must be a map whose values are `off` or `auto`. Valid states are `working | blocked | waiting | verify | review | done | explore`. Doctor may recommend `beislid workflow-signal status`, but it must not invoke `tmux-glance` or emit test signals. Missing `tmux-glance` is graceful fallback guidance, not a config failure when the workflow shape is valid.
+
 ### model_routing validation
 
 `beislid:model_routing` is validated, not probed as an external dependency. Doctor checks shape only: optional `defaults`, ordered `overrides[]`, route `model`/`models` candidates, `mode: prefer|require`, and override `skills[]`. It should record `probe_kind: validation` and summarize default candidates, override count, and required-route count. Runtime hosts decide whether candidates are supported; doctor may warn on unknown bare strings but must not spend model budget probing availability. `when` is reserved for future conditional routing and should warn as inactive v1 config rather than narrowing a route.

@@ -8,7 +8,7 @@ Inputs: base/branch/ticket/PR, merge/diff state, gate model (`gate_sets`/scopes/
 
 Outputs: gate envelopes, proof status, skips, decisions, warnings, and resume route.
 
-Print Phase 2 entry/exit one-liners. Verbose mode emits aux/probe/gate summaries.
+Print Phase 2 entry/exit. Emit workflow-signal `verify` at Phase 2 entry. Verbose mode emits aux/probe/gate summaries.
 
 ## 2a. Merge base if stale
 
@@ -18,7 +18,7 @@ If `needs_merge`, policy-check `git.merge` (`workspace-write`, `git-local`) and 
 git merge origin/<base>
 ```
 
-If conflicts occur, stop and ask the user for help. After resolution, continue Phase 2 and run gates that apply to touched files; merged code may violate current rules.
+If conflicts occur, emit workflow-signal `blocked`, then stop and ask the user for help. After resolution, continue Phase 2 and run gates that apply to touched files; merged code may violate current rules.
 
 ## 2b. Run scoped or top-level gates
 
@@ -39,7 +39,7 @@ Execution:
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
 3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md` (pytest parser when pytest-like, otherwise generic). Store raw logs by path when possible, else a safe summary.
 4. Autofix only when `fail` and not environment failure: policy-check `gate.autofix` (`workspace-write` plus non-read classes), show summary, run on `allow`/approved `ask`, show diff, ask before commit. Ask the commit approval question exactly once in user-visible output; do not duplicate it across progress prose and the final/blocking response.
-5. For `status: error`, `environment_failure: true`, or no `autofix`, prompt from the envelope (`summary`, failures, flags, action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess. In parallel, wait for siblings and surface all failure envelopes together.
+5. For `status: error`, `environment_failure: true`, or no `autofix`, emit workflow-signal `waiting`, then prompt from the envelope (`summary`, failures, flags, action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess. In parallel, wait for siblings and surface all failure envelopes together.
 6. After a fix, re-run the applicable gate before advancing. If the user explicitly proceeds without a passing gate, record that decision/risk.
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state for cache write-back. Plain git checks are not probe-cache entries.

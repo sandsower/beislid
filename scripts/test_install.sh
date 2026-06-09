@@ -905,6 +905,139 @@ test_cli_status() {
   assert_stdout_contains "✓ verify"
 }
 
+test_workflow_signal_noops_when_unconfigured() {
+  local project="$TMP/workflow-signal-unconfigured"
+  mkdir -p "$project"
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes
+  if [[ -e "$TMP/tmux-glance.log" ]]; then
+    note_fail "expected unconfigured workflow-signal emit not to invoke tmux-glance"
+  fi
+
+  run_cli_from_dir "$project" workflow-signal status
+  assert_stdout_contains "workflow_signals: not configured"
+}
+
+test_workflow_signal_tmux_glance_requires_tmux() {
+  local project="$TMP/workflow-signal-no-tmux"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  poke-holes: auto
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX='' run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes
+  if [[ -e "$TMP/tmux-glance.log" ]]; then
+    note_fail "expected workflow-signal emit outside tmux not to invoke tmux-glance"
+  fi
+}
+
+test_workflow_signal_tmux_glance_invokes_sink() {
+  local project="$TMP/workflow-signal-tmux"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  poke-holes: auto
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes --phase question
+  assert_file_contains "$TMP/tmux-glance.log" "waiting"
+
+  run_cli_from_dir "$project" workflow-signal status --skill poke-holes
+  assert_stdout_contains "mode: auto"
+  assert_stdout_contains "skill_mode: auto"
+  assert_stdout_contains "sink: tmux-glance"
+}
+
+test_workflow_signal_skill_override_can_disable() {
+  local project="$TMP/workflow-signal-skill-off"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  poke-holes: off
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit waiting --skill poke-holes
+  if [[ -e "$TMP/tmux-glance.log" ]]; then
+    note_fail "expected skill-level off to suppress workflow-signal sink"
+  fi
+}
+
+test_workflow_signal_invalid_modes_noop() {
+  local project="$TMP/workflow-signal-invalid-mode"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: prompt
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: disabled
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit waiting --skill ready-for-review
+  if [[ -e "$TMP/tmux-glance.log" ]]; then
+    note_fail "expected invalid workflow-signal modes not to invoke tmux-glance"
+  fi
+}
+
 test_cli_plugin_enable_lavish_writes_state() {
   run_cli plugin enable lavish
   assert_stdout_contains "Lavish plugin enabled"
@@ -1515,6 +1648,11 @@ run_test "Homebrew formula draft installs runtime subset"       test_homebrew_fo
 run_test "CLI install user delegates to user install"          test_cli_install_user
 run_test "CLI ignores ambient option flags"                    test_cli_ignores_ambient_option_flags
 run_test "CLI status delegates to status"                      test_cli_status
+run_test "workflow-signal noops when unconfigured"            test_workflow_signal_noops_when_unconfigured
+run_test "workflow-signal tmux-glance requires tmux"           test_workflow_signal_tmux_glance_requires_tmux
+run_test "workflow-signal tmux-glance invokes sink"            test_workflow_signal_tmux_glance_invokes_sink
+run_test "workflow-signal skill override can disable"          test_workflow_signal_skill_override_can_disable
+run_test "workflow-signal invalid modes noop"                  test_workflow_signal_invalid_modes_noop
 run_test "CLI plugin enable lavish writes state"               test_cli_plugin_enable_lavish_writes_state
 run_test "CLI plugin status lavish reports light probe"        test_cli_plugin_status_lavish_reports_light_probe
 run_test "CLI plugin disable lavish preserves state"           test_cli_plugin_disable_lavish_preserves_state

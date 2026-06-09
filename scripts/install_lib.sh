@@ -402,6 +402,209 @@ beislid_plugin_lavish_status() {
   fi
 }
 
+_workflow_signal_usage() {
+  cat <<'USAGE'
+Usage:
+  beislid workflow-signal emit <working|blocked|waiting|verify|review|done|explore> [--skill NAME] [--phase NAME] [--event NAME] [--repo PATH]
+  beislid workflow-signal status [--skill NAME] [--repo PATH]
+USAGE
+}
+
+_workflow_signal_state_valid() {
+  case "$1" in
+    working|blocked|waiting|verify|review|done|explore) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_workflow_signal_repo_root() {
+  local requested="$1"
+  if [[ -n "$requested" ]]; then
+    if [[ -d "$requested" ]]; then
+      git -C "$requested" rev-parse --show-toplevel 2>/dev/null || (cd "$requested" && pwd)
+      return 0
+    fi
+    printf '%s\n' "$requested"
+    return 0
+  fi
+  git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+
+_workflow_signal_config_lines() {
+  local repo="$1" skill="$2"
+  local workflow="$repo/.beislid/workflow.md"
+  if [[ ! -f "$workflow" ]] || ! command -v python3 >/dev/null 2>&1; then
+    return 0
+  fi
+  python3 - <<'PY' "$workflow" "$skill"
+import re, shlex, sys
+path, skill = sys.argv[1:]
+try:
+    lines = open(path, encoding="utf-8").read().splitlines()
+except Exception:
+    sys.exit(0)
+block = []
+in_block = False
+for line in lines:
+    if not in_block and line.strip().startswith("```beislid:workflow_signals"):
+        in_block = True
+        continue
+    if in_block and line.strip().startswith("```"):
+        break
+    if in_block:
+        block.append(line.rstrip("\n"))
+if not block:
+    sys.exit(0)
+mode = "auto"
+sinks = []
+skills = {}
+section = None
+current_sink = None
+for raw in block:
+    if not raw.strip() or raw.lstrip().startswith("#"):
+        continue
+    indent = len(raw) - len(raw.lstrip(" "))
+    stripped = raw.strip()
+    if indent == 0 and stripped.startswith("mode:"):
+        mode = stripped.split(":", 1)[1].strip().strip("'\"") or mode
+        section = None
+        current_sink = None
+        continue
+    if indent == 0 and stripped == "sinks:":
+        section = "sinks"
+        current_sink = None
+        continue
+    if indent == 0 and stripped == "skills:":
+        section = "skills"
+        current_sink = None
+        continue
+    if section == "sinks":
+        if stripped.startswith("- "):
+            current_sink = {}
+            item = stripped[2:].strip()
+            if item.startswith("type:"):
+                current_sink["type"] = item.split(":", 1)[1].strip().strip("'\"")
+            sinks.append(current_sink)
+            continue
+        if current_sink is not None and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            current_sink[key.strip()] = value.strip().strip("'\"")
+            continue
+    if section == "skills" and ":" in stripped:
+        key, value = stripped.split(":", 1)
+        skills[key.strip()] = value.strip().strip("'\"")
+if not sinks:
+    # No implicit default sink: a configured signal surface must name sinks.
+    sinks = []
+skill_mode = skills.get(skill, mode) if skill else mode
+print("configured=1")
+print("mode=" + shlex.quote(mode))
+print("skill_mode=" + shlex.quote(skill_mode))
+for sink in sinks:
+    t = sink.get("type", "")
+    if t:
+        print("sink=" + shlex.quote(t))
+PY
+}
+
+beislid_workflow_signal() {
+  local subcmd="${1:-}"
+  shift || true
+  case "$subcmd" in
+    emit)
+      local state="${1:-}" skill="" repo_arg=""
+      if [[ -z "$state" ]]; then
+        _workflow_signal_usage >&2
+        return 2
+      fi
+      shift
+      if ! _workflow_signal_state_valid "$state"; then
+        echo "Unknown workflow signal state: $state" >&2
+        _workflow_signal_usage >&2
+        return 2
+      fi
+      while (($#)); do
+        case "$1" in
+          --skill) shift; skill="${1:-}" ;;
+          # Reserved metadata flags: accepted for future sinks but intentionally unused in v1.
+          --phase|--event) shift; : "${1:-}" ;;
+          --repo) shift; repo_arg="${1:-}" ;;
+          -h|--help) _workflow_signal_usage; return 0 ;;
+          *) echo "Unknown workflow-signal emit flag: $1" >&2; return 2 ;;
+        esac
+        if [[ -z "${1:-}" ]]; then
+          echo "Missing value for workflow-signal flag" >&2
+          return 2
+        fi
+        shift
+      done
+      local repo config mode="off" skill_mode="off" line saw_config=0
+      repo="$(_workflow_signal_repo_root "$repo_arg")"
+      config="$(_workflow_signal_config_lines "$repo" "$skill")"
+      while IFS= read -r line; do
+        case "$line" in
+          configured=1) saw_config=1 ;;
+          mode=*) mode="${line#mode=}" ;;
+          skill_mode=*) skill_mode="${line#skill_mode=}" ;;
+        esac
+      done <<<"$config"
+      [[ "$saw_config" == 1 && "$mode" == "auto" && "$skill_mode" == "auto" ]] || return 0
+      while IFS= read -r line; do
+        case "$line" in
+          sink=tmux-glance)
+            [[ -n "${TMUX:-}" ]] || continue
+            command -v tmux-glance >/dev/null 2>&1 || continue
+            tmux-glance "$state" >/dev/null 2>&1 || true
+            ;;
+        esac
+      done <<<"$config"
+      ;;
+    status)
+      local skill="" repo_arg=""
+      while (($#)); do
+        case "$1" in
+          --skill) shift; skill="${1:-}" ;;
+          --repo) shift; repo_arg="${1:-}" ;;
+          -h|--help) _workflow_signal_usage; return 0 ;;
+          *) echo "Unknown workflow-signal status flag: $1" >&2; return 2 ;;
+        esac
+        if [[ -z "${1:-}" ]]; then
+          echo "Missing value for workflow-signal flag" >&2
+          return 2
+        fi
+        shift
+      done
+      local repo config line saw_config=0
+      repo="$(_workflow_signal_repo_root "$repo_arg")"
+      config="$(_workflow_signal_config_lines "$repo" "$skill")"
+      echo "beislid workflow-signal status"
+      echo "  repo: $repo"
+      while IFS= read -r line; do
+        [[ "$line" == configured=1 ]] && saw_config=1
+      done <<<"$config"
+      if [[ "$saw_config" != 1 ]]; then
+        echo "  workflow_signals: not configured"
+        return 0
+      fi
+      while IFS= read -r line; do
+        case "$line" in
+          mode=*) echo "  mode: ${line#mode=}" ;;
+          skill_mode=*) [[ -n "$skill" ]] && echo "  skill_mode: ${line#skill_mode=}" ;;
+          sink=*) echo "  sink: ${line#sink=}" ;;
+        esac
+      done <<<"$config"
+      ;;
+    ""|-h|--help)
+      _workflow_signal_usage
+      ;;
+    *)
+      echo "Unknown workflow-signal subcommand: $subcmd" >&2
+      _workflow_signal_usage >&2
+      return 2
+      ;;
+  esac
+}
+
 _path_contains_dir() {
   local dir="$1"
   case ":${PATH:-}:" in

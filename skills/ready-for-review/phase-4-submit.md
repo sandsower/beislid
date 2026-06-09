@@ -6,11 +6,11 @@ Authoritative protocol for Phase 4. Normal mode loads it after Phase 3 has no un
 
 Inputs: branch, base, ticket ID or `none`, diff stats, fast-path state, Phase 2/3 status, accepted/reduced-coverage risks, workflow config, in-memory probe state, verbose/transcript handles, and loaded-aux metadata. Outputs: PR URL/title/base, final notes, domain-capture status, memory brief status, and Phase 4 exit status. Main owns cache write-back.
 
-Print the Phase 4 entry one-liner from `ready-for-review-templates.md`; verbose mode appends load/entry transcript events and exit checks.
+Print Phase 4 entry; emit workflow-signal `working`. Verbose mode appends load/entry transcript events and exit checks.
 
 ## Hard gate
 
-The user must explicitly approve the final PR title and body before any push/PR creation. Draft PR creation also requires this approval. Ask that blocking approval question exactly once in user-visible output: show the title/body as context, then put the single approval question in the final/blocking response, or do not restate it if the visible context already asked it. Marking a draft PR ready requires a second explicit approval after bot review/fixes. Do not treat silence, ambiguous approval, or prior Phase 3 approval as PR approval.
+Emit workflow-signal `waiting` before the final PR approval prompt. The user must explicitly approve title/body before push/PR creation. Draft PR creation also requires this approval. Ask that blocking approval question exactly once in user-visible output: show the title/body as context, then put the single approval question in the final/blocking response, or do not restate it if the visible context already asked it. Marking a draft PR ready requires a second explicit approval after bot review/fixes. Do not treat silence, ambiguous approval, or prior Phase 3 approval as PR approval.
 
 ## 4-pre. Paired-set front-load
 
@@ -63,7 +63,7 @@ gh pr create --head "<branch>" --title "<title>" --base "<base>" --body "<descri
 
 Draft path adds `--draft`; readying later uses provider command such as `gh pr ready` only after second explicit approval.
 
-On network/sandbox failure, surface retry with needed permissions/escalation or abort. Do not re-draft or change approved title/body unless the user asks.
+On network/sandbox failure, emit workflow-signal `blocked`, then surface retry/escalation or abort. Do not re-draft or change approved title/body unless the user asks.
 
 Report the PR URL with the success template. Include notes after the success prose. Verbose mode records transcript events for push, PR creation, bot-review choice, fixes, ready-marking, and auth preflight.
 
@@ -86,7 +86,7 @@ Do not finish with only prose such as “brief summarized”; that fails smoke. 
 
 ## Exit
 
-Print the Phase 4 exit one-liner from `ready-for-review-templates.md`. In verbose mode, append Phase 4 exit check and loaded/not-reached aux status per `ready-for-review-templates.md`.
+Emit workflow-signal `done` after successful PR handoff, then print Phase 4 exit. In verbose mode, append exit and loaded/not-reached aux status.
 
 ## Phase-local tripwires
 

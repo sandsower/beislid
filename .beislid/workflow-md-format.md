@@ -30,6 +30,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `PR description`
 - `Guided walkthrough`
 - `Visual surfaces`
+- `Workflow signals`
 - `Model routing`
 - `Probe cache`
 - `Skill-specific overrides`
@@ -96,6 +97,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Visual surfaces:**
 - `visual_surfaces` — optional visual-surface routing config. Fields: `provider` (`lavish-axi` in v1), `mode` (`off | suggest | prompt | auto`, default `suggest`), optional `command` (string override for the provider command), optional `artifact_root` (repo-relative path, default `.lavish`), and optional `workflows` map for per-workflow mode overrides. Workflow override keys are Beislið workflow/skill names such as `spec`, `blueprint`, `poke-holes`, `show-me`, `review`, `ready-for-review`, `walk-the-diff`, and `handoff`; override values use the same mode enum. Proactive routing requires repo `visual_surfaces` config; user-level plugin enablement alone is not enough.
 
+**Workflow signals:**
+- `workflow_signals` — optional local workflow-state signal fan-out. Fields: `mode` (`off | auto`, default `auto`), `sinks[]` (v1 supports `type: tmux-glance`; future sink types are reserved), and optional `skills` map for per-skill mode overrides using the same enum. Beislið emits normalized states `working | blocked | waiting | verify | review | done | explore`; sinks consume them best-effort and must not block workflow progress. Workflow signals are local presence/status events, not tracker writes or quality gates.
+
 **Model routing:**
 - `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), and `skills` (required on overrides). `when` is reserved for future conditional routing and is not executable in v1.
 
@@ -142,6 +146,34 @@ workflows:
 ````
 
 `mode` controls proactive use: `off` disables visual routing, `suggest` mentions that a visual surface may help, `prompt` asks before opening/invoking one, and `auto` allows configured workflows to open/invoke without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. `command` defaults to the enabled Lavish plugin command, then `npx -y lavish-axi`; doctor validates shape but should not deep-invoke the command. `artifact_root` defaults to `.lavish` and must be a relative repo-local path with no `..` segments. Repo config is required for proactive routing; user-level plugin enablement alone is not enough.
+
+## Workflow signals shape
+
+`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic state (`waiting`, `verify`, `blocked`, etc.); sinks own local side effects. In v1 the only executable sink is `tmux-glance`, which annotates the current tmux window/tab through the external `tmux-glance` CLI when available.
+
+````markdown
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: auto
+  poke-holes: auto
+```
+````
+
+Valid states are `working | blocked | waiting | verify | review | done | explore`. `mode: off` disables signal emission. Skill overrides inherit the global mode when absent. Sink execution is best-effort: outside tmux, without `tmux-glance`, or on a sink failure, the workflow continues silently. Future sink types may fan the same normalized signal to other local processes, but they must use constrained transcript-safe metadata and must not become external tracker/PR side effects.
+
+Skills should emit signals only when they have real semantic knowledge. For example, `ready-for-review` can mark gate execution as `verify`, review phases as `review`, hard approval boundaries as `waiting`, and blocking failures as `blocked`; `poke-holes` can mark each interview question as `waiting` and interrogation/exploration as `working`.
+
+Use the CLI for manual or skill-driven emission:
+
+```bash
+beislid workflow-signal emit waiting --skill ready-for-review --phase approval
+beislid workflow-signal status --skill ready-for-review
+```
 
 ## Model routing shape
 

@@ -163,6 +163,8 @@ beislid install user
 beislid install project [path]
 beislid status
 beislid status project [path]
+beislid workflow-signal status
+beislid workflow-signal emit waiting --skill ready-for-review
 beislid update
 beislid migrate v0.2
 beislid help
@@ -244,6 +246,7 @@ Invocation syntax depends on the host.
 
 - `credential_guard` hook: blocks bash commands that dump secrets. Claude Code-specific; the skills themselves are portable markdown.
 - `show-me` Pi extension: typed deck-builder tools, command evidence capture, asset ingestion, browser screenshots when Playwright is installed, and `/show-me doctor|list|open|clean`. The portable skill still works without Pi.
+- `workflow_signals`: optional local workflow-state fan-out; v1 can drive `tmux-glance` tab markers through `beislid workflow-signal` when configured.
 
 ## Philosophy
 
