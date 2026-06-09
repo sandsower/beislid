@@ -164,7 +164,7 @@ Screenshots, videos, and GIFs may contain sensitive data. Treat them as local/pr
 
 ## Pi tooling
 
-The portable skill works without Pi-specific tooling by writing files manually. In Pi, Beislið's managed command extension routes `/show-me` to this portable skill like the rest of the skill surface.
+The portable skill works without Pi-specific tooling by writing files manually. In Pi, the Beislið Pi extension routes `/show-me` to this portable skill like the rest of the skill surface.
 
 Older Beislið builds included a separate Show Me Pi deck-builder extension. That extension is no longer packaged by default; keep using the portable skill workflow unless a future package reintroduces dedicated deck-builder tools.
 

@@ -23,6 +23,7 @@ function notify(ctx: ExtensionContext, message: string, level: "info" | "warning
 }
 
 function refreshConsumed(ctx: ExtensionContext, consumed: Set<string>) {
+	consumed.clear();
 	for (const entry of ctx.sessionManager.getEntries() as Array<{ type?: string; customType?: string; data?: unknown }>) {
 		if (entry.type !== "custom" || entry.customType !== CONSUMED_ENTRY) continue;
 		const data = entry.data as Partial<ConsumedEntry> | undefined;

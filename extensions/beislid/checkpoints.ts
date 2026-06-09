@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join, normalize } from "node:path";
+import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 
 export type LatestCheckpointEntry = {
 	event?: string;
@@ -35,10 +35,13 @@ async function normalizeEntry(cwd: string, value: unknown): Promise<LatestCheckp
 	if (!isObject(value)) return undefined;
 	const entry = value as LatestCheckpointEntry;
 	if (typeof entry.event !== "string" || typeof entry.path !== "string") return undefined;
-	const artifactPath = normalize(entry.path);
-	if (isAbsolute(artifactPath) || artifactPath === ".." || artifactPath.startsWith(`..${"/"}`)) return undefined;
+	const artifactPath = normalize(entry.path.replace(/\\/g, "/"));
+	if (isAbsolute(artifactPath)) return undefined;
+	const resolvedPath = resolve(cwd, artifactPath);
+	const relativePath = relative(cwd, resolvedPath);
+	if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) return undefined;
 	try {
-		await readFile(join(cwd, artifactPath), "utf8");
+		await readFile(resolvedPath, "utf8");
 	} catch {
 		return undefined;
 	}
@@ -47,15 +50,17 @@ async function normalizeEntry(cwd: string, value: unknown): Promise<LatestCheckp
 
 export function identityForEntry(entry: LatestCheckpointEntry): BoundaryIdentity | undefined {
 	if (typeof entry.event !== "string" || typeof entry.path !== "string") return undefined;
+	const branch = typeof entry.branch === "string" ? entry.branch : undefined;
 	const ticketId = isObject(entry.ticket) && typeof entry.ticket.id === "string" ? entry.ticket.id : undefined;
+	const writtenAt = typeof entry.written_at === "string" ? entry.written_at : undefined;
 	const runId = typeof entry.run_id === "string" ? entry.run_id : typeof entry.runId === "string" ? entry.runId : undefined;
-	const parts = [entry.event, entry.path, entry.branch ?? "", ticketId ?? "", entry.written_at ?? "", runId ?? ""];
+	const parts = [entry.event, entry.path, branch ?? "", ticketId ?? "", writtenAt ?? "", runId ?? ""];
 	return {
 		event: entry.event,
 		path: entry.path,
-		branch: typeof entry.branch === "string" ? entry.branch : undefined,
+		branch,
 		ticketId,
-		writtenAt: typeof entry.written_at === "string" ? entry.written_at : undefined,
+		writtenAt,
 		runId,
 		id: parts.join("|"),
 	};

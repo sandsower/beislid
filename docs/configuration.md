@@ -743,13 +743,13 @@ Repo workflow config declares team intent:
 ## Pi handoff
 
 ```beislid:pi_handoff
-enabled: true
+autoHandoff: true
 events: all
 exclude: []
 ```
 ````
 
-`enabled` defaults to true when the Pi extension is active. `events` can be `all` or a list of lifecycle/checkpoint event names; `exclude` removes events from that set. Local Pi extension settings are the final authority and can disable or narrow the behavior for a developer's machine. Auto-handoff requires a readable checkpoint pointer/artifact and loop protection; if the pointer is missing or unreadable, Beislið keeps the existing manual checkpoint guidance used by Claude and other non-Pi hosts.
+`autoHandoff` defaults to true when the Pi extension is active; `enabled` is accepted as a backward-compatible alias. `events` can be `all` or a list of lifecycle/checkpoint event names; `exclude` removes events from that set. Local Pi extension settings are the final authority and can disable or narrow the behavior for a developer's machine. Auto-handoff requires a readable checkpoint pointer/artifact and loop protection; if the pointer is missing or unreadable, Beislið keeps the existing manual checkpoint guidance used by Claude and other non-Pi hosts.
 
 Local Pi overrides are extension-owned JSON files. User-global settings live at `~/.pi/agent/beislid.json`; project-local settings live at `.pi/beislid.json` and win over user-global settings:
 

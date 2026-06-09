@@ -39,16 +39,39 @@ function parseRepoPiHandoff(workflow: string): PartialConfig | undefined {
 	const match = workflow.match(/```beislid:pi_handoff\s*\n([\s\S]*?)\n```/m);
 	if (!match) return undefined;
 	const config: PartialConfig = {};
+	let listKey: "events" | "exclude" | undefined;
 	for (const rawLine of match[1].split(/\r?\n/)) {
 		const line = rawLine.trim();
 		if (!line || line.startsWith("#")) continue;
+		const listItem = line.match(/^-\s*(.+)$/);
+		if (listItem && listKey) {
+			const item = String(parseScalar(listItem[1]));
+			if (listKey === "events") config.events = [...((config.events as string[] | undefined) ?? []), item];
+			if (listKey === "exclude") config.exclude = [...(config.exclude ?? []), item];
+			continue;
+		}
 		const split = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
 		if (!split) continue;
 		const [, key, rawValue] = split;
+		listKey = undefined;
 		const value = parseScalar(rawValue);
 		if ((key === "enabled" || key === "autoHandoff") && typeof value === "boolean") config.autoHandoff = value;
-		if (key === "events") config.events = value === "all" ? "all" : Array.isArray(value) ? value : [String(value)];
-		if (key === "exclude") config.exclude = Array.isArray(value) ? value : [String(value)];
+		if (key === "events") {
+			if (rawValue.trim() === "") {
+				config.events = [];
+				listKey = "events";
+			} else {
+				config.events = value === "all" ? "all" : Array.isArray(value) ? value : [String(value)];
+			}
+		}
+		if (key === "exclude") {
+			if (rawValue.trim() === "") {
+				config.exclude = [];
+				listKey = "exclude";
+			} else {
+				config.exclude = Array.isArray(value) ? value : [String(value)];
+			}
+		}
 	}
 	return config;
 }
