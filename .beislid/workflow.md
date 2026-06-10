@@ -81,6 +81,28 @@ Agent smoke is intentionally not a default quality gate because it spends model 
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
 ```
 
+
+## Babysit
+
+Enable all closeout steps by default for this repo. Babysit may merge, capture memento, and run/apply retro automatically after the green audit; each action is still bounded by runtime safety stops.
+
+```beislid:babysit
+loop:
+  use_review_response: true
+  run_configured_gates_before_push: true
+  wait_interval_seconds: 60
+closeout:
+  merge:
+    mode: auto
+    method: squash
+    delete_branch: true
+  memento:
+    mode: auto
+  retro:
+    mode: auto
+    apply_findings: auto
+```
+
 ## Action policy
 
 This repo auto-allows PR review reply posting in supervised review-response runs while keeping other remote git/PR actions on the built-in approval path.
@@ -96,6 +118,11 @@ modes:
       pr.review.reply: allow
       git.push: allow
       gh.pr.create: allow
+      gh.pr.merge: allow
+      pr.merge: allow
+      memento.capture: allow
+      retro.run: allow
+      retro.apply: allow
 ```
 
 ## Translation sync
