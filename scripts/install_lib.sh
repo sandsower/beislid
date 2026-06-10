@@ -404,6 +404,13 @@ _workflow_signal_state_valid() {
   esac
 }
 
+_workflow_signal_tmux_glance_state() {
+  case "$1" in
+    explore) printf '%s\n' working ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
 _workflow_signal_repo_root() {
   local requested="$1"
   if [[ -n "$requested" ]]; then
@@ -541,7 +548,7 @@ beislid_workflow_signal() {
           sink=tmux-glance)
             [[ -n "${TMUX:-}" ]] || continue
             command -v tmux-glance >/dev/null 2>&1 || continue
-            tmux-glance "$state" >/dev/null 2>&1 || true
+            tmux-glance "$(_workflow_signal_tmux_glance_state "$state")" >/dev/null 2>&1 || true
             ;;
         esac
       done <<<"$config"

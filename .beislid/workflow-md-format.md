@@ -173,7 +173,7 @@ workflows:
 
 ## Workflow signals shape
 
-`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic state (`waiting`, `verify`, `blocked`, etc.); sinks own local side effects. In v1 the only executable sink is `tmux-glance`, which annotates the current tmux window/tab through the external `tmux-glance` CLI when available.
+`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic state (`waiting`, `verify`, `blocked`, etc.); sinks own local side effects. In v1 the only executable sink is `tmux-glance`, which annotates the current tmux window/tab through the external `tmux-glance` CLI when available. Pi's managed Beislið wrapper additionally surfaces emitted signals in Pi's status/title UI and emits a best-effort start signal for managed skill commands.
 
 ````markdown
 ## Workflow signals
@@ -188,7 +188,7 @@ skills:
 ```
 ````
 
-Valid states are `working | blocked | waiting | verify | review | done | explore`. `mode: off` disables signal emission. Skill overrides inherit the global mode when absent. Sink execution is best-effort: outside tmux, without `tmux-glance`, or on a sink failure, the workflow continues silently. Future sink types may fan the same normalized signal to other local processes, but they must use constrained transcript-safe metadata and must not become external tracker/PR side effects.
+Valid states are `working | blocked | waiting | verify | review | done | explore`. `mode: off` disables signal emission. Skill overrides inherit the global mode when absent. Sink execution is best-effort: outside tmux, without `tmux-glance`, or on a sink failure, the workflow continues silently. The `tmux-glance` sink maps `explore` to its working marker when the installed `tmux-glance` command has no dedicated explore state. Future sink types may fan the same normalized signal to other local processes, but they must use constrained transcript-safe metadata and must not become external tracker/PR side effects.
 
 Skills should emit signals only when they have real semantic knowledge. For example, `ready-for-review` can mark gate execution as `verify`, review phases as `review`, hard approval boundaries as `waiting`, and blocking failures as `blocked`; `poke-holes` can mark each interview question as `waiting` and interrogation/exploration as `working`.
 

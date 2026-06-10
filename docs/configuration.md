@@ -886,7 +886,7 @@ Use `beislid plugin enable lavish` to enable local plugin state and `beislid plu
 
 ## Workflow signals
 
-`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic signal; configured sinks decide how to present it locally. In v1 the supported sink is `tmux-glance`, which annotates the current tmux window/tab when the external `tmux-glance` CLI is available.
+`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic signal; configured sinks decide how to present it locally. In v1 the supported sink is `tmux-glance`, which annotates the current tmux window/tab when the external `tmux-glance` CLI is available. The Pi-managed Beislið wrapper also surfaces emitted signals in Pi's status/title UI and emits a best-effort start signal when a managed Beislið skill command begins.
 
 ````markdown
 ## Workflow signals
@@ -903,7 +903,7 @@ skills:
 
 Valid signal states are `working`, `blocked`, `waiting`, `verify`, `review`, `done`, and `explore`. Emission is best-effort: if workflow signals are absent/off, the process is outside tmux, `tmux-glance` is missing, or a sink fails, the Beislið workflow continues silently.
 
-Skills should emit signals only where they have semantic knowledge. For example, `ready-for-review` can emit `verify` while gates run, `review` during review/fresh-eyes, `waiting` at approval boundaries, and `blocked` on hard failures. `poke-holes` can emit `waiting` before each interview question and `working` while interrogating or exploring code.
+Skills should emit signals only where they have semantic knowledge. For example, `ready-for-review` can emit `verify` while gates run, `review` during review/fresh-eyes, `waiting` at approval boundaries, and `blocked` on hard failures. `poke-holes` can emit `waiting` before each interview question and `working` while interrogating or exploring code. The `explore` semantic state is normalized to a working marker for `tmux-glance` versions that do not have a dedicated explore marker.
 
 Manual check/emission:
 

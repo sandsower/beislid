@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { readLatestCheckpoint, pickNewBoundary, type BoundaryIdentity, type CheckpointPointerSnapshot } from "./checkpoints.js";
 import { resolveHandoffConfig } from "./config.js";
 import { BEISLID_SKILLS, BOUNDARY_CAPABLE_SKILLS, commandNameForSkill, skillPrompt, type BeislidSkill } from "./skill-commands.js";
+import { emitWorkflowSignal, initialSignalForSkill, surfaceWorkflowSignalsFromCommand } from "./workflow-signals.js";
 
 const CONSUMED_ENTRY = "beislid-auto-handoff-consumed";
 const INTERNAL_HANDOFF_COMMAND = "beislid-auto-handoff";
@@ -97,6 +98,12 @@ export default function beislidExtension(pi: ExtensionAPI) {
 		refreshConsumed(ctx, consumed);
 	});
 
+	pi.on("tool_call", async (event, ctx) => {
+		if (event.toolName !== "bash") return;
+		const command = (event as { input?: { command?: unknown } }).input?.command;
+		if (typeof command === "string") surfaceWorkflowSignalsFromCommand(ctx, command);
+	});
+
 	for (const skill of BEISLID_SKILLS) {
 		const command = commandNameForSkill(skill);
 		pi.registerCommand(command, {
@@ -104,13 +111,17 @@ export default function beislidExtension(pi: ExtensionAPI) {
 			handler: async (args, ctx) => {
 				if (skill === "babysit") {
 					if (!hasGoalCommand(pi)) {
+						emitWorkflowSignal(ctx, { state: "blocked", skill, phase: "missing-goal" });
 						notify(ctx, "/babysit requires /goal. Install or enable pi-goal, reload/restart Pi, then run /babysit again.", "warning");
 						return;
 					}
+					emitWorkflowSignal(ctx, { state: "working", skill, phase: "goal" });
 					await pi.sendUserMessage(await buildBabysitGoalCommand(args, ctx), { deliverAs: "followUp" });
 					return;
 				}
 
+				const initialSignal = initialSignalForSkill(skill);
+				if (initialSignal) emitWorkflowSignal(ctx, initialSignal);
 				const prompt = skillPrompt(skill, args);
 				if (BOUNDARY_CAPABLE_SKILLS.has(skill)) {
 					activeRun = {

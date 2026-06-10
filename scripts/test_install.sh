@@ -731,6 +731,51 @@ PY
 }
 
 
+test_pi_beislid_surfaces_workflow_signals() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Beislið Pi extension to surface workflow signals"
+from pathlib import Path
+import re, sys
+root = Path(sys.argv[1])
+index = (root / 'extensions' / 'beislid' / 'index.ts').read_text(encoding='utf-8')
+signals = (root / 'extensions' / 'beislid' / 'workflow-signals.ts').read_text(encoding='utf-8')
+required_index = [
+    'emitWorkflowSignal',
+    'initialSignalForSkill',
+    'surfaceWorkflowSignalsFromCommand',
+    'pi.on("tool_call"',
+]
+required_signals = [
+    'ctx.ui.setStatus("beislid-workflow"',
+    'ctx.ui.setTitle(title)',
+    'execFile("beislid", args',
+    'INITIAL_SKILL_SIGNALS',
+    'WORKFLOW_SIGNAL_STATES',
+]
+missing = [needle for needle in required_index if needle not in index]
+missing += [needle for needle in required_signals if needle not in signals]
+if missing:
+    raise SystemExit(f'missing workflow signal Pi surfaces: {missing}')
+states = set(re.findall(r'"(working|blocked|waiting|verify|review|done|explore)"', signals))
+expected = {'working', 'blocked', 'waiting', 'verify', 'review', 'done', 'explore'}
+if not expected.issubset(states):
+    raise SystemExit(f'missing workflow signal states: {sorted(expected - states)}')
+PY
+}
+
+
+test_beislid_repo_workflow_signals_configured() {
+  python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" || note_fail "expected repo workflow.md to dogfood workflow_signals"
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding='utf-8')
+required = ['```beislid:workflow_signals', 'mode: auto', 'type: tmux-glance', 'ready-for-review: auto']
+missing = [needle for needle in required if needle not in text]
+if missing:
+    raise SystemExit(f'missing workflow_signals config: {missing}')
+PY
+}
+
+
 
 test_status_after_install() {
   run_installer
@@ -972,6 +1017,30 @@ SH
   assert_stdout_contains "mode: auto"
   assert_stdout_contains "skill_mode: auto"
   assert_stdout_contains "sink: tmux-glance"
+}
+
+test_workflow_signal_explore_maps_to_tmux_glance_working() {
+  local project="$TMP/workflow-signal-explore"
+  mkdir -p "$project/.beislid"
+  cat >"$project/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Workflow signals
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+```
+MD
+  cat >"$TMP/bin/tmux-glance" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$BEISLID_FAKE_PI_LOG"
+SH
+  chmod +x "$TMP/bin/tmux-glance"
+
+  BEISLID_FAKE_PI_LOG="$TMP/tmux-glance.log" TMUX=fake run_cli_from_dir "$project" workflow-signal emit explore --skill debug --phase inspect
+  assert_file_contains "$TMP/tmux-glance.log" "working"
 }
 
 test_workflow_signal_skill_override_can_disable() {
@@ -1639,6 +1708,7 @@ run_test "CLI status delegates to status"                      test_cli_status
 run_test "workflow-signal noops when unconfigured"            test_workflow_signal_noops_when_unconfigured
 run_test "workflow-signal tmux-glance requires tmux"           test_workflow_signal_tmux_glance_requires_tmux
 run_test "workflow-signal tmux-glance invokes sink"            test_workflow_signal_tmux_glance_invokes_sink
+run_test "workflow-signal explore maps to tmux-glance working" test_workflow_signal_explore_maps_to_tmux_glance_working
 run_test "workflow-signal skill override can disable"          test_workflow_signal_skill_override_can_disable
 run_test "workflow-signal invalid modes noop"                  test_workflow_signal_invalid_modes_noop
 run_test "CLI plugin enable lavish writes state"               test_cli_plugin_enable_lavish_writes_state
@@ -1676,6 +1746,8 @@ run_test "CLI project status reports manifest and counts"      test_cli_project_
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
 run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
+run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
+run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks

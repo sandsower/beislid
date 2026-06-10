@@ -82,6 +82,21 @@ python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 9
 ```
 
 
+## Workflow signals
+
+Dogfood local workflow-state fan-out for Beislið's own Pi-managed runs. Signals are best-effort and local; missing `tmux-glance` or non-tmux sessions must not block workflow progress.
+
+```beislid:workflow_signals
+mode: auto
+sinks:
+  - type: tmux-glance
+skills:
+  ready-for-review: auto
+  poke-holes: auto
+  babysit: auto
+  review-response: auto
+```
+
 ## Babysit
 
 Enable all closeout steps by default for this repo. Babysit may merge, capture memento, and run/apply retro automatically after the green audit; each action is still bounded by runtime safety stops.
