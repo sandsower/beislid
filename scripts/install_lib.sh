@@ -511,8 +511,9 @@ _workflow_signal_write_file() {
   state_dir="${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}"
   repo_hash="$(git -C "$repo" rev-list --max-parents=0 HEAD 2>/dev/null | head -c 12)"
   [[ -n "$repo_hash" ]] || return 0
-  branch_slug="$(git -C "$repo" branch --show-current 2>/dev/null | tr '/' '-')"
-  [[ -n "$branch_slug" ]] || return 0
+  branch_slug="$(git -C "$repo" symbolic-ref --short HEAD 2>/dev/null | tr '/' '-')"
+  # symbolic-ref fails on detached HEAD; fall back to directory basename.
+  [[ -n "$branch_slug" ]] || branch_slug="$(basename "$repo")"
   signal_dir="$state_dir/signals/$repo_hash"
   signal_file="$signal_dir/$branch_slug"
   if [[ "$state" == "done" ]]; then
