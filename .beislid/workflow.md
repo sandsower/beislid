@@ -10,7 +10,7 @@ Linear issues in the personal `teotl` workspace, team `beislid`, accessed via Li
 
 ```beislid:ticket_source
 type: mcp
-tool: mcp__linear_personal__get_issue
+tool: mcp__personal-linear-server__get_issue
 id_pattern: '^BEI-\d+$'
 link_template: 'https://linear.app/teotl/issue/{id}'
 ```
@@ -23,8 +23,8 @@ Linear-created branches use lowercase issue keys such as `vic/bei-56-...`; the b
 
 ```beislid:ticket_update
 type: mcp
-comment_tool: mcp__linear_personal__save_comment
-issue_tool: mcp__linear_personal__save_issue
+comment_tool: mcp__personal-linear-server__save_comment
+issue_tool: mcp__personal-linear-server__save_issue
 ```
 
 ## PR reviews
@@ -105,6 +105,8 @@ skills:
 ## Babysit
 
 Enable all closeout steps by default for this repo. Babysit may merge, capture memento, and run/apply retro automatically after the green audit; each action is still bounded by runtime safety stops.
+
+This repo runs ticket work in secondary worktrees, so `gh pr merge --delete-branch` fails its local checkout step (`main` is checked out in the primary worktree) and leaves the remote branch undeleted. Verify the merge via `gh pr view --json state`, then delete the remote branch with `gh api repos/{owner}/{repo}/git/refs/heads/{branch} --method DELETE`.
 
 ```beislid:babysit
 loop:
