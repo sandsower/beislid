@@ -53,6 +53,11 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
+- name: install-integration-tests
+  command: 'bash scripts/test_install.sh'
+  parallel_safe: true
+  mutates: false
+  cost: moderate
 - name: skill-size-budgets
   command: 'python3 scripts/check_skill_size_budgets.py'
   parallel_safe: true
