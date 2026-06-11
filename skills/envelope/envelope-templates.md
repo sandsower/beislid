@@ -1,0 +1,1 @@
+../../.beislid/envelope-templates.md

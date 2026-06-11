@@ -586,6 +586,25 @@ ownership:
   teotl: "Deferred; no runtime/service responsibility in v0."
 ```
 
+### Export bundles (`.beislid/exports/`)
+
+The `envelope` skill packages approved execution envelopes as repo-committed export bundles so provenance travels with the code and any machine can run after pull:
+
+```
+.beislid/exports/<bundle-id>/
+  bundle.json            # approved-slice-plan-export-v0
+  slices/<slice-id>.json # approved-slice-v1 per approved envelope
+  slices/<slice-id>.md   # human-readable envelope summary
+```
+
+`bundle-id` is a stable slug derived from the intake (ticket id + feature stem). Revisions rewrite the bundle in place with a bumped `version` and `supersedes: <sha256 of the prior bundle.json>`; git history is the archive.
+
+`bundle.json` carries the BEI-17 required fields: `kind` (`approved-slice-plan-export-v0`), `version`, `status`, `generated_from`, `source_work_contract`, `slice_plan`, `children`, `dependency_graph` (adjacency map of slice id → dependency ids; must be acyclic), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by` from git identity after an explicit per-envelope verdict), `runner_extensions`, `validation`, and `ownership`. Only `status: approved` bundles are exportable — draft, paused, or superseded plans fail validation (fail-closed).
+
+Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. All machine files are JSON; YAML remains a human approval rendering.
+
+`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, known slice schemas and rubric versions, repo pinning, and approval metadata. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
+
 ## Proof Requirement v1
 
 `proof-requirement-v1` is the portable done-evidence contract inside a Work Contract. It names the proof a human or agent must produce before the contract, slice, or child task can be treated as ready. Beislið defines the semantics; it does not store proof artifacts, ingest Rondo run state, or replace Memento curated memory.

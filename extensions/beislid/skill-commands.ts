@@ -4,6 +4,7 @@ export const BEISLID_SKILLS = [
 	"break-spec",
 	"debug",
 	"doctor",
+	"envelope",
 	"fresh-eyes",
 	"handoff",
 	"implement",
@@ -29,6 +30,7 @@ export const COMMAND_COLLISIONS: Partial<Record<BeislidSkill, string>> = {};
 export const BOUNDARY_CAPABLE_SKILLS = new Set<BeislidSkill>([
 	"break-spec",
 	"blueprint",
+	"envelope",
 	"handoff",
 	"implement",
 	"kickoff",
