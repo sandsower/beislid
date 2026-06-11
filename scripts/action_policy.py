@@ -30,11 +30,18 @@ ACTION_CLASSES = (
     "destructive",
     "secret-bearing",
 )
+PROTECTED_CLASSES = ("destructive", "secret-bearing")
 SANDBOX_BASELINES = ("none", "non-default-branch", "separate-worktree", "host-sandbox")
 BASELINE_RANK = {name: idx for idx, name in enumerate(SANDBOX_BASELINES)}
 
+# Assignment-shaped only (`KEY=...` / `key: ...`): bare substrings such as
+# `tokenizer.py` must not infer secret-bearing. Compound segments around the
+# keyword (`GITHUB_TOKEN=`, `db_password:`) still match; embedded fragments
+# (`tokenizer`, `passwordless`, `monkey=`) do not.
 SECRETISH_TEXT = re.compile(
-    r"(?i)(authorization\s*:\s*bearer|api[_-]?key|token|secret|password|private[_-]?key|auth[_-]?header)"
+    r"(?i)(authorization\s*:\s*bearer\b"
+    r"|\b(?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|private[_-]?key|auth[_-]?header)"
+    r"(?:[_-][a-z0-9]+)*\b[\"']?\s*[:=]\s*\S)"
 )
 SECRETISH_ENV = re.compile(r"(?i)\$\{?(TOKEN|SECRET|PASSWORD|API[_-]?KEY|AUTH|GITHUB_TOKEN)\}?")
 
@@ -259,11 +266,30 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         decision = stricter(decision, unclassified_decision)
         matched_rules.append({"type": "fallback", "rule": "unclassified_action", "decision": unclassified_decision})
 
+    # Per-action overrides replace class/fallback decisions, but are floored by
+    # the protected classes: a deny earned through `destructive` or
+    # `secret-bearing` (declared or inferred) can never be downgraded per
+    # action. The only escape hatch is the explicit mode-wide class rule.
     action_overrides = mode_policy.get("actions", {})
+    floor_clamped = False
     if action in action_overrides:
         action_decision = validate_decision(str(action_overrides[action]), f"{run_mode}.actions.{action}")
-        decision = action_decision
-        matched_rules.append({"type": "action", "action": action, "decision": action_decision})
+        protected_floor = "allow"
+        for cls in PROTECTED_CLASSES:
+            if cls in classes:
+                protected_floor = stricter(protected_floor, str(mode_policy["rules"].get(cls, "ask")))
+        applied_decision = stricter(action_decision, protected_floor)
+        decision = applied_decision
+        action_rule = {"type": "action", "action": action, "decision": action_decision}
+        if applied_decision != action_decision:
+            floor_clamped = True
+            action_rule["applied"] = applied_decision
+            action_rule["rule"] = "protected_class_floor"
+            remediation.append(
+                "Per-action overrides cannot downgrade destructive or secret-bearing decisions; "
+                "if truly intended, set the mode-wide class rule explicitly instead."
+            )
+        matched_rules.append(action_rule)
 
     sandbox_status = payload.get("sandbox_status") if isinstance(payload.get("sandbox_status"), dict) else {}
     sandbox_dec, sandbox_rules, sandbox_hints, required_baseline = sandbox_decision(mode_policy, sandbox_status, run_mode)
@@ -281,6 +307,8 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         reason_parts.append("classes=" + ",".join(classes_list))
     if not known:
         reason_parts.append("unknown action")
+    if floor_clamped:
+        reason_parts.append("action override capped by protected class floor")
     if sandbox_rules:
         reason_parts.append("sandbox baseline/status requires attention")
     if not reason_parts:

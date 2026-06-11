@@ -501,12 +501,44 @@ for sink in sinks:
 PY
 }
 
+_workflow_signal_write_file() {
+  # File sink — unconditional, runs regardless of workflow_signals config.
+  # Path: ${BEISLID_STATE_DIR}/signals/<repo_hash>/<branch_slug>
+  # Format: line 1 = absolute worktree path, line 2 = "<state> <skill|-> <phase|-> <iso-ts>"
+  # On state=done the file is removed (missing file == idle/done).
+  local repo="$1" state="$2" skill="${3:-}" phase="${4:-}"
+  local state_dir repo_hash branch_slug signal_dir signal_file ts
+  state_dir="${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}"
+  # `|| true` keeps the pipelines from aborting the CLI under `set -euo pipefail`
+  # when the repo is not a git checkout (e.g. plain project dirs).
+  repo_hash="$(git -C "$repo" rev-list --max-parents=0 HEAD 2>/dev/null | head -c 12 || true)"
+  [[ -n "$repo_hash" ]] || return 0
+  branch_slug="$(git -C "$repo" symbolic-ref --short HEAD 2>/dev/null | tr '/' '-' || true)"
+  # symbolic-ref fails on detached HEAD; fall back to directory basename.
+  [[ -n "$branch_slug" ]] || branch_slug="$(basename "$repo")"
+  signal_dir="$state_dir/signals/$repo_hash"
+  signal_file="$signal_dir/$branch_slug"
+  if [[ "$state" == "done" ]]; then
+    rm -f "$signal_file"
+    return 0
+  fi
+  mkdir -p "$signal_dir" || return 0
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || printf '')"
+  printf '%s\n%s %s %s %s\n' \
+    "$repo" \
+    "$state" \
+    "${skill:--}" \
+    "${phase:--}" \
+    "$ts" \
+    > "$signal_file"
+}
+
 beislid_workflow_signal() {
   local subcmd="${1:-}"
   shift || true
   case "$subcmd" in
     emit)
-      local state="${1:-}" skill="" repo_arg=""
+      local state="${1:-}" skill="" phase="" event="" repo_arg=""
       if [[ -z "$state" ]]; then
         _workflow_signal_usage >&2
         return 2
@@ -520,8 +552,8 @@ beislid_workflow_signal() {
       while (($#)); do
         case "$1" in
           --skill) shift; skill="${1:-}" ;;
-          # Reserved metadata flags: accepted for future sinks but intentionally unused in v1.
-          --phase|--event) shift; : "${1:-}" ;;
+          --phase) shift; phase="${1:-}" ;;
+          --event) shift; event="${1:-}" ;;
           --repo) shift; repo_arg="${1:-}" ;;
           -h|--help) _workflow_signal_usage; return 0 ;;
           *) echo "Unknown workflow-signal emit flag: $1" >&2; return 2 ;;
@@ -534,6 +566,9 @@ beislid_workflow_signal() {
       done
       local repo config mode="off" skill_mode="off" line saw_config=0
       repo="$(_workflow_signal_repo_root "$repo_arg")"
+      # File sink: always write, not gated on workflow_signals config.
+      # Best-effort per workflow doctrine — never block the configured sinks.
+      _workflow_signal_write_file "$repo" "$state" "$skill" "$phase" || true
       config="$(_workflow_signal_config_lines "$repo" "$skill")"
       while IFS= read -r line; do
         case "$line" in

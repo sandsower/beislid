@@ -281,7 +281,7 @@ modes:
 ```
 ````
 
-Use `actions` for explicit stable action-id overrides when one action should differ from its class default; for example, `pr.review.reply: allow` can auto-allow PR review replies while `git-remote` still asks for push/PR creation.
+Use `actions` for explicit stable action-id overrides when one action should differ from its class default; for example, `pr.review.reply: allow` can auto-allow PR review replies while `git-remote` still asks for push/PR creation. Overrides may relax `ask` decisions and ordinary policy denies (such as `git-remote` in unattended mode), but they are floored by the protected classes: a deny earned through `destructive` or `secret-bearing` — whether declared, registry-derived, or inferred by the secret heuristics — can **never** be downgraded by a per-action line. A clamped override stays visible in the envelope as a `protected_class_floor` matched rule showing both the configured and applied decisions. The only escape hatch is deliberate and loud: set the mode-wide class rule itself (for example `rules: destructive: allow`), which applies to every action in that class and is surfaced in `beislid action-policy validate` summaries. Do not expect a quiet per-action exception for destructive or secret-bearing work.
 
 Doctor validates `beislid:action_policy` as config, not as an external probe. It should report invalid modes, classes, decisions, sandbox baselines, and malformed overrides instead of silently falling back to defaults.
 
