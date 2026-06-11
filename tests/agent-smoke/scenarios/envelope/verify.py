@@ -108,12 +108,13 @@ def main() -> int:
     if not checkpoint_path.is_file():
         errors.append(f"missing checkpoint pointer: {checkpoint_path}")
     else:
-        pointer = load_json(checkpoint_path, errors, "checkpoints/latest.json") or {}
-        latest = pointer.get("latest") or {}
-        if pointer and "envelope_exported" not in latest:
-            errors.append("latest.json has no envelope_exported entry")
-        elif latest["envelope_exported"].get("source_skill") != "envelope":
-            errors.append("envelope_exported pointer source_skill must be 'envelope'")
+        pointer = load_json(checkpoint_path, errors, "checkpoints/latest.json")
+        if pointer is not None:
+            latest = pointer.get("latest") or {}
+            if "envelope_exported" not in latest:
+                errors.append("latest.json has no envelope_exported entry")
+            elif latest["envelope_exported"].get("source_skill") != "envelope":
+                errors.append("envelope_exported pointer source_skill must be 'envelope'")
 
     committed = subprocess.run(
         ["git", "-C", str(repo), "log", "--name-only", "--pretty=format:%s"],

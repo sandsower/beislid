@@ -33,7 +33,7 @@ Slug from the primary input (ticket id + short feature stem, e.g. `bei-76-envelo
 
 ## Exit
 
-Print the Step 1 exit one-liner. Required outputs: input kind, ticket/contract reference, planning context summary, candidate slice list with AFK/HITL markings, `bundle_id`.
+Print the Step 1 exit one-liner. Required outputs: input kind, ticket/contract reference, planning context summary, candidate slice list with AFK/HITL markings, bundle-id.
 
 ## Tripwires
 
