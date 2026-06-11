@@ -240,6 +240,56 @@ test_invalid_supersedes_rejected() {
   expect_invalid "$TMP/bundle" "supersedes"
 }
 
+test_missing_supersedes_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["supersedes"]'
+  expect_invalid "$TMP/bundle" "supersedes"
+}
+
+test_missing_schema_version_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["validation"]["schema_version"]'
+  expect_invalid "$TMP/bundle" "schema_version"
+}
+
+test_two_cycles_both_reported() {
+  write_valid_bundle "$TMP/bundle"
+  cp "$TMP/bundle/slices/slice-a.json" "$TMP/bundle/slices/slice-c.json"
+  mutate_slice "$TMP/bundle/slices/slice-c.json" 'manifest["slice_id"] = "slice-c"'
+  cp "$TMP/bundle/slices/slice-a.md" "$TMP/bundle/slices/slice-c.md"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"].append({"id": "slice-c"}); bundle["dependency_graph"] = {"slice-a": ["slice-b", "slice-c"], "slice-b": ["slice-a"], "slice-c": ["slice-a"]}'
+  local out rc=0
+  out="$(python3 "$VALIDATOR" "$TMP/bundle" 2>&1)" || rc=$?
+  [[ "$rc" -eq 1 ]] || { note_fail "expected exit 1, got $rc"; return 1; }
+  local count
+  count="$(grep -c "cyclic dependency" <<<"$out")"
+  [[ "$count" -ge 2 ]] || { note_fail "expected >=2 cycle errors, got $count: $out"; return 1; }
+}
+
+test_duplicate_children_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"].append({"id": "slice-a"})'
+  expect_invalid "$TMP/bundle" "duplicate"
+}
+
+test_body_alias_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["body"] = manifest.pop("prompt")'
+  expect_valid "$TMP/bundle"
+}
+
+test_rondo_request_schema_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["schema"] = "rondo-execution-request-v1"'
+  expect_valid "$TMP/bundle"
+}
+
+test_nonpositive_version_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["version"] = 0'
+  expect_invalid "$TMP/bundle" "version"
+}
+
 test_invalid_json_rejected() {
   write_valid_bundle "$TMP/bundle"
   echo "{not json" > "$TMP/bundle/bundle.json"
@@ -290,6 +340,13 @@ run_test "missing approval fields rejected" test_missing_approval_fields_rejecte
 run_test "missing rubric_version rejected" test_missing_rubric_version_rejected
 run_test "unknown rubric_version rejected" test_unknown_rubric_version_rejected
 run_test "invalid supersedes rejected" test_invalid_supersedes_rejected
+run_test "missing supersedes rejected" test_missing_supersedes_rejected
+run_test "missing schema_version rejected" test_missing_schema_version_rejected
+run_test "two cycles both reported" test_two_cycles_both_reported
+run_test "duplicate children rejected" test_duplicate_children_rejected
+run_test "body alias accepted" test_body_alias_accepted
+run_test "rondo-execution-request-v1 accepted" test_rondo_request_schema_accepted
+run_test "non-positive version rejected" test_nonpositive_version_rejected
 run_test "invalid json rejected" test_invalid_json_rejected
 run_test "missing bundle.json rejected" test_missing_bundle_json_rejected
 run_test "validator is read-only" test_validator_is_read_only

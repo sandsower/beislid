@@ -23,6 +23,7 @@ if [[ -n "${BEISLID_HOME:-}" ]] && \
    { [[ ! -f "$BEISLID_ROOT/scripts/install_lib.sh" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/run_ledger.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/action_policy.py" ]] || \
+     [[ ! -f "$BEISLID_ROOT/scripts/validate_export.py" ]] || \
      [[ ! -d "$BEISLID_ROOT/skills" ]] || \
      [[ ! -f "$BEISLID_ROOT/install.sh" ]]; }; then
   if [[ -d "$BEISLID_HOME" ]]; then
@@ -40,6 +41,7 @@ _validate_runtime_layout() {
   [[ -f "$root/install.sh" ]] || missing+=("install.sh")
   [[ -f "$root/scripts/run_ledger.py" ]] || missing+=("scripts/run_ledger.py")
   [[ -f "$root/scripts/action_policy.py" ]] || missing+=("scripts/action_policy.py")
+  [[ -f "$root/scripts/validate_export.py" ]] || missing+=("scripts/validate_export.py")
 
   if (( ${#missing[@]} > 0 )); then
     echo "error: Beislið runtime layout is incomplete at $root" >&2

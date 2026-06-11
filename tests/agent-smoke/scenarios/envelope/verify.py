@@ -27,6 +27,18 @@ def load_metadata(run_dir: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_json(path: Path, errors: list[str], label: str) -> dict | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"{label}: unreadable or invalid JSON ({exc})")
+        return None
+    if not isinstance(payload, dict):
+        errors.append(f"{label}: top level must be a JSON object")
+        return None
+    return payload
+
+
 def agent_output_text(run_dir: Path) -> str:
     chunks: list[str] = []
     for path in sorted(run_dir.glob("*.log")):
@@ -59,8 +71,8 @@ def main() -> int:
         if validator.returncode != 0:
             errors.append(f"validator failed (exit {validator.returncode}):\n{validator.stdout}")
 
-        bundle = json.loads(bundle_json.read_text(encoding="utf-8"))
-        if bundle.get("status") != "approved":
+        bundle = load_json(bundle_json, errors, "bundle.json") or {}
+        if bundle and bundle.get("status") != "approved":
             errors.append(f"bundle status must be approved, got {bundle.get('status')!r}")
         children = bundle.get("children") or []
         if not children:
@@ -74,7 +86,9 @@ def main() -> int:
                 continue
             if not summary_path.is_file():
                 errors.append(f"missing slice summary: {summary_path}")
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest = load_json(manifest_path, errors, f"slices/{slice_id}.json")
+            if manifest is None:
+                continue
             if manifest.get("schema") != "approved-slice-v1":
                 errors.append(f"{slice_id}: schema must be approved-slice-v1")
             prompt = manifest.get("prompt") or ""
@@ -94,9 +108,9 @@ def main() -> int:
     if not checkpoint_path.is_file():
         errors.append(f"missing checkpoint pointer: {checkpoint_path}")
     else:
-        pointer = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        pointer = load_json(checkpoint_path, errors, "checkpoints/latest.json") or {}
         latest = pointer.get("latest") or {}
-        if "envelope_exported" not in latest:
+        if pointer and "envelope_exported" not in latest:
             errors.append("latest.json has no envelope_exported entry")
         elif latest["envelope_exported"].get("source_skill") != "envelope":
             errors.append("envelope_exported pointer source_skill must be 'envelope'")

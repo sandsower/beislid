@@ -66,6 +66,9 @@ def _validate_graph(graph: object, child_ids: list[str], errors: list[str]) -> N
         errors.append("dependency_graph: must be an object mapping slice id -> [dependency ids]")
         return
 
+    # Slices absent from the graph implicitly have no dependencies.
+    cycle_errors: list[str] = []
+
     known = set(child_ids)
     for node, deps in graph.items():
         if node not in known:
@@ -96,8 +99,9 @@ def _validate_graph(graph: object, child_ids: list[str], errors: list[str]) -> N
                 if not isinstance(dep, str) or dep not in color:
                     continue
                 if color[dep] == GRAY:
-                    errors.append(f"dependency_graph: cyclic dependency involving '{dep}'")
-                    color[dep] = BLACK
+                    message = f"dependency_graph: cyclic dependency via edge '{node}' -> '{dep}'"
+                    if message not in cycle_errors:
+                        cycle_errors.append(message)
                     continue
                 if color[dep] == WHITE:
                     stack[-1] = (node, next_idx + 1)
@@ -107,6 +111,8 @@ def _validate_graph(graph: object, child_ids: list[str], errors: list[str]) -> N
             if not advanced:
                 color[node] = BLACK
                 stack.pop()
+
+    errors.extend(cycle_errors)
 
 
 def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> None:
@@ -165,11 +171,14 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
     if not isinstance(bundle["version"], int) or bundle["version"] < 1:
         errors.append("bundle.json: version must be a positive integer")
 
-    supersedes = bundle.get("supersedes")
-    if supersedes is not None and (
-        not isinstance(supersedes, str) or not SUPERSEDES_PATTERN.match(supersedes)
-    ):
-        errors.append("bundle.json: supersedes must be null or a 64-char lowercase sha256 hex digest")
+    if "supersedes" not in bundle:
+        errors.append("bundle.json: missing required field 'supersedes' (null for first export)")
+    else:
+        supersedes = bundle["supersedes"]
+        if supersedes is not None and (
+            not isinstance(supersedes, str) or not SUPERSEDES_PATTERN.match(supersedes)
+        ):
+            errors.append("bundle.json: supersedes must be null or a 64-char lowercase sha256 hex digest")
 
     approval = bundle["approval"]
     if not isinstance(approval, dict):
@@ -183,6 +192,8 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
     if not isinstance(validation, dict):
         errors.append("bundle.json: validation must be an object")
     else:
+        if validation.get("schema_version") != BUNDLE_KIND:
+            errors.append(f"bundle.json: validation.schema_version must be '{BUNDLE_KIND}'")
         rubric = validation.get("rubric_version")
         if not _nonempty_string(rubric):
             errors.append("bundle.json: validation.rubric_version must be a non-empty string")

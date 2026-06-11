@@ -28,7 +28,7 @@ Evaluate action policy for `checkpoint.envelope_exported` with class `workspace-
 
 ### Commit
 
-Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and checkpoint pointer and commit. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
+Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local — `.beislid/checkpoints/` is replaceable per-machine convenience state and is conventionally gitignored; the committed bundle itself carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
 
 ### Hand off
 
@@ -41,5 +41,5 @@ Print the Step 4 exit one-liner. Required outputs: bundle path, validator result
 ## Tripwires
 
 - Validator exit 0 is a precondition for checkpoint and commit, not a parallel step.
-- Stage only export + checkpoint files; never sweep unrelated changes into the commit.
+- Stage only the export bundle; the checkpoint pointer stays local and unrelated changes never ride along.
 - Do not push, open PRs, or start executing slices.
