@@ -170,6 +170,115 @@ test_secret_heuristic_adds_secret_bearing_class() {
   assert_contains_json_text "$out" '"secret-bearing"'
 }
 
+test_benign_substring_is_not_secret_bearing() {
+  local out
+  out="$(python3 "$POLICY" evaluate --mode unattended-auto --action gh.issue.view --command 'python3 tokenizer.py' --sandbox-baseline non-default-branch)"
+  assert_decision "$out" allow
+  ! grep -qF '"secret-bearing"' <<<"$out" || { note_fail "benign substring inferred as secret-bearing"; return 1; }
+}
+
+test_action_override_can_allow_unattended_ask() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "unattended-auto": {
+      "actions": {
+        "custom.notify": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode unattended-auto --action custom.notify --sandbox-baseline non-default-branch)"
+  assert_decision "$out" allow
+  assert_contains_json_text "$out" '"type": "action"'
+}
+
+test_action_override_can_allow_unprotected_deny() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "unattended-auto": {
+      "actions": {
+        "git.push": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode unattended-auto --action git.push --sandbox-baseline non-default-branch)"
+  assert_decision "$out" allow
+}
+
+test_action_override_cannot_allow_destructive_deny() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "actions": {
+        "shell.rm": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action shell.rm)"
+  assert_decision "$out" deny
+  assert_contains_json_text "$out" '"rule": "protected_class_floor"'
+}
+
+test_compound_secret_assignment_is_secret_bearing() {
+  local out
+  out="$(python3 "$POLICY" evaluate --mode unattended-auto --action gh.issue.view --command 'export GITHUB_TOKEN=ghp_abc123' --sandbox-baseline non-default-branch)"
+  assert_decision "$out" deny
+  assert_contains_json_text "$out" '"secret-bearing"'
+}
+
+test_protected_floor_applies_at_ask_level() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "actions": {
+        "custom.fetch": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action custom.fetch --class network-read --class secret-bearing)"
+  assert_decision "$out" ask
+  assert_contains_json_text "$out" '"applied": "ask"'
+  assert_contains_json_text "$out" '"rule": "protected_class_floor"'
+}
+
+test_action_override_cannot_allow_inferred_secret_deny() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "unattended-auto": {
+      "actions": {
+        "gh.issue.view": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode unattended-auto --action gh.issue.view --command 'export API_KEY=abc123' --sandbox-baseline non-default-branch)"
+  assert_decision "$out" deny
+  assert_contains_json_text "$out" '"rule": "protected_class_floor"'
+}
+
 test_validate_valid_policy_summary() {
   local override out
   override="$TMP/policy.json"
@@ -249,6 +358,13 @@ run_test "unattended requires non-default branch" test_unattended_requires_non_d
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline
 run_test "uncommitted changes override can deny" test_uncommitted_changes_can_be_denied_by_override
 run_test "secret heuristic adds class" test_secret_heuristic_adds_secret_bearing_class
+run_test "benign substring is not secret-bearing" test_benign_substring_is_not_secret_bearing
+run_test "compound secret assignment is secret-bearing" test_compound_secret_assignment_is_secret_bearing
+run_test "protected floor applies at ask level" test_protected_floor_applies_at_ask_level
+run_test "action override allows unattended ask" test_action_override_can_allow_unattended_ask
+run_test "action override allows unprotected deny" test_action_override_can_allow_unprotected_deny
+run_test "action override cannot allow destructive deny" test_action_override_cannot_allow_destructive_deny
+run_test "action override cannot allow inferred secret deny" test_action_override_cannot_allow_inferred_secret_deny
 run_test "validate valid policy summary" test_validate_valid_policy_summary
 run_test "validate rejects malformed mode policy" test_validate_rejects_malformed_mode_policy
 run_test "validate rejects invalid policy" test_validate_rejects_invalid_policy
