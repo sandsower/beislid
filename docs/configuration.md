@@ -285,9 +285,26 @@ Use `actions` for explicit stable action-id overrides when one action should dif
 
 Doctor validates `beislid:action_policy` as config, not as an external probe. It should report invalid modes, classes, decisions, sandbox baselines, and malformed overrides instead of silently falling back to defaults.
 
+The evaluator reads policy overrides only from an explicit `--policy-file` JSON argument (conventionally `.beislid/action-policy.json`); it never parses workflow.md. Inline `beislid:action_policy` blocks are export inputs and setup documentation only: `beislid process export` renders them into the committed process artifact when no `action-policy.json` exists, and prints guidance to materialize the JSON file so the runtime evaluator and the artifact agree. Keep `.beislid/action-policy.json` as the single runtime source; treat the inline block as the human-readable mirror or delete it once the JSON file exists.
+
 Policy decisions recorded in run summaries or the durable ledger should preserve the evaluator envelope shape: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When an `ask` decision is accepted or declined, summaries should record the human outcome separately from the original evaluator decision. Denied actions should include the remediation hint and stop point.
 
 In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, `review-response`, and `babysit`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
+
+## Process artifact export
+
+`beislid process export` renders the shared process semantics — workflow.md gates plus the action policy — into a committed `beislid-process-artifact-v1` JSON at `.beislid/exports/process.json`. External runners (rondo's `process_provider.kind: beislid` with `artifact_path`) consume the artifact instead of parsing Beislið's config format, so gates and policy are defined once and enforced identically in interactive and AFK runs.
+
+```bash
+beislid process export   # render .beislid/workflow.md gates + action policy into the artifact
+beislid process check    # freshness gate: fail when the committed artifact is stale
+```
+
+The artifact carries `schema: beislid-process-artifact-v1`, a checkout-independent `id`, `status: approved`, the rendered `gates` (with `timeout_seconds` converted to `timeout_ms`; workflow-only fields like `cost` and `parallel_safe` are dropped), an `action_policy` block with a conservative top-level `decision: ask` fixture plus the full policy and `policy_file` pointer, and `metadata.source_hashes` (`git hash-object` of each source). Output is byte-stable — no timestamps, sorted keys — so re-exporting unchanged sources produces no diff. **Committing the artifact is the approval act.**
+
+`beislid process check` recomputes the source hashes and re-renders the artifact in memory: it fails red with remediation when a source changed without re-export, when the artifact was hand-edited, or when the artifact is missing while workflow.md exists. Wire it as a cheap gate (`python3 scripts/process_export.py check` in this repo) so a stale seam blocks readiness; teotl adopts the same check at bootstrap time.
+
+Gates are parsed from the fenced `beislid:gates` block with a restricted, fail-closed YAML-subset parser (plain scalars, nested maps, lists of flat maps); anchors, multiline scalars, and flow collections hard-fail rather than exporting a guess. Policy comes from `.beislid/action-policy.json` when present, else from the inline `beislid:action_policy` block (with materialization guidance), else the artifact carries an empty `action_policy` with a warning.
 
 ## Work Contract v1
 

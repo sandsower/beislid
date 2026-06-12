@@ -318,6 +318,16 @@ Evaluator input is explicit JSON/config from the calling orchestrator. The evalu
 
 The policy decision envelope contains `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. Run summaries and ledger events should preserve that shape, plus a separate human outcome when an `ask` decision is accepted or declined.
 
+The evaluator itself reads policy only from an explicit `--policy-file` JSON (conventionally `.beislid/action-policy.json`); inline `beislid:action_policy` blocks are export inputs and documentation, never runtime evaluator input. `beislid process export` renders the inline block into the committed process artifact when no `action-policy.json` exists and prints guidance to materialize the JSON file.
+
+## Process artifact export
+
+`beislid process export` renders the `beislid:gates` block plus the action policy into a committed `beislid-process-artifact-v1` JSON at `.beislid/exports/process.json` for external runners (rondo `process_provider.kind: beislid` via `artifact_path`). Gates keep `name`, `command`, `timeout_seconds` (converted to `timeout_ms`), and the contract fields `action_id`, `action_classes`, and `reason`; workflow-only metadata such as `cost`, `mutates`, and `parallel_safe` stays out of the artifact. Output is byte-stable and stamped with `metadata.source_hashes` (`git hash-object` per source); committing the artifact is the approval act.
+
+`beislid process check` is the freshness gate: it recomputes source hashes and re-renders in memory, failing red with remediation when sources changed without re-export, the artifact was hand-edited, or the artifact is missing while workflow.md exists. Configure it as a cheap gate so stale artifacts block readiness.
+
+The export parser accepts only the restricted YAML subset documented for fenced blocks (plain scalars, nested maps, lists of flat maps) and hard-fails on anchors, multiline scalars, tabs, and flow collections.
+
 ## Gate object shape
 
 Gate lists are backward-compatible. Existing flat gates remain valid:
