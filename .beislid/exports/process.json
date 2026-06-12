@@ -1,0 +1,93 @@
+{
+  "action_policy": {
+    "decision": "ask",
+    "modes": {
+      "supervised-auto": {
+        "actions": {
+          "dependency.install": "allow",
+          "gh.pr.create": "allow",
+          "gh.pr.merge": "allow",
+          "git.push": "allow",
+          "memento.capture": "allow",
+          "pr.merge": "allow",
+          "pr.review.reply": "allow",
+          "retro.apply": "allow",
+          "retro.run": "allow",
+          "ticket.comment": "allow",
+          "ticket.fetch": "allow"
+        },
+        "rules": {
+          "dependency-install": "allow",
+          "git-remote": "allow"
+        }
+      },
+      "unattended-auto": {
+        "actions": {
+          "dependency.install": "allow",
+          "gh.pr.create": "allow",
+          "git.push": "allow",
+          "pr.review.reply": "allow",
+          "ticket.comment": "allow",
+          "ticket.fetch": "allow"
+        },
+        "rules": {
+          "dependency-install": "allow",
+          "git-remote": "allow"
+        }
+      }
+    },
+    "policy_file": ".beislid/action-policy.json"
+  },
+  "gates": [
+    {
+      "command": "git diff --check origin/main...HEAD",
+      "name": "diff-whitespace"
+    },
+    {
+      "command": "bash scripts/test_install.sh",
+      "name": "install-integration-tests"
+    },
+    {
+      "command": "python3 scripts/check_skill_size_budgets.py",
+      "name": "skill-size-budgets"
+    },
+    {
+      "command": "python3 scripts/validate_skills.py",
+      "name": "validate-skills"
+    },
+    {
+      "command": "python3 scripts/check_visual_surfaces_consistency.py",
+      "name": "visual-surfaces-consistency"
+    },
+    {
+      "command": "python3 scripts/check_workflow_signals_consistency.py",
+      "name": "workflow-signals-consistency"
+    },
+    {
+      "command": "bash scripts/test_process_export.sh",
+      "name": "process-export-tests"
+    },
+    {
+      "command": "python3 scripts/process_export.py check",
+      "name": "process-artifact-freshness"
+    }
+  ],
+  "id": "beislid:beislid",
+  "metadata": {
+    "generator": "beislid process export",
+    "policy_source": "action-policy.json",
+    "source_hashes": {
+      "action_policy": {
+        "hash": "cce0dca020a4595d0eaed1d609b1a4bc197e88ed",
+        "path": ".beislid/action-policy.json"
+      },
+      "workflow": {
+        "hash": "06a448faff92479974508b9ceaeb92ead8b7249c",
+        "path": ".beislid/workflow.md"
+      }
+    },
+    "workflow_format": "v1"
+  },
+  "schema": "beislid-process-artifact-v1",
+  "status": "approved"
+}
