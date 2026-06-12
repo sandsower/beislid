@@ -164,14 +164,43 @@ def parse_map(tokens: list[tuple[int, str]], context: str) -> dict[str, Any]:
             sub.append(tokens[i])
             i += 1
         if value:
+            scalar = parse_scalar(value, context)
             if sub:
                 raise ExportError(f"{context}: key {key!r} has both a value and nested lines")
-            result[key] = parse_scalar(value, context)
+            result[key] = scalar
         elif sub:
             result[key] = parse_nodes(sub, context)
         else:
             raise ExportError(f"{context}: key {key!r} has no value")
     return result
+
+
+def repo_id(repo: Path) -> str:
+    """Checkout-independent repo identity for the artifact `id`.
+
+    `check` re-renders the artifact and byte-compares, so the id must not
+    depend on the local directory name (worktrees and clones vary it).
+    """
+    origin = subprocess.run(
+        ["git", "-C", str(repo), "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if origin.returncode == 0 and origin.stdout.strip():
+        name = origin.stdout.strip().rstrip("/").rsplit("/", 1)[-1]
+        name = name.removesuffix(".git")
+        if name:
+            return name
+    root_commit = subprocess.run(
+        ["git", "-C", str(repo), "rev-list", "--max-parents=0", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if root_commit.returncode == 0 and root_commit.stdout.strip():
+        return sorted(root_commit.stdout.split())[0][:12]
+    return repo.resolve().name
 
 
 def git_hash_object(path: Path) -> str:
@@ -284,7 +313,7 @@ def render_artifact(repo: Path) -> tuple[dict[str, Any], str]:
 
     artifact = {
         "schema": ARTIFACT_SCHEMA,
-        "id": f"beislid:{repo.resolve().name}",
+        "id": f"beislid:{repo_id(repo)}",
         "status": "approved",
         "gates": gates,
         "action_policy": action_policy,
