@@ -310,6 +310,59 @@ test_validator_is_read_only() {
   [[ "$before" == "$after" ]] || { note_fail "validator mutated the bundle"; return 1; }
 }
 
+# Turn the fixture into a multi-ticket batch bundle: slice-a from BEI-1,
+# slice-b from BEI-2, cross-ticket edge slice-b -> slice-a.
+make_multi_ticket() {
+  mutate_bundle "$1/bundle.json" 'bundle["children"] = [{"id": "slice-a", "source_ticket": "BEI-1"}, {"id": "slice-b", "source_ticket": "BEI-2"}]'
+}
+
+test_multi_ticket_bundle_valid() {
+  write_valid_bundle "$TMP/bundle"
+  make_multi_ticket "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a"], ["slice-b"]]'
+  expect_valid "$TMP/bundle"
+}
+
+test_empty_source_ticket_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"][0]["source_ticket"] = "  "'
+  expect_invalid "$TMP/bundle" "source_ticket"
+}
+
+test_parallel_group_with_dependents_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  make_multi_ticket "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-b"]]'
+  expect_invalid "$TMP/bundle" "cannot share a parallel group"
+}
+
+test_parallel_group_transitive_dependents_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  cp "$TMP/bundle/slices/slice-a.json" "$TMP/bundle/slices/slice-c.json"
+  mutate_slice "$TMP/bundle/slices/slice-c.json" 'manifest["slice_id"] = "slice-c"'
+  cp "$TMP/bundle/slices/slice-a.md" "$TMP/bundle/slices/slice-c.md"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"].append({"id": "slice-c"}); bundle["dependency_graph"]["slice-c"] = ["slice-b"]; bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-c"]]'
+  expect_invalid "$TMP/bundle" "transitively"
+}
+
+test_parallel_group_unknown_slice_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-ghost"]]'
+  expect_invalid "$TMP/bundle" "slice-ghost"
+}
+
+test_slice_in_two_parallel_groups_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a"], ["slice-a"]]'
+  expect_invalid "$TMP/bundle" "more than one group"
+}
+
+test_nonlist_parallel_groups_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = {"group-1": ["slice-a"]}'
+  expect_invalid "$TMP/bundle" "parallel_groups"
+}
+
 test_cli_dispatch_valid() {
   write_valid_bundle "$TMP/bundle"
   "$CLI" export validate "$TMP/bundle" || { note_fail "beislid export validate failed on valid bundle"; return 1; }
@@ -350,6 +403,13 @@ run_test "non-positive version rejected" test_nonpositive_version_rejected
 run_test "invalid json rejected" test_invalid_json_rejected
 run_test "missing bundle.json rejected" test_missing_bundle_json_rejected
 run_test "validator is read-only" test_validator_is_read_only
+run_test "multi-ticket bundle with cross-ticket edge valid" test_multi_ticket_bundle_valid
+run_test "empty source_ticket rejected" test_empty_source_ticket_rejected
+run_test "parallel group containing dependent slices rejected" test_parallel_group_with_dependents_rejected
+run_test "parallel group with transitive dependents rejected" test_parallel_group_transitive_dependents_rejected
+run_test "parallel group with unknown slice rejected" test_parallel_group_unknown_slice_rejected
+run_test "slice in two parallel groups rejected" test_slice_in_two_parallel_groups_rejected
+run_test "non-list parallel_groups rejected" test_nonlist_parallel_groups_rejected
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
 
