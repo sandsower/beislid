@@ -590,7 +590,7 @@ ownership:
 
 The `envelope` skill packages approved execution envelopes as repo-committed export bundles so provenance travels with the code and any machine can run after pull:
 
-```
+```text
 .beislid/exports/<bundle-id>/
   bundle.json            # approved-slice-plan-export-v0
   slices/<slice-id>.json # approved-slice-v1 per approved envelope

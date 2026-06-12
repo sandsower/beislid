@@ -103,6 +103,11 @@ def main() -> int:
             for field in ("run_mode", "allow", "ask", "deny"):
                 if field not in allowed:
                     errors.append(f"{slice_id}: allowed_actions.{field} missing")
+            if allowed.get("run_mode") != "supervised-auto":
+                errors.append(f"{slice_id}: run_mode must be supervised-auto, got {allowed.get('run_mode')!r}")
+            provider = manifest.get("process_provider") or {}
+            if provider.get("name") != "claude_code":
+                errors.append(f"{slice_id}: process_provider.name must be claude_code, got {provider.get('name')!r}")
 
     checkpoint_path = repo / ".beislid" / "checkpoints" / "latest.json"
     if not checkpoint_path.is_file():
@@ -116,14 +121,40 @@ def main() -> int:
             elif latest["envelope_exported"].get("source_skill") != "envelope":
                 errors.append("envelope_exported pointer source_skill must be 'envelope'")
 
-    committed = subprocess.run(
-        ["git", "-C", str(repo), "log", "--name-only", "--pretty=format:%s"],
+    log = subprocess.run(
+        ["git", "-C", str(repo), "log", "--pretty=format:%H %s"],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ).stdout
-    if f".beislid/exports/{bundle_id}/bundle.json" not in committed:
-        errors.append("bundle.json was not committed")
+    export_sha = next((line.split()[0] for line in log.splitlines() if "Export envelope bundle" in line), None)
+    if export_sha is None:
+        errors.append("no 'Export envelope bundle' commit found")
+    else:
+        commit_files = [
+            f
+            for f in subprocess.run(
+                ["git", "-C", str(repo), "show", "--name-only", "--pretty=format:", export_sha],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            ).stdout.splitlines()
+            if f.strip()
+        ]
+        if f".beislid/exports/{bundle_id}/bundle.json" not in commit_files:
+            errors.append("export commit does not contain bundle.json")
+        prefix = f".beislid/exports/{bundle_id}/"
+        offenders = [f for f in commit_files if not f.startswith(prefix)]
+        if offenders:
+            errors.append(f"export commit contains files outside the bundle subtree: {offenders}")
+    tracked_checkpoints = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", ".beislid/checkpoints"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    ).stdout.strip()
+    if tracked_checkpoints:
+        errors.append(f"checkpoint pointer must stay untracked, found: {tracked_checkpoints}")
 
     output = agent_output_text(run_dir)
     for stamp in REQUIRED_STAMPS:
