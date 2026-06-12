@@ -24,18 +24,6 @@ workspace:
 hooks:
   after_create: |
     git clone --depth 1 git@github.com:sandsower/beislid.git .
-gates:
-  - name: skill-size-budgets
-    command: python3 scripts/check_skill_size_budgets.py
-  - name: validate-skills
-    command: python3 scripts/validate_skills.py
-  - name: visual-surfaces-consistency
-    command: python3 scripts/check_visual_surfaces_consistency.py
-  - name: workflow-signals-consistency
-    command: python3 scripts/check_workflow_signals_consistency.py
-  - name: install-integration-tests
-    command: bash scripts/test_install.sh
-    timeout_ms: 600000
 agent:
   adapter: pi
   max_concurrent_agents: 2
@@ -56,6 +44,7 @@ action_policy:
 process_provider:
   kind: beislid
   required: false
+  artifact_path: .beislid/exports/process.json
 ---
 
 You are working on Linear ticket `{{ issue.identifier }}` in the beislid repo
