@@ -228,8 +228,10 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
             f"bundle.json: status must be 'approved' for export (fail-closed), got {bundle['status']!r}"
         )
 
-    if not isinstance(bundle["version"], int) or bundle["version"] < 1:
+    version = bundle["version"]
+    if not isinstance(version, int) or version < 1:
         errors.append("bundle.json: version must be a positive integer")
+        version = None
 
     if "supersedes" not in bundle:
         errors.append("bundle.json: missing required field 'supersedes' (null for first export)")
@@ -239,6 +241,14 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
             not isinstance(supersedes, str) or not SUPERSEDES_PATTERN.match(supersedes)
         ):
             errors.append("bundle.json: supersedes must be null or a 64-char lowercase sha256 hex digest")
+        elif version == 1 and supersedes is not None:
+            errors.append(
+                "bundle.json: supersedes must be null for version 1 (first export supersedes nothing)"
+            )
+        elif version is not None and version >= 2 and supersedes is None:
+            errors.append(
+                "bundle.json: supersedes must be the prior bundle.json sha256 for version >= 2 (revision)"
+            )
 
     approval = bundle["approval"]
     if not isinstance(approval, dict):

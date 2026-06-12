@@ -246,6 +246,30 @@ test_missing_supersedes_rejected() {
   expect_invalid "$TMP/bundle" "supersedes"
 }
 
+test_v2_with_valid_supersedes_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["version"] = 2; bundle["supersedes"] = "ab" * 32'
+  expect_valid "$TMP/bundle"
+}
+
+test_v2_null_supersedes_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["version"] = 2'
+  expect_invalid "$TMP/bundle" "supersedes"
+}
+
+test_v1_nonnull_supersedes_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["supersedes"] = "ab" * 32'
+  expect_invalid "$TMP/bundle" "supersedes"
+}
+
+test_superseded_status_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["status"] = "superseded"'
+  expect_invalid "$TMP/bundle" "status"
+}
+
 test_missing_schema_version_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["validation"]["schema_version"]'
@@ -394,6 +418,10 @@ run_test "missing rubric_version rejected" test_missing_rubric_version_rejected
 run_test "unknown rubric_version rejected" test_unknown_rubric_version_rejected
 run_test "invalid supersedes rejected" test_invalid_supersedes_rejected
 run_test "missing supersedes rejected" test_missing_supersedes_rejected
+run_test "v2 with valid supersedes accepted" test_v2_with_valid_supersedes_accepted
+run_test "v2 with null supersedes rejected" test_v2_null_supersedes_rejected
+run_test "v1 with non-null supersedes rejected" test_v1_nonnull_supersedes_rejected
+run_test "superseded status rejected" test_superseded_status_rejected
 run_test "missing schema_version rejected" test_missing_schema_version_rejected
 run_test "two cycles both reported" test_two_cycles_both_reported
 run_test "duplicate children rejected" test_duplicate_children_rejected
