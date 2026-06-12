@@ -122,6 +122,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Babysit:**
 - `babysit` — optional PR babysitting policy used by the `babysit` skill and Pi `/babysit` command. Fields: `goal.token_budget` (optional string such as `50k`), `loop.use_review_response` (bool, default true), `loop.run_configured_gates_before_push` (bool, default true), `loop.wait_interval_seconds` (positive integer, default 60), `loop.timeout_minutes` (positive integer, optional), `closeout.merge.mode` (`off` / `ask` / `auto`, default off), `closeout.merge.method` (`squash` / `merge` / `rebase` / `repo-default`, default repo-default), `closeout.merge.delete_branch` (bool, default false), `closeout.memento.mode` (`off` / `ask` / `auto`, default off), `closeout.retro.mode` (`off` / `ask` / `auto`, default off), and `closeout.retro.apply_findings` (`off` / `ask` / `auto`, default ask). `auto` removes routine prompts only when action policy allows; policy `ask` still asks and policy `deny` still stops.
 
+**Envelope:**
+- `envelope` — optional config for the `/envelope` skill. Fields: `rubric_path` (optional repo-relative `.md` path, no `..` segments) replacing the skill's built-in AFK-eligibility rubric. See **Envelope shape** below.
+
 **Paired (Phase 4d of ready-for-review):**
 - `domain_expert.agent` — domain expert name (paired with `knowledge_store.path`); kickoff resolves it as a subagent first and, on hosts without a subagent mechanism, may fall back to an installed Beislið skill with the same name
 - `knowledge_store.path` — repo-relative path (paired with `domain_expert.agent`)
