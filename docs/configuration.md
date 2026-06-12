@@ -601,9 +601,9 @@ The `envelope` skill packages approved execution envelopes as repo-committed exp
 
 `bundle.json` carries the BEI-17 required fields: `kind` (`approved-slice-plan-export-v0`), `version`, `status`, `generated_from`, `source_work_contract`, `slice_plan`, `children`, `dependency_graph` (adjacency map of slice id → dependency ids; must be acyclic, and a slice absent from the map implicitly has no dependencies), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by` from git identity after an explicit per-envelope verdict), `runner_extensions`, `validation`, and `ownership`, plus an explicit `supersedes` key (`null` for a first export, the prior `bundle.json` sha256 for revisions). Only `status: approved` bundles are exportable — draft, paused, or superseded plans fail validation (fail-closed).
 
-Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. All machine files are JSON; YAML remains a human approval rendering.
+Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. When a slice carries a capability tier, `runner_extensions.model_routing` is `{tier, rationale, mode, candidates}`: `tier` is one of `light|standard|heavy|frontier` with the authoring rationale, `mode` is `prefer|require` (default `prefer`), and `candidates` is the ordered provider list resolved at export from the `model_routing` `tiers` table (repo override, else the shipped defaults — see Model routing). Rondo consumes the hint at run time; absent `model_routing` is valid. All machine files are JSON; YAML remains a human approval rendering.
 
-`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, known slice schemas and rubric versions, repo pinning, and approval metadata. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
+`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, known slice schemas and rubric versions, repo pinning, approval metadata, and — when a slice declares `runner_extensions.model_routing` — a known tier, `prefer|require` mode, and non-empty candidate list. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
 
 ## Proof Requirement v1
 
@@ -828,12 +828,29 @@ overrides:
     mode: require
   - skills: [implement, ready-for-review, review-response]
     model: sonnet
+tiers:
+  standard: [claude:sonnet]
+  heavy: [claude:opus, openai:gpt-5.5]
+tier_mode: prefer
 ```
 ````
 
 `model` is shorthand for a one-item `models` list. `models` is ordered: the host picks the first supported candidate unless its adapter has a more specific local mapping policy. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings are allowed as escape hatches. `mode: prefer` continues with a disclosed fallback if none can be honored. `mode: require` stops before invoking that skill unless at least one candidate can be honored. Ordered overrides are first-match by skill name, then defaults. Subagents inherit the parent skill's resolved model by default when supported.
 
 Conditional `when:` routing is reserved for future work and is not active in v1; do not rely on a `when:` field to narrow a route.
+
+### Capability tiers
+
+`tiers` is an optional map from provider-neutral capability tier names to ordered provider candidate lists. The known tier vocabulary is exactly `light`, `standard`, `heavy`, and `frontier`; other names are reserved and warn in `doctor`. Tiers let `envelope`-authored slices declare how much model capability a slice needs without naming a provider: at export time the slice's tier is resolved through this table into concrete candidates embedded in `runner_extensions.model_routing` (see Export bundles), which Rondo consumes at run time. Optional `tier_mode` (`prefer` / `require`, default `prefer`) is the default resolution mode stamped into exported tier hints; the human can override tier and mode per envelope at approval.
+
+When a repo does not declare `tiers`, Beislið resolves through these illustrative shipped defaults (override any or all of them in `model_routing`):
+
+| Tier | Default candidates |
+| --- | --- |
+| `light` | `[claude:haiku]` |
+| `standard` | `[claude:sonnet]` |
+| `heavy` | `[claude:opus]` |
+| `frontier` | `[claude:opus, openai:gpt-5.5]` |
 
 ## Ready-for-review final review
 
