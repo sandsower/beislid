@@ -40,6 +40,7 @@ _validate_runtime_layout() {
   [[ -f "$root/install.sh" ]] || missing+=("install.sh")
   [[ -f "$root/scripts/run_ledger.py" ]] || missing+=("scripts/run_ledger.py")
   [[ -f "$root/scripts/action_policy.py" ]] || missing+=("scripts/action_policy.py")
+  [[ -f "$root/scripts/process_export.py" ]] || missing+=("scripts/process_export.py")
 
   if (( ${#missing[@]} > 0 )); then
     echo "error: Beislið runtime layout is incomplete at $root" >&2
@@ -72,6 +73,7 @@ Usage:
   beislid migrate v0.2 [--with-security-hooks] [--force]
   beislid run-ledger <init|event|checkpoint|gate|interrupt|finalize|resume> [...]
   beislid action-policy <evaluate|validate> [...]
+  beislid process <export|check> [--repo path]
   beislid help
 USAGE
 }
@@ -240,6 +242,10 @@ case "$cmd" in
   action-policy)
     shift
     python3 "$BEISLID_ROOT/scripts/action_policy.py" "$@"
+    ;;
+  process)
+    shift
+    python3 "$BEISLID_ROOT/scripts/process_export.py" "$@"
     ;;
   workflow-signal)
     shift
