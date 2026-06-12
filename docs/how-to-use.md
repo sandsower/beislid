@@ -131,6 +131,14 @@ review-response → debug if needed → fix → verify → push or reply
 
 Use `review-response` after someone reviews or QA-tests your work. It categorizes feedback, helps fix or push back with evidence, then follows the configured update path.
 
+### AFK execution with envelopes
+
+```text
+/envelope <ticket-or-spec> → intake → author → approve → export → rondo run-once --manifest <slice-manifest>
+```
+
+Use `kickoff` when you'll implement interactively in the same session. Use `/envelope` when approved slices should run away-from-keyboard later: it authors, approves, and exports `execution-envelope-v0` slices as a validated, repo-committed bundle under `.beislid/exports/` that an external runner executes in a fresh session. Invoke it explicitly in a strong-model session, e.g. `/envelope BEI-123`; `kickoff` may suggest it for AFK-suitable multi-slice work but never auto-routes into it. The export bundle contract is documented in [Configuration](./configuration.md) under "Export bundles (`.beislid/exports/`)".
+
 ### Babysit an open PR
 
 ```text
