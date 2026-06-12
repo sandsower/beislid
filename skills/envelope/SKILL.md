@@ -31,13 +31,14 @@ Complete steps in order. At each step entry, read the step aux file and follow i
 2. **Author** — read `step-2-author.md`. Outputs: one draft `execution-envelope-v0` per AFK-candidate slice with autonomy lists, proof requirements, pause conditions, dependencies, expected delivery, self-contained prompt, repo pin.
 3. **Approve** — read `step-3-approve.md`. Outputs: per-envelope verdicts (approve / reject / demote-to-HITL), approval metadata, or the zero-AFK terminal state.
 4. **Export** — read `step-4-export.md`. Outputs: validated bundle path, `envelope_exported` checkpoint status, commit status, handoff guidance.
+5. **Revise** — *revision mode only*, loaded straight from Step 1 in place of Steps 2–4: read `step-5-revise.md`. Outputs: v+1 bundle rewritten in place with `supersedes: <sha256 of prior bundle.json>`, per-envelope delta summary, delta-only re-approval verdicts (unchanged approved envelopes carry their original approval metadata forward), validated re-export.
 
 ## Global tripwires
 
 - **Fail-closed:** unapproved envelopes are never exported. Zero approved envelopes means no bundle, no checkpoint, no commit — print the verdict summary and recommend `kickoff` for HITL slices.
 - **No implementation.** This skill plans, packages, and exports; it never starts the work it is packaging.
-- **Manifest input means revision mode**, which ships in a later Beislið version. Detect it (a JSON file whose `kind`/`schema` matches export/manifest contracts) and stop with the revision-mode message from `envelope-templates.md`. Do not overwrite or re-author silently.
-- **Existing bundle dir is a hard stop.** `.beislid/exports/<bundle-id>/` already existing means a prior export; overwriting would corrupt the future supersede chain. Stop with the collision message; the user must pick a new bundle-id or delete deliberately.
+- **Manifest input means revision mode.** Step 1 detects it (a JSON file whose `kind`/`schema` matches export/manifest contracts) and looks for feedback: a delivery artifact with `pause_reason`/`review_feedback`, or a non-approved bundle status. With feedback, route through `step-5-revise.md`; an approved manifest with no feedback is refused with the nothing-to-revise message. Never overwrite or re-author silently.
+- **Existing bundle dir is a hard stop in non-revision runs.** `.beislid/exports/<bundle-id>/` already existing means a prior export; overwriting would corrupt the supersede chain. Stop with the collision message; the user must pick a new bundle-id or delete deliberately. Revision mode is the one exception: it rewrites the same dir in place with a bumped version and `supersedes` hash.
 - **Validator is the gate.** `beislid export validate <bundle-dir>` must exit 0 before checkpoint or commit. Never hand-wave a failed validation.
 - **Reuse planning skills** (`spec`, `break-spec`, `blueprint`) for thinking work; never reimplement their protocols here.
 - Policy-check every side effect (workspace writes, checkpoint, `git.commit`); `ask` requires approval, `deny` stops with manual fallback.

@@ -19,6 +19,7 @@ Entry:
 🔄 Step 2: Author — drafting one execution envelope per AFK-ready slice.
 🔄 Step 3: Approve — collecting per-envelope verdicts.
 🔄 Step 4: Export — writing, validating, and committing the bundle.
+🔄 Step 5: Revise — re-authoring bundle `<id>` v<N+1> from feedback.
 ```
 
 Exit:
@@ -28,14 +29,23 @@ Exit:
 ✓ Step 2: Authored <N> draft envelopes.
 ✓ Step 3: Verdicts — <A> approved, <R> rejected, <D> demoted to HITL.
 ✓ Step 4: Bundle `<id>` exported and validated; checkpoint <written|skipped>; commit <done|declined|printed>.
+✓ Step 5: Bundle `<id>` v<N+1> exported (supersedes <hash-prefix>…); <A> re-approved, <C> carried forward.
 ```
 
-## Revision-mode refusal
+## Revision-mode entry
 
-When intake input is an export manifest or bundle (JSON with a known export/manifest `kind`/`schema`):
+When intake detects a manifest/bundle with pause/review feedback (delivery artifact or bundle status):
 
 ```
-⛔ This input is an exported manifest. Feeding manifests back in enters revision mode, which ships in a later Beislið version. Nothing was changed. Re-run /envelope with the originating ticket or contract when revision support lands.
+🔁 Revision mode: bundle `<bundle-id>` v<N> carries feedback — <one-line summary>. I'll re-author the affected envelopes, take delta verdicts, and re-export v<N+1> in place superseding the prior bundle by hash.
+```
+
+## Nothing-to-revise refusal
+
+When intake input is an export manifest or bundle with `status: approved` and no pause/review feedback:
+
+```
+⛔ This manifest's bundle is `status: approved` with no pause or review feedback — nothing to revise; nothing was changed. Re-run /envelope with a ticket or contract to author new work, or point me at the delivery feedback artifact to revise this bundle.
 ```
 
 ## Bundle collision
