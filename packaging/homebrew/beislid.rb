@@ -24,6 +24,7 @@ class Beislid < Formula
     (libexec/"scripts").install "scripts/install_lib.sh"
     (libexec/"scripts").install "scripts/run_ledger.py"
     (libexec/"scripts").install "scripts/action_policy.py"
+    (libexec/"scripts").install "scripts/validate_export.py"
 
     bin.install_symlink libexec/"bin/beislid" => "beislid"
   end

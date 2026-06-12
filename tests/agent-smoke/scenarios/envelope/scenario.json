@@ -1,0 +1,8 @@
+{
+  "name": "envelope",
+  "description": "Envelope flow: author, approve, export, and validate an execution-envelope bundle from a pre-approved structure file.",
+  "prompt": "Run the installed envelope skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Input: the approved structure file `plans/widget-export-structure.md`. Use bundle-id `wid-7-widget-export` and ticket reference WID-7. Author one execution envelope for the single AFK phase, grounding file scope and the gate command in the actual fixture repo (explore `src/widget_export.py` and `tests/` first). For smoke purposes the human verdict is: approve the envelope for AFK export with run_mode supervised-auto and process_provider claude_code. Export the bundle to `.beislid/exports/wid-7-widget-export/`, run `beislid export validate` on it and require exit 0, write the envelope_exported checkpoint pointer (kept local, not committed), and commit only the bundle directory with message `Export envelope bundle wid-7-widget-export (WID-7)`. Do not use real network, do not push, and do not implement the widget feature itself. FINAL RESPONSE REQUIREMENT: include these four lines verbatim after you have read the matching aux files: `✓ envelope/step-1-intake v1 loaded`, `✓ envelope/step-2-author v1 loaded`, `✓ envelope/step-3-approve v1 loaded`, `✓ envelope/step-4-export v1 loaded`.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}

@@ -8,6 +8,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 - `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and write approved spec artifacts when configured.
 - `break-spec`: break large specs into vertical implementation phases.
 - `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
+- `envelope`: author, approve, and export execution envelopes for AFK slices as validated `.beislid/exports/` bundles; explicit trigger only.
 - `poke-holes`: adversarial plan stress-test.
 
 ## Execute
@@ -47,6 +48,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may derive a Work Contract and write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
 | `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design artifact actions after approval | `implement`                                                   |
 | `implement`     | Execution planning          | Implementation design is approved; may consume approved execution envelopes and write configured implementation-plan checkpoints | code changes + `verify`                                       |
+| `envelope`      | AFK export flow             | Explicitly invoked to author/approve/export execution envelopes for AFK slices in a standalone session; fail-closed export validated by `beislid export validate` | external runner execution (e.g. `rondo run-once`)             |
 | `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |
 | `debug`         | Debugging gate              | Bug, failing test, or unexpected behavior                                                                                 | fix + `verify`                                                |
 | `review`        | Review primitive            | Local or supplied diff needs first-pass findings and a readiness verdict                                                  | caller decides: fix, post, loop, or submit                      |
