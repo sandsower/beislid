@@ -12,7 +12,7 @@ Print the Step 3 entry one-liner from `envelope-templates.md`.
 
 For each draft envelope, show the human-readable rendering and ask the verdict prompt from `envelope-templates.md`:
 
-- **approve** — envelope joins the export set with `status: approved`. Confirm `run_mode` (default `supervised-auto`) and `process_provider` (default `claude_code`), offering per-slice overrides.
+- **approve** — envelope joins the export set with `status: approved`. Confirm `run_mode` (default `supervised-auto`), `process_provider` (default `claude_code`), and the Step 2 tier + mode (default `prefer`), offering per-slice overrides; a tier override at approval replaces the authored tier and is recorded with the human's rationale.
 - **reject** — envelope is dropped from the bundle entirely. Record the reason. Rejection never blocks other envelopes.
 - **demote to HITL** — slice stays interactive: excluded from export, recorded in the verdict summary with a recommendation to run it through `kickoff`. Slices pre-marked in Step 2 for unverifiable evidence default to demotion; the human may override only after the evidence gap is closed in-session.
 
@@ -32,10 +32,10 @@ For each approved envelope record:
 
 ## Exit
 
-Print the Step 3 exit one-liner. Required outputs: verdict per envelope with reasons, approval metadata for approved envelopes, chosen run_mode/process_provider per slice, terminal-state decision.
+Print the Step 3 exit one-liner. Required outputs: verdict per envelope with reasons, approval metadata for approved envelopes, chosen run_mode/process_provider/tier per slice, terminal-state decision.
 
 ## Tripwires
 
 - A prior blanket approval ("yes to everything") does not replace per-envelope verdicts; walk each one.
 - An exported manifest is an execution affordance — demoted/rejected slices must never reach the bundle.
-- Do not edit envelope substance during approval beyond run_mode/provider/overrides; substantive changes go back to Step 2.
+- Do not edit envelope substance during approval beyond run_mode/provider/tier overrides; substantive changes go back to Step 2.

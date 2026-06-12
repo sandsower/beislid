@@ -19,6 +19,7 @@ For each candidate slice, draft an envelope with:
 - **pause_conditions** — failed required proof, ambiguity, unsafe side effects, missing dependencies, scope drift.
 - **dependencies** — required inputs, branches, fixtures, tools, upstream slices.
 - **expected_delivery** — summary, artifacts (changed_files, proof_results), next step.
+- **tier** — provider-neutral capability tier plus a one-line rationale. Coarse rubric: docs/config-only → `light`; single-module code+tests → `standard`; cross-module or design-bearing → `heavy`, or keep interactive (pre-mark for demotion). Default resolution mode is `prefer`. Tiers resolve at export through the `model_routing` `tiers` table (repo override or the shipped defaults in `docs/configuration.md`).
 
 ### Self-contained prompt
 
@@ -45,7 +46,7 @@ Present each draft envelope in human-readable form (prose rendering, as in `docs
 
 ## Exit
 
-Print the Step 2 exit one-liner. Required outputs: N draft envelopes with all fields above, per-slice eligibility notes, any slices pre-marked for demotion.
+Print the Step 2 exit one-liner. Required outputs: N draft envelopes with all fields above, tier + rationale per envelope, per-slice eligibility notes, any slices pre-marked for demotion.
 
 ## Tripwires
 
