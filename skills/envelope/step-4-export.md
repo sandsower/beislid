@@ -14,7 +14,7 @@ Print the Step 4 entry one-liner from `envelope-templates.md`.
 
 Evaluate action policy for `export.bundle.write` with class `workspace-write` before writing. Re-check the collision tripwire, then write `.beislid/exports/<bundle-id>/` per the contract in `docs/configuration.md`:
 
-- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 for first export), `status: approved`, `supersedes: null`, `generated_from`, `source_work_contract`, `slice_plan`, `children` (approved slices only), `dependency_graph` (adjacency map, approved slices only), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by`), `runner_extensions`, `validation` (`schema_version`, `rubric_version: afk-rubric-v0`, `notes`), `ownership`.
+- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 for first export), `status: approved`, `supersedes: null`, `generated_from`, `source_work_contract`, `slice_plan` (incl. `parallel_groups` from Step 2: list of lists of mutually independent slice ids), `children` (approved slices only; entries `{id, source_ticket}` — record `source_ticket` whenever known), `dependency_graph` (adjacency map spanning every exported slice across all batch tickets; dropped slices, their edges, and their cascade-demoted dependents never appear), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by`), `runner_extensions`, `validation` (`schema_version`, `rubric_version: afk-rubric-v0`, `notes`), `ownership`.
 - `slices/<slice-id>.json` — `approved-slice-v1` per approved envelope: `schema`, `slice_id`, `prompt` (templated sections from Step 2), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract: {id, source: beislid}`, `repo: {url, base_ref, base_sha}`, `allowed_actions: {run_mode, allow, ask, deny}`, `process_provider`, `runner_extensions`.
 - `slices/<slice-id>.md` — human-readable summary: source and approval, objective, scope, autonomy, proof, pause conditions, expected delivery, ownership.
 
@@ -28,7 +28,7 @@ Evaluate action policy for `checkpoint.envelope_exported` with class `workspace-
 
 ### Commit
 
-Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local — `.beislid/checkpoints/` is replaceable per-machine convenience state and is conventionally gitignored; the committed bundle itself carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
+Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local (gitignored per-machine state); the committed bundle carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
 
 ### Hand off
 

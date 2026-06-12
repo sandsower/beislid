@@ -18,6 +18,10 @@ For each draft envelope, show the human-readable rendering and ask the verdict p
 
 Silence, ambiguity, or skipping is not approval. Every envelope gets an explicit verdict before Step 4.
 
+### Dependency cascade
+
+Dropping a slice (reject or demote) removes it AND its edges from the exported graph. Any remaining slice that depends — directly or transitively — on a dropped slice is itself demoted to HITL: it cannot execute without its dependency. Record the cascade in the verdict summary; export proceeds with the remainder.
+
 ### Approval metadata
 
 For each approved envelope record:

@@ -34,6 +34,10 @@ Each slice's exportable `prompt` follows a fixed section template — this is wh
 
 Boundaries, dependencies, and proof requirements go in their dedicated manifest fields (the runner renders those alongside the prompt); do not duplicate them as prose.
 
+### Cross-ticket dependencies (REQUIRED for batches)
+
+When slices span more than one ticket: each contract-producing slice declares what it emits (module, schema, API, fixture); for every cross-ticket slice pair, check whether one consumes what the other produces. Each suspected edge needs probe evidence from this session (the artifact's path/name verified in both scopes, or the structure/contract names the dependency explicitly). Record explicit edges (consumer depends on producer) and group the remaining mutually independent slices into parallel groups. An unverifiable cross-ticket edge demotes the *consumer* slice to HITL — same rule as unverified evidence below.
+
 ### Mechanical fields
 
 - **repo pin** — `repo: {url, base_ref, base_sha}` from `git remote get-url origin`, the target branch, and `git rev-parse` of the base commit at authoring time.
@@ -45,7 +49,7 @@ Present each draft envelope in human-readable form (prose rendering, as in `docs
 
 ## Exit
 
-Print the Step 2 exit one-liner. Required outputs: N draft envelopes with all fields above, per-slice eligibility notes, any slices pre-marked for demotion.
+Print the Step 2 exit one-liner. Required outputs: N draft envelopes with all fields above, per-slice eligibility notes, any slices pre-marked for demotion, and (for batches) the cross-ticket dependency edges and parallel groups with their evidence.
 
 ## Tripwires
 
