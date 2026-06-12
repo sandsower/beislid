@@ -253,6 +253,20 @@ Closeout mode values are `off`, `ask`, and `auto`. `off` disables that closeout 
 
 `loop.use_review_response: true` means `babysit` delegates actionable PR feedback handling to `review-response` rather than reimplementing categorization, fixing, safe replies, commits, and pushes. `false` means `babysit` stops with the loaded feedback summary and asks the user how to proceed instead of fixing, replying, committing, or pushing automatically. `loop.run_configured_gates_before_push: true` means babysit-owned pushes and merge preparation must use the same configured gates/scopes/gate sets as other Beislið PR workflows.
 
+## Envelope shape
+
+`envelope` config customizes the `/envelope` skill. All keys are optional; omitting the block means skill defaults.
+
+````markdown
+## Envelope
+
+```beislid:envelope
+rubric_path: docs/afk-rubric.md
+```
+````
+
+`rubric_path` points at a repo-relative `.md` file that replaces the skill's built-in AFK-eligibility rubric (`skills/envelope/afk-rubric.md`, currently `afk-rubric-v1`). The path must be relative, end in `.md`, and contain no `..` segments; anything else is invalid and the skill falls back to the built-in rubric with a warning. Resolution is repo-override-first: when `rubric_path` resolves to a readable file, that rubric's version string is judged against and recorded in exports; otherwise the skill default applies.
+
 ## Fresh-eyes replacement shape
 
 `ready-for-review` always runs the primary `review` pass on the normal new-PR path. Configure `fresh_eyes` only to change the final whole-diff `fresh-eyes` pass.

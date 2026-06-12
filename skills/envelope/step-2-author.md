@@ -39,7 +39,17 @@ Boundaries, dependencies, and proof requirements go in their dedicated manifest 
 - **repo pin** — `repo: {url, base_ref, base_sha}` from `git remote get-url origin`, the target branch, and `git rev-parse` of the base commit at authoring time.
 - **autonomy mapping** — `allowed_actions: {run_mode, allow, ask, deny}` carries the envelope lists verbatim; `run_mode` defaults to `supervised-auto` and is confirmed at approval.
 - **process_provider** — `{name: claude_code}` default; per-slice override offered at approval.
-- **AFK eligibility** — record the eligibility judgment and `rubric_version: afk-rubric-v0` (ticket-embedded criteria; the versioned rubric doc lands in a later phase). A slice whose evidence cannot be verified (named gate command missing, paths unexplored, unresolved dependency) is marked for demotion to HITL rather than authored as AFK.
+- **AFK eligibility** — judge the slice against the versioned rubric (repo-override `rubric_path` from the `beislid:envelope` workflow.md block first, else `afk-rubric.md` in this skill) and record `rubric_version` (default `afk-rubric-v1`) plus per-criterion evidence in the draft.
+
+### Probe-evidence gate (hard)
+
+No envelope may be presented for approval until every claim it cites is probed in this session:
+
+- **Gate commands** — for each cited verification/gate command, run `command -v <first word>`; for repo scripts, `test -f <path>` (and probe the interpreter). Record the probe and result.
+- **Include paths** — every path in slice scope explored (listed or read), not assumed from filenames.
+- **Dependencies** — each one resolved to a real artifact: existing path/ref/tool, or an upstream slice in the bundle's dependency graph.
+
+Record the evidence inline per envelope (probe command → result). Any unverifiable claim auto-marks the slice **demote-to-HITL** (the Step 3 default stands); do not author it as AFK.
 
 Present each draft envelope in human-readable form (prose rendering, as in `docs/configuration.md`) so Step 3 verdicts are informed.
 
@@ -49,6 +59,6 @@ Print the Step 2 exit one-liner. Required outputs: N draft envelopes with all fi
 
 ## Tripwires
 
-- No envelope cites a gate command, path, or dependency that was not verified in this session.
+- No envelope cites a gate command, path, or dependency that was not probed in this session; unverified means demote-to-HITL, never AFK.
 - Prompts must be self-contained; "see the ticket" or "as discussed" is a defect.
 - Authoring never starts implementation work.
