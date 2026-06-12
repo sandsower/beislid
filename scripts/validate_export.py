@@ -36,7 +36,7 @@ REQUIRED_BUNDLE_FIELDS = (
     "ownership",
 )
 REQUIRED_APPROVAL_FIELDS = ("approved_at", "approved_by")
-KNOWN_RUBRIC_VERSIONS = frozenset({"afk-rubric-v0"})
+KNOWN_RUBRIC_VERSIONS = frozenset({"afk-rubric-v0", "afk-rubric-v1"})
 ALLOWED_SLICE_SCHEMAS = frozenset({"approved-slice-v1", "rondo-execution-request-v1"})
 REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
