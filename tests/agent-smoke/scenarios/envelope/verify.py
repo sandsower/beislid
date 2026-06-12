@@ -77,6 +77,34 @@ def main() -> int:
         children = bundle.get("children") or []
         if not children:
             errors.append("bundle has no children")
+        if len(children) != 2:
+            errors.append(f"batch bundle must have exactly 2 children, got {len(children)}")
+        by_ticket: dict[str, str] = {}
+        for child in children:
+            ticket = child.get("source_ticket")
+            if not str(ticket or "").strip():
+                errors.append(f"child {child.get('id')!r} missing source_ticket")
+            else:
+                by_ticket[ticket] = child.get("id")
+        if set(by_ticket) != {"WID-7", "WID-8"}:
+            errors.append(f"children source_tickets must be WID-7 and WID-8, got {sorted(by_ticket)}")
+        else:
+            producer = by_ticket["WID-7"]
+            consumer = by_ticket["WID-8"]
+            graph = bundle.get("dependency_graph") or {}
+            if producer not in (graph.get(consumer) or []):
+                errors.append(
+                    f"dependency_graph missing cross-ticket edge: '{consumer}' must depend on '{producer}'"
+                )
+            if consumer in (graph.get(producer) or []):
+                errors.append(
+                    f"dependency edge reversed: producer '{producer}' must not depend on consumer '{consumer}'"
+                )
+            groups = (bundle.get("slice_plan") or {}).get("parallel_groups")
+            if not isinstance(groups, list) or not groups:
+                errors.append("slice_plan.parallel_groups missing or empty")
+            elif any(producer in group and consumer in group for group in groups if isinstance(group, list)):
+                errors.append("dependent slices share a parallel group")
         for child in children:
             slice_id = child.get("id")
             manifest_path = bundle_dir / "slices" / f"{slice_id}.json"
