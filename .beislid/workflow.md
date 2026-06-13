@@ -93,6 +93,8 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   cost: cheap
 ```
 
+Changes to `bin/beislid` runtime-layout checks or `packaging/` must run `bash scripts/test_install.sh` locally before push; the packaged-layout contract is only covered by the install integration tests.
+
 Agent smoke is intentionally not a default quality gate because it spends model budget and can take several minutes. During `ready-for-review`, ask about Codex agent smoke only when the diff includes medium/large Beislið skill changes, protocol changes (`skills/`, `.beislid/`), installer/test-install changes, or smoke harness changes (`tests/agent-smoke/`). For tiny docs-only skill prose changes, record `Codex agent smoke skipped by workflow: docs-only skill prose change` and continue without prompting. When smoke is required, stop before running it and ask exactly: `This change touches Beislið skill/smoke paths. Run Codex agent smoke now? Claude support is temporarily unavailable; this uses broad fixture permissions, model budget, and can take several minutes. [y/N]`. Default is no; do not run on silence, ambiguity, or prior blanket approval. If accepted and the host supports background subagents/tasks, start the smoke command in a non-blocking subagent, continue other side-effect-free ready-for-review work while it runs, then join before PR creation; never push/open the PR until the smoke result is known or the user explicitly accepts skipping/ignoring it. If no background runner is available, run it in the main session. Use:
 
 ```bash
