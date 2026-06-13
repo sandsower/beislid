@@ -95,6 +95,25 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 
 Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-md-format.md).
 
+## AFK intake queue (roundup)
+
+`roundup` triages a ticket set into AFK-ready / AFK-blocked / HITL pens and, after explicit per-pen verdicts, dispatches the first dependency-safe wave to the queue an external runner polls. Two optional workflow.md surfaces drive it; both degrade gracefully when absent:
+
+````markdown
+```beislid:ticket_source
+# ... existing fields ...
+list_tool: mcp__example__list_issues   # enables prose rosters ("the audit tickets")
+```
+
+```beislid:afk_queue
+type: mcp
+move_tool: mcp__example__save_issue    # moves a ticket into the queue
+queue_ref: 'Runner intake — myrepo'    # the queue the runner polls
+```
+````
+
+Without `list_tool`, roundup accepts explicit ticket-id lists only. Without `afk_queue`, it still produces the pen sheet (`plans/<stem>-roundup.md` — waves, verdicts, enrichment briefs, HITL kickoff order) but performs no queue moves. The pen sheet is a consumed handoff seed, not maintained state; re-run `/roundup` on live tracker state to dispatch later waves.
+
 ## Scopes and quality gates
 
 Scopes let Beislið run the gates that match the files touched by a branch. For newer workflows that need reusable named gate groups and explicit selected/skipped explanations, prefer `gate_sets`.

@@ -72,9 +72,11 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 Keys recognized by Beislið orchestrators. Optional fields are noted; the rest are required when the parent key is set.
 
 **Issue tracker:**
-- `ticket_source` — fields: `type` (`mcp` / `cli` / `file` / `paste`), `tool` (when `type: mcp`), `command` (when `type: cli`, with `{id}` placeholder), `file_glob` (when `type: file`), `id_pattern` (regex), `link_template` (optional, with `{id}` placeholder)
+- `ticket_source` — fields: `type` (`mcp` / `cli` / `file` / `paste`), `tool` (when `type: mcp`), `command` (when `type: cli`, with `{id}` placeholder), `file_glob` (when `type: file`), `id_pattern` (regex), `link_template` (optional, with `{id}` placeholder), `list_tool` (optional, `type: mcp` only — batch-fetch tool that lets `roundup` resolve prose rosters; absent means roundup accepts explicit id lists only)
 - `branch_pattern` — single regex string; per-project only, never user-level
 - `ticket_update` — shared by kickoff and review-response. Fields: `type` (`mcp` / `cli`); comment channel is used for kickoff plan comments and review-response ticket replies (`comment_tool` when `type: mcp`, `comment_command` when `type: cli`); issue channel is optional for review-response child tickets (`issue_tool` / `issue_command`). CLI comment commands use `{id}` + `{body_file}` placeholders; issue commands use `{title_file}` + `{body_file}`. Orchestrators write temp files and substitute file paths — never interpolate raw user-authored body/title text into shell commands.
+
+- `afk_queue` — optional AFK intake queue used by `roundup` wave-1 dispatch. Fields: `type` (`mcp` only in P0), `move_tool` (MCP tool that moves/updates a ticket into the queue), `queue_ref` (queue identifier the runner polls, e.g. a tracker project name). Absent block means roundup degrades to pen sheet + ordering with no queue handoff.
 
 **PR target:**
 - `pr_base.default` — base branch name (e.g. `main`)

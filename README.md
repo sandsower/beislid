@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/sandsower/beislid/actions/workflows/validate.yml"><img alt="validate" src="https://img.shields.io/github/actions/workflow/status/sandsower/beislid/validate.yml?branch=main&label=validate"></a>
   <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/sandsower/beislid"></a>
-  <img alt="skills" src="https://img.shields.io/badge/skills-21-22d3ee">
+  <img alt="skills" src="https://img.shields.io/badge/skills-23-22d3ee">
   <img alt="hosts" src="https://img.shields.io/badge/hosts-Claude%20%7C%20Pi%20%7C%20Codex-a78bfa">
   <img alt="status" src="https://img.shields.io/badge/status-v0.2.0-f59e0b">
 </p>

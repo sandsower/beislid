@@ -13,7 +13,10 @@ type: mcp
 tool: mcp__personal-linear-server__get_issue
 id_pattern: '^BEI-\d+$'
 link_template: 'https://linear.app/teotl/issue/{id}'
+list_tool: mcp__personal-linear-server__list_issues
 ```
+
+`list_tool` is the batch-fetch tool that lets `roundup` resolve prose rosters ("the audit tickets", "this cycle's P1s") into ticket sets; without it, roundup accepts explicit ticket-id lists only.
 
 Linear-created branches use lowercase issue keys such as `vic/bei-56-...`; the branch pattern lets orchestrators recover and normalize the ticket ID when present. Other branch shapes still fall back to asking for the ticket ID.
 
@@ -25,6 +28,16 @@ Linear-created branches use lowercase issue keys such as `vic/bei-56-...`; the b
 type: mcp
 comment_tool: mcp__personal-linear-server__save_comment
 issue_tool: mcp__personal-linear-server__save_issue
+```
+
+## AFK intake queue
+
+Adding an issue to the "Rondo intake — beislid" Linear project is this repo's explicit AFK opt-in (see `WORKFLOW.md`); rondo polls that project and runs queued issues unattended. `roundup` dispatches approved wave-1 tickets here via `move_tool`. The block is optional by design: repos without a runner simply omit it and roundup degrades to pen sheet + ordering.
+
+```beislid:afk_queue
+type: mcp
+move_tool: mcp__personal-linear-server__save_issue
+queue_ref: 'Rondo intake — beislid'
 ```
 
 ## PR reviews
