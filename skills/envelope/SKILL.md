@@ -11,7 +11,7 @@ Turn approved planning context into exported execution envelopes: one `execution
 
 **Don't use this for:** interactive implementation (use `kickoff`), PR handoff (`ready-for-review`), or running exported work (that's rondo's job — Beislið owns envelope/export semantics; rondo owns execution and run evidence; no runtime service).
 
-Project config: `<repo>/.beislid/workflow.md`. Probe lazily per `probe-semantics.md`; policy-check side effects per `action-policy-protocol.md`. Output copy lives in `envelope-templates.md`.
+Project config: `<repo>/.beislid/workflow.md`. Probe lazily per `probe-semantics.md`; policy-check side effects per `action-policy-protocol.md`. Output copy lives in `envelope-templates.md`. AFK eligibility is judged against a versioned rubric, resolved repo-override-first: a `beislid:envelope` block in workflow.md may set `rubric_path` (a repo-relative `.md`, no `..`); otherwise the skill default `afk-rubric.md` applies.
 
 ## Read workflow.md
 

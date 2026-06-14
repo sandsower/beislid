@@ -228,6 +228,12 @@ test_missing_rubric_version_rejected() {
   expect_invalid "$TMP/bundle" "rubric_version"
 }
 
+test_rubric_v1_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["validation"]["rubric_version"] = "afk-rubric-v1"'
+  expect_valid "$TMP/bundle"
+}
+
 test_unknown_rubric_version_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_bundle "$TMP/bundle/bundle.json" 'bundle["validation"]["rubric_version"] = "afk-rubric-v99"'
@@ -368,6 +374,7 @@ run_test "empty prompt rejected" test_empty_prompt_rejected
 run_test "missing repo pin rejected" test_missing_repo_pin_rejected
 run_test "missing approval fields rejected" test_missing_approval_fields_rejected
 run_test "missing rubric_version rejected" test_missing_rubric_version_rejected
+run_test "afk-rubric-v1 accepted" test_rubric_v1_accepted
 run_test "unknown rubric_version rejected" test_unknown_rubric_version_rejected
 run_test "invalid supersedes rejected" test_invalid_supersedes_rejected
 run_test "missing supersedes rejected" test_missing_supersedes_rejected

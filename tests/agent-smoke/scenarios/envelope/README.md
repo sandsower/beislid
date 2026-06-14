@@ -2,11 +2,16 @@
 
 Exercises the `/envelope` walking skeleton end-to-end against a fixture repo with a pre-approved
 break-spec structure (`plans/widget-export-structure.md`), skipping the planning conversation.
+The structure has two AFK phases: Phase 1 is valid; Phase 2 cites a nonexistent gate command
+(`frobnicate --check`) so the step-2 probe-evidence gate must demote it to HITL.
 
 Asserts:
 
 - bundle exported to `.beislid/exports/wid-7-widget-export/` and `scripts/validate_export.py` exits 0
 - bundle `status: approved`, every child slice has `slices/<id>.json` + `.md`
+- bundle contains ONLY the valid Phase 1 slice; the demoted Phase 2 slice appears nowhere in
+  `slices/` (fail-closed), and no exported slice cites `frobnicate`
+- `validation.rubric_version` is `afk-rubric-v1`
 - slice manifest is `approved-slice-v1` with the templated prompt sections, `repo` pinning
   (`url`, `base_ref`, `base_sha`), and `allowed_actions` lists
 - slice manifest embeds `runner_extensions.model_routing` with `tier: standard` and a non-empty
