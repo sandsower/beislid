@@ -130,6 +130,20 @@ def main() -> int:
             provider = manifest.get("process_provider") or {}
             if provider.get("name") != "claude_code":
                 errors.append(f"{slice_id}: process_provider.name must be claude_code, got {provider.get('name')!r}")
+            routing = (manifest.get("runner_extensions") or {}).get("model_routing") or {}
+            if routing.get("tier") != "standard":
+                errors.append(
+                    f"{slice_id}: runner_extensions.model_routing.tier must be 'standard', got {routing.get('tier')!r}"
+                )
+            candidates = routing.get("candidates")
+            if (
+                not isinstance(candidates, list)
+                or not candidates
+                or not all(isinstance(c, str) and c.strip() for c in candidates)
+            ):
+                errors.append(
+                    f"{slice_id}: runner_extensions.model_routing.candidates must be a non-empty list of strings, got {candidates!r}"
+                )
 
     checkpoint_path = repo / ".beislid" / "checkpoints" / "latest.json"
     if not checkpoint_path.is_file():

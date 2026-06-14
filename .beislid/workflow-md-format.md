@@ -219,10 +219,18 @@ overrides:
     mode: require
   - skills: [implement, ready-for-review, review-response]
     model: sonnet
+tiers:
+  light: [claude:haiku]
+  standard: [claude:sonnet]
+  heavy: [claude:opus]
+  frontier: [claude:opus, openai:gpt-5.5]
+tier_mode: prefer
 ```
 ````
 
 `model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
+
+`tiers` is an optional map from provider-neutral capability tier names — exactly `light`, `standard`, `heavy`, `frontier`; other names are reserved — to ordered provider candidate lists (e.g. `heavy: [claude:opus, openai:gpt-5.5]`). Tiers are how envelope-authored slices declare capability needs without naming providers: export resolves a slice's tier through this table into `runner_extensions.model_routing.candidates`. When the repo omits `tiers`, Beislið resolves through the illustrative shipped defaults documented in `docs/configuration.md`. Optional `tier_mode` (`prefer` / `require`, default `prefer`) sets the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
 
 ## Babysit shape
 

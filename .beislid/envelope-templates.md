@@ -48,6 +48,7 @@ When intake input is an export manifest or bundle (JSON with a known export/mani
 
 ```
 Envelope <i>/<N>: `<slice-id>` — <objective one-liner>
+Tier: <tier> (mode <prefer|require>) — <rationale>. Override tier/mode here if you disagree.
 Verdict? (a) approve for AFK export, (r) reject (drop from bundle), (d) demote to HITL (keep interactive, not exported).
 ```
 

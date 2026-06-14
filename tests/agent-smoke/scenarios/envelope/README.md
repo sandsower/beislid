@@ -14,6 +14,8 @@ Asserts:
 - `validation.rubric_version` is `afk-rubric-v1`
 - slice manifest is `approved-slice-v1` with the templated prompt sections, `repo` pinning
   (`url`, `base_ref`, `base_sha`), and `allowed_actions` lists
+- slice manifest embeds `runner_extensions.model_routing` with `tier: standard` and a non-empty
+  resolved `candidates` list
 - `.beislid/checkpoints/latest.json` carries an `envelope_exported` pointer from skill `envelope`
 - the bundle was committed (`Export envelope bundle ...`)
 - the four step aux files were actually loaded (verbose stamps)

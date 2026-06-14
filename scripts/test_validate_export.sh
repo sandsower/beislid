@@ -316,6 +316,36 @@ test_validator_is_read_only() {
   [[ "$before" == "$after" ]] || { note_fail "validator mutated the bundle"; return 1; }
 }
 
+test_model_routing_valid_tier_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "rationale": "single-module code+tests", "mode": "prefer", "candidates": ["claude:sonnet"]}'
+  expect_valid "$TMP/bundle"
+}
+
+test_model_routing_unknown_tier_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "mega", "mode": "prefer", "candidates": ["claude:opus"]}'
+  expect_invalid "$TMP/bundle" "model_routing.tier"
+}
+
+test_model_routing_bad_mode_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "heavy", "mode": "always", "candidates": ["claude:opus"]}'
+  expect_invalid "$TMP/bundle" "model_routing.mode"
+}
+
+test_model_routing_empty_candidates_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "light", "mode": "prefer", "candidates": []}'
+  expect_invalid "$TMP/bundle" "model_routing.candidates"
+}
+
+test_model_routing_absent_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"] = {}'
+  expect_valid "$TMP/bundle"
+}
+
 test_cli_dispatch_valid() {
   write_valid_bundle "$TMP/bundle"
   "$CLI" export validate "$TMP/bundle" || { note_fail "beislid export validate failed on valid bundle"; return 1; }
@@ -357,6 +387,11 @@ run_test "non-positive version rejected" test_nonpositive_version_rejected
 run_test "invalid json rejected" test_invalid_json_rejected
 run_test "missing bundle.json rejected" test_missing_bundle_json_rejected
 run_test "validator is read-only" test_validator_is_read_only
+run_test "model_routing valid tier accepted" test_model_routing_valid_tier_accepted
+run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_rejected
+run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
+run_test "model_routing empty candidates rejected" test_model_routing_empty_candidates_rejected
+run_test "model_routing absent accepted" test_model_routing_absent_accepted
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
 
