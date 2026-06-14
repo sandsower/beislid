@@ -108,8 +108,17 @@ def main() -> int:
             groups = (bundle.get("slice_plan") or {}).get("parallel_groups")
             if not isinstance(groups, list) or not groups:
                 errors.append("slice_plan.parallel_groups missing or empty")
-            elif any(producer in group and consumer in group for group in groups if isinstance(group, list)):
-                errors.append("dependent slices share a parallel group")
+            else:
+                producer_groups = [
+                    idx for idx, group in enumerate(groups) if isinstance(group, list) and producer in group
+                ]
+                consumer_groups = [
+                    idx for idx, group in enumerate(groups) if isinstance(group, list) and consumer in group
+                ]
+                if len(producer_groups) != 1 or len(consumer_groups) != 1:
+                    errors.append("slice_plan.parallel_groups must include producer and consumer exactly once")
+                elif producer_groups[0] == consumer_groups[0]:
+                    errors.append("dependent slices share a parallel group")
         slices_dir = bundle_dir / "slices"
         if slices_dir.is_dir():
             known = {c.get("id") for c in children if isinstance(c, dict)}
