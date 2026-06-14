@@ -1,16 +1,19 @@
 # envelope smoke scenario
 
-Exercises the `/envelope` walking skeleton end-to-end against a fixture repo with a pre-approved
-break-spec structure (`plans/widget-export-structure.md`), skipping the planning conversation.
-The structure has two AFK phases: Phase 1 is valid; Phase 2 cites a nonexistent gate command
-(`frobnicate --check`) so the step-2 probe-evidence gate must demote it to HITL.
+Exercises the `/envelope` batch flow end-to-end against a fixture repo with two pseudo-tickets,
+each backed by a pre-approved break-spec structure (`plans/widget-export-structure.md` for WID-7,
+`plans/widget-report-structure.md` for WID-8), skipping the planning conversation. WID-7 includes
+one valid export slice and one bogus `frobnicate --check` audit-log slice that the probe-evidence
+gate must demote to HITL; WID-8 consumes the CSV from WID-7 (cross-ticket dependency).
 
 Asserts:
 
-- bundle exported to `.beislid/exports/wid-7-widget-export/` and `scripts/validate_export.py` exits 0
-- bundle `status: approved`, every child slice has `slices/<id>.json` + `.md`
-- bundle contains ONLY the valid Phase 1 slice; the demoted Phase 2 slice appears nowhere in
-  `slices/` (fail-closed), and no exported slice cites `frobnicate`
+- ONE bundle exported to `.beislid/exports/wid-7-wid-8-widget-suite/` and `scripts/validate_export.py` exits 0
+- bundle `status: approved`, exactly two children with `source_ticket` WID-7 and WID-8,
+  every child slice has `slices/<id>.json` + `.md`
+- demoted WID-7 audit-log slice appears nowhere in `slices/`, and no exported slice cites `frobnicate`
+- `dependency_graph` carries the cross-ticket edge (WID-8 slice depends on WID-7 slice, not reversed)
+- `slice_plan.parallel_groups` present and the dependent slices do not share a group
 - `validation.rubric_version` is `afk-rubric-v1`
 - slice manifest is `approved-slice-v1` with the templated prompt sections, `repo` pinning
   (`url`, `base_ref`, `base_sha`), and `allowed_actions` lists

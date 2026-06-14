@@ -12,9 +12,9 @@ Print the Step 4 entry one-liner from `envelope-templates.md`.
 
 ### Write the bundle
 
-Evaluate action policy for `export.bundle.write` (`workspace-write`). Re-check the collision tripwire, then write `.beislid/exports/<bundle-id>/` per `docs/configuration.md`:
+Evaluate action policy for `export.bundle.write` (`workspace-write`). Re-check the collision tripwire (non-revision; revision mode rewrites in place), then write `.beislid/exports/<bundle-id>/` per `docs/configuration.md`:
 
-- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 first export), `status: approved`, `supersedes: null`, `generated_from`, `source_work_contract`, `slice_plan`, approved `children`, `dependency_graph`, `proof_requirements`, `guides_and_gates`, `approval`, `runner_extensions`, `validation` (`schema_version`, judged `rubric_version`, default `afk-rubric-v1`, `notes`), `ownership`.
+- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 first export; prior+1 revision), `status: approved`, `supersedes` (`null` first export; prior bundle sha for revisions), `generated_from`, `source_work_contract`, `slice_plan` (incl. Step 2 `parallel_groups`), approved `children` with `source_ticket` when known, `dependency_graph` across exported batch slices, `proof_requirements`, `guides_and_gates`, `approval`, `runner_extensions`, `validation` (`schema_version`, judged `rubric_version`, default `afk-rubric-v1`, `notes`), `ownership`.
 - `slices/<slice-id>.json` — `approved-slice-v1`: `schema`, `slice_id`, `prompt`, `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo`, `allowed_actions`, `process_provider`, and when tiered, `runner_extensions.model_routing: {tier, rationale, mode, candidates}` resolved from `model_routing.tiers`.
 - `slices/<slice-id>.md` — human summary: source/approval, objective, scope, autonomy, proof, pause conditions, delivery, ownership.
 
@@ -24,11 +24,11 @@ Run `beislid export validate .beislid/exports/<bundle-id>`. On failure, print th
 
 ### Checkpoint
 
-Evaluate action policy for `checkpoint.envelope_exported` with class `workspace-write`. Update `.beislid/checkpoints/latest.json` with a replaceable latest-pointer entry: event `envelope_exported`, path to the bundle's `bundle.json`, `ticket: {id, title}` when known, branch, source skill `envelope`, timestamp. The export manifest doubles as the checkpoint payload; no separate artifact is written. Pointer failures are reported but do not undo the export.
+Evaluate action policy for `checkpoint.envelope_exported` with class `workspace-write`. Update `.beislid/checkpoints/latest.json` with a replaceable latest-pointer entry: event `envelope_exported`, path to the bundle's `bundle.json`, `ticket: {id, title}` when known, branch, source skill `envelope`, timestamp. The export manifest doubles as the checkpoint payload. Pointer failures are reported but do not undo the export.
 
 ### Commit
 
-Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local — `.beislid/checkpoints/` is replaceable per-machine convenience state and is conventionally gitignored; the committed bundle itself carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
+Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local (gitignored per-machine state); the committed bundle carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
 
 ### Hand off
 

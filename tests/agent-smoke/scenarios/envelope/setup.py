@@ -86,6 +86,19 @@ Cuts through: audit hook in `src/widget_export.py`.
 Delivers: each export appends an audit line; verified by running `frobnicate --check` against the audit output.
 Validates: exports leave a verifiable audit trail.
 """)
+    write(repo / "plans" / "widget-report-structure.md", """# Widget Report — Implementation Structure
+
+Approved structure (smoke fixture). Source: smoke ticket WID-8.
+
+## Durable Decisions
+- Report builder lives in `src/widget_report.py` (new file); stdlib only.
+- Input contract: the CSV produced by WID-7's `export_widgets(items, path)` in `src/widget_export.py`.
+
+## Phase 1: Summary report from the exported CSV (AFK)
+Cuts through: CSV read, aggregation, tests.
+Delivers: `summarize_export(csv_path)` returning counts per status; covered by `tests/test_widget_report.py`.
+Depends on: WID-7 Phase 1 — `export_widgets` CSV output is this slice's input.
+""")
     write(repo / "src" / "widget_export.py", """def widgets():
     return [{"name": "alpha", "status": "open"}]
 """)
@@ -106,7 +119,7 @@ def test_widgets_have_status():
         "repo": str(repo),
         "state_dir": str(state_dir),
         "origin": str(origin),
-        "bundle_id": "wid-7-widget-export",
+        "bundle_id": "wid-7-wid-8-widget-suite",
         "beislid_root": str(BEISLID_ROOT),
         "env": {
             "BEISLID_VERBOSE": "1",

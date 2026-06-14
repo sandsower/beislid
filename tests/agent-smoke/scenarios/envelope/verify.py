@@ -82,11 +82,43 @@ def main() -> int:
         children = bundle.get("children") or []
         if not children:
             errors.append("bundle has no children")
-        if len(children) != 1:
-            errors.append(
-                f"bundle must contain ONLY the valid slice (Phase 2 is demoted), got {len(children)} children: "
-                f"{[c.get('id') for c in children if isinstance(c, dict)]}"
-            )
+        if len(children) != 2:
+            errors.append(f"batch bundle must have exactly 2 exported children, got {len(children)}")
+        by_ticket: dict[str, str] = {}
+        for child in children:
+            ticket = child.get("source_ticket")
+            if not str(ticket or "").strip():
+                errors.append(f"child {child.get('id')!r} missing source_ticket")
+            else:
+                by_ticket[ticket] = child.get("id")
+        if set(by_ticket) != {"WID-7", "WID-8"}:
+            errors.append(f"children source_tickets must be WID-7 and WID-8, got {sorted(by_ticket)}")
+        else:
+            producer = by_ticket["WID-7"]
+            consumer = by_ticket["WID-8"]
+            graph = bundle.get("dependency_graph") or {}
+            if producer not in (graph.get(consumer) or []):
+                errors.append(
+                    f"dependency_graph missing cross-ticket edge: '{consumer}' must depend on '{producer}'"
+                )
+            if consumer in (graph.get(producer) or []):
+                errors.append(
+                    f"dependency edge reversed: producer '{producer}' must not depend on consumer '{consumer}'"
+                )
+            groups = (bundle.get("slice_plan") or {}).get("parallel_groups")
+            if not isinstance(groups, list) or not groups:
+                errors.append("slice_plan.parallel_groups missing or empty")
+            else:
+                producer_groups = [
+                    idx for idx, group in enumerate(groups) if isinstance(group, list) and producer in group
+                ]
+                consumer_groups = [
+                    idx for idx, group in enumerate(groups) if isinstance(group, list) and consumer in group
+                ]
+                if len(producer_groups) != 1 or len(consumer_groups) != 1:
+                    errors.append("slice_plan.parallel_groups must include producer and consumer exactly once")
+                elif producer_groups[0] == consumer_groups[0]:
+                    errors.append("dependent slices share a parallel group")
         slices_dir = bundle_dir / "slices"
         if slices_dir.is_dir():
             known = {c.get("id") for c in children if isinstance(c, dict)}
@@ -96,7 +128,7 @@ def main() -> int:
                 text = slice_file.read_text(encoding="utf-8", errors="replace")
                 if "frobnicate" in text:
                     errors.append(
-                        f"slices/{slice_file.name} cites the bogus 'frobnicate' gate; the demoted Phase 2 "
+                        f"slices/{slice_file.name} cites the bogus 'frobnicate' gate; the demoted WID-7 Phase 2 "
                         "slice must appear nowhere in slices/"
                     )
         for child in children:

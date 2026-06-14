@@ -252,6 +252,30 @@ test_missing_supersedes_rejected() {
   expect_invalid "$TMP/bundle" "supersedes"
 }
 
+test_v2_with_valid_supersedes_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["version"] = 2; bundle["supersedes"] = "ab" * 32'
+  expect_valid "$TMP/bundle"
+}
+
+test_v2_null_supersedes_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["version"] = 2'
+  expect_invalid "$TMP/bundle" "supersedes"
+}
+
+test_v1_nonnull_supersedes_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["supersedes"] = "ab" * 32'
+  expect_invalid "$TMP/bundle" "supersedes"
+}
+
+test_superseded_status_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["status"] = "superseded"'
+  expect_invalid "$TMP/bundle" "status"
+}
+
 test_missing_schema_version_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["validation"]["schema_version"]'
@@ -316,6 +340,59 @@ test_validator_is_read_only() {
   [[ "$before" == "$after" ]] || { note_fail "validator mutated the bundle"; return 1; }
 }
 
+# Turn the fixture into a multi-ticket batch bundle: slice-a from BEI-1,
+# slice-b from BEI-2, cross-ticket edge slice-b -> slice-a.
+make_multi_ticket() {
+  mutate_bundle "$1/bundle.json" 'bundle["children"] = [{"id": "slice-a", "source_ticket": "BEI-1"}, {"id": "slice-b", "source_ticket": "BEI-2"}]'
+}
+
+test_multi_ticket_bundle_valid() {
+  write_valid_bundle "$TMP/bundle"
+  make_multi_ticket "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a"], ["slice-b"]]'
+  expect_valid "$TMP/bundle"
+}
+
+test_empty_source_ticket_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"][0]["source_ticket"] = "  "'
+  expect_invalid "$TMP/bundle" "source_ticket"
+}
+
+test_parallel_group_with_dependents_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  make_multi_ticket "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-b"]]'
+  expect_invalid "$TMP/bundle" "cannot share a parallel group"
+}
+
+test_parallel_group_transitive_dependents_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  cp "$TMP/bundle/slices/slice-a.json" "$TMP/bundle/slices/slice-c.json"
+  mutate_slice "$TMP/bundle/slices/slice-c.json" 'manifest["slice_id"] = "slice-c"'
+  cp "$TMP/bundle/slices/slice-a.md" "$TMP/bundle/slices/slice-c.md"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["children"].append({"id": "slice-c"}); bundle["dependency_graph"]["slice-c"] = ["slice-b"]; bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-c"]]'
+  expect_invalid "$TMP/bundle" "transitively"
+}
+
+test_parallel_group_unknown_slice_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a", "slice-ghost"]]'
+  expect_invalid "$TMP/bundle" "slice-ghost"
+}
+
+test_slice_in_two_parallel_groups_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = [["slice-a"], ["slice-a"]]'
+  expect_invalid "$TMP/bundle" "more than one group"
+}
+
+test_nonlist_parallel_groups_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["slice_plan"]["parallel_groups"] = {"group-1": ["slice-a"]}'
+  expect_invalid "$TMP/bundle" "parallel_groups"
+}
+
 test_model_routing_valid_tier_accepted() {
   write_valid_bundle "$TMP/bundle"
   mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "rationale": "single-module code+tests", "mode": "prefer", "candidates": ["claude:sonnet"]}'
@@ -378,6 +455,10 @@ run_test "afk-rubric-v1 accepted" test_rubric_v1_accepted
 run_test "unknown rubric_version rejected" test_unknown_rubric_version_rejected
 run_test "invalid supersedes rejected" test_invalid_supersedes_rejected
 run_test "missing supersedes rejected" test_missing_supersedes_rejected
+run_test "v2 with valid supersedes accepted" test_v2_with_valid_supersedes_accepted
+run_test "v2 with null supersedes rejected" test_v2_null_supersedes_rejected
+run_test "v1 with non-null supersedes rejected" test_v1_nonnull_supersedes_rejected
+run_test "superseded status rejected" test_superseded_status_rejected
 run_test "missing schema_version rejected" test_missing_schema_version_rejected
 run_test "two cycles both reported" test_two_cycles_both_reported
 run_test "duplicate children rejected" test_duplicate_children_rejected
@@ -387,6 +468,13 @@ run_test "non-positive version rejected" test_nonpositive_version_rejected
 run_test "invalid json rejected" test_invalid_json_rejected
 run_test "missing bundle.json rejected" test_missing_bundle_json_rejected
 run_test "validator is read-only" test_validator_is_read_only
+run_test "multi-ticket bundle with cross-ticket edge valid" test_multi_ticket_bundle_valid
+run_test "empty source_ticket rejected" test_empty_source_ticket_rejected
+run_test "parallel group containing dependent slices rejected" test_parallel_group_with_dependents_rejected
+run_test "parallel group with transitive dependents rejected" test_parallel_group_transitive_dependents_rejected
+run_test "parallel group with unknown slice rejected" test_parallel_group_unknown_slice_rejected
+run_test "slice in two parallel groups rejected" test_slice_in_two_parallel_groups_rejected
+run_test "non-list parallel_groups rejected" test_nonlist_parallel_groups_rejected
 run_test "model_routing valid tier accepted" test_model_routing_valid_tier_accepted
 run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_rejected
 run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected

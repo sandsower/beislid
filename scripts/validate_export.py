@@ -117,6 +117,64 @@ def _validate_graph(graph: object, child_ids: list[str], errors: list[str]) -> N
     errors.extend(cycle_errors)
 
 
+def _transitive_deps(graph: object) -> dict[str, set[str]]:
+    """Map each graph node to the set of slices it transitively depends on."""
+    deps_of: dict[str, list[str]] = {}
+    if isinstance(graph, dict):
+        for node, deps in graph.items():
+            if isinstance(deps, list):
+                deps_of[node] = [d for d in deps if isinstance(d, str)]
+
+    closure: dict[str, set[str]] = {}
+    for start in deps_of:
+        reached: set[str] = set()
+        stack = list(deps_of.get(start, []))
+        while stack:
+            node = stack.pop()
+            if node in reached:
+                continue
+            reached.add(node)
+            stack.extend(deps_of.get(node, []))
+        closure[start] = reached
+    return closure
+
+
+def _validate_parallel_groups(
+    slice_plan: object, graph: object, child_ids: list[str], errors: list[str]
+) -> None:
+    if not isinstance(slice_plan, dict) or "parallel_groups" not in slice_plan:
+        return
+
+    groups = slice_plan["parallel_groups"]
+    if not isinstance(groups, list) or not all(isinstance(g, list) for g in groups):
+        errors.append("slice_plan.parallel_groups: must be a list of lists of slice ids")
+        return
+
+    known = set(child_ids)
+    seen: set[str] = set()
+    for idx, group in enumerate(groups):
+        for slice_id in group:
+            if not isinstance(slice_id, str) or slice_id not in known:
+                errors.append(f"slice_plan.parallel_groups[{idx}]: unknown slice {slice_id!r}")
+                continue
+            if slice_id in seen:
+                errors.append(
+                    f"slice_plan.parallel_groups: slice '{slice_id}' appears in more than one group entry"
+                )
+            seen.add(slice_id)
+
+    closure = _transitive_deps(graph)
+    for idx, group in enumerate(groups):
+        members = [s for s in group if isinstance(s, str) and s in known]
+        for slice_id in members:
+            for other in members:
+                if other != slice_id and other in closure.get(slice_id, set()):
+                    errors.append(
+                        f"slice_plan.parallel_groups[{idx}]: '{slice_id}' depends (transitively) on "
+                        f"'{other}'; dependent slices cannot share a parallel group"
+                    )
+
+
 def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> None:
     """Validate optional runner_extensions.model_routing tier hints; absent is valid."""
     extensions = manifest.get("runner_extensions")
@@ -199,8 +257,10 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
             f"bundle.json: status must be 'approved' for export (fail-closed), got {bundle['status']!r}"
         )
 
-    if not isinstance(bundle["version"], int) or bundle["version"] < 1:
+    version = bundle["version"]
+    if not isinstance(version, int) or version < 1:
         errors.append("bundle.json: version must be a positive integer")
+        version = None
 
     if "supersedes" not in bundle:
         errors.append("bundle.json: missing required field 'supersedes' (null for first export)")
@@ -210,6 +270,14 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
             not isinstance(supersedes, str) or not SUPERSEDES_PATTERN.match(supersedes)
         ):
             errors.append("bundle.json: supersedes must be null or a 64-char lowercase sha256 hex digest")
+        elif version == 1 and supersedes is not None:
+            errors.append(
+                "bundle.json: supersedes must be null for version 1 (first export supersedes nothing)"
+            )
+        elif version is not None and version >= 2 and supersedes is None:
+            errors.append(
+                "bundle.json: supersedes must be the prior bundle.json sha256 for version >= 2 (revision)"
+            )
 
     approval = bundle["approval"]
     if not isinstance(approval, dict):
@@ -244,11 +312,16 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
                 errors.append(f"bundle.json: children[{idx}] must have a non-empty string 'id'")
                 continue
             child_ids.append(child_id)
+            if "source_ticket" in child and not _nonempty_string(child["source_ticket"]):
+                errors.append(
+                    f"bundle.json: children[{idx}].source_ticket must be a non-empty string when present"
+                )
         duplicates = {cid for cid in child_ids if child_ids.count(cid) > 1}
         for dup in sorted(duplicates):
             errors.append(f"bundle.json: duplicate slice id '{dup}' in children")
 
     _validate_graph(bundle["dependency_graph"], child_ids, errors)
+    _validate_parallel_groups(bundle["slice_plan"], bundle["dependency_graph"], child_ids, errors)
 
     slices_dir = bundle_dir / "slices"
     for child_id in child_ids:
