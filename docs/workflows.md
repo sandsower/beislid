@@ -79,6 +79,28 @@ Use the routing this way:
 - If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.” In Pi, managed Beislið extension commands can automatically start a fresh session from a readable checkpoint pointer at configured boundaries.
 - For Rondo-style durable run state, orchestrators can additionally use `beislid run-ledger ...`. The ledger stores run IDs, events, gate log indexes, interruptions, and final reports under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/`; it links to checkpoint artifacts instead of replacing them.
 
+## Envelope flow (AFK execution)
+
+Use this when approved slices should run away-from-keyboard through an external runner instead of an interactive implementation session. `kickoff` stays the interactive front door: when it classifies work as `multi_slice` or `project` with AFK-suitable slices, it *recommends* running `/envelope` in a strong-model session — it never auto-routes into it.
+
+```mermaid
+flowchart LR
+  A["kickoff<br/>Interactive front door"] -- "multi_slice / project<br/>AFK-suitable slices" --> B["Suggestion only:<br/>run /envelope"]
+  B --> C["/envelope<br/>strong-model session"]
+  C --> D["intake"]
+  D --> E["author<br/>execution-envelope-v0 per slice"]
+  E --> F["approve<br/>per-envelope verdicts"]
+  F --> G["export<br/>.beislid/exports/ bundle"]
+  G --> H["rondo run-once --manifest<br/>External runner executes"]
+```
+
+Routing rules:
+
+- `/envelope` is explicit-trigger only. The human chooses which model/session pays for authoring; other skills may recommend it but never invoke it.
+- The flow is intake → author → approve → export. Approval is per envelope with verdicts approve / reject / demote-to-HITL; rejected envelopes never block the rest of the batch.
+- Export produces a repo-committed `approved-slice-plan-export-v0` bundle under `.beislid/exports/`, gated by `scripts/validate_export.py` before checkpoint/commit. The contract lives in [Configuration](./configuration.md) under "Export bundles (`.beislid/exports/`)".
+- An external runner such as `rondo run-once --manifest <slice-manifest>` consumes the approved slices in a fresh session; rondo owns execution and run evidence, and supersedes stale exports by manifest hash. Beislið owns envelope/export semantics only.
+
 ## Feedback loop
 
 Use this after PR review or QA feedback.
