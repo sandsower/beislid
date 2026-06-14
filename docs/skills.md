@@ -8,7 +8,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 - `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and write approved spec artifacts when configured.
 - `break-spec`: break large specs into vertical implementation phases.
 - `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
-- `envelope`: author, approve, and export execution envelopes for AFK slices as validated `.beislid/exports/` bundles; explicit trigger only.
+- `envelope`: author, approve, and export execution envelopes for AFK slices as validated `.beislid/exports/` bundles; explicit trigger only. Re-feeding a manifest with pause/review feedback self-detects revision mode and re-exports a superseding version in place.
 - `poke-holes`: adversarial plan stress-test.
 
 ## Execute
