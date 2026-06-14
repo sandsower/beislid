@@ -36,10 +36,12 @@ REQUIRED_BUNDLE_FIELDS = (
     "ownership",
 )
 REQUIRED_APPROVAL_FIELDS = ("approved_at", "approved_by")
-KNOWN_RUBRIC_VERSIONS = frozenset({"afk-rubric-v0"})
+KNOWN_RUBRIC_VERSIONS = frozenset({"afk-rubric-v0", "afk-rubric-v1"})
 ALLOWED_SLICE_SCHEMAS = frozenset({"approved-slice-v1", "rondo-execution-request-v1"})
 REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+KNOWN_TIERS = frozenset({"light", "standard", "heavy", "frontier"})
+ALLOWED_ROUTING_MODES = frozenset({"prefer", "require"})
 
 
 def _nonempty_string(value: object) -> bool:
@@ -153,9 +155,7 @@ def _validate_parallel_groups(
     for idx, group in enumerate(groups):
         for slice_id in group:
             if not isinstance(slice_id, str) or slice_id not in known:
-                errors.append(
-                    f"slice_plan.parallel_groups[{idx}]: unknown slice {slice_id!r}"
-                )
+                errors.append(f"slice_plan.parallel_groups[{idx}]: unknown slice {slice_id!r}")
                 continue
             if slice_id in seen:
                 errors.append(
@@ -173,6 +173,33 @@ def _validate_parallel_groups(
                         f"slice_plan.parallel_groups[{idx}]: '{slice_id}' depends (transitively) on "
                         f"'{other}'; dependent slices cannot share a parallel group"
                     )
+
+
+def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> None:
+    """Validate optional runner_extensions.model_routing tier hints; absent is valid."""
+    extensions = manifest.get("runner_extensions")
+    if not isinstance(extensions, dict):
+        return
+    routing = extensions.get("model_routing")
+    if routing is None:
+        return
+    prefix = f"{name}: runner_extensions.model_routing"
+    if not isinstance(routing, dict):
+        errors.append(f"{prefix} must be an object with tier, mode, candidates")
+        return
+    tier = routing.get("tier")
+    if tier not in KNOWN_TIERS:
+        errors.append(f"{prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
+    mode = routing.get("mode")
+    if mode not in ALLOWED_ROUTING_MODES:
+        errors.append(f"{prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
+    candidates = routing.get("candidates")
+    if (
+        not isinstance(candidates, list)
+        or not candidates
+        or not all(_nonempty_string(c) for c in candidates)
+    ):
+        errors.append(f"{prefix}.candidates must be a non-empty list of non-empty strings")
 
 
 def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> None:
@@ -201,6 +228,8 @@ def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> 
         for field in REQUIRED_REPO_FIELDS:
             if not _nonempty_string(repo.get(field)):
                 errors.append(f"{path.name}: repo.{field} must be a non-empty string")
+
+    _validate_model_routing(path.name, manifest, errors)
 
 
 def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:

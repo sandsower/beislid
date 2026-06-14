@@ -122,6 +122,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 **Babysit:**
 - `babysit` — optional PR babysitting policy used by the `babysit` skill and Pi `/babysit` command. Fields: `goal.token_budget` (optional string such as `50k`), `loop.use_review_response` (bool, default true), `loop.run_configured_gates_before_push` (bool, default true), `loop.wait_interval_seconds` (positive integer, default 60), `loop.timeout_minutes` (positive integer, optional), `closeout.merge.mode` (`off` / `ask` / `auto`, default off), `closeout.merge.method` (`squash` / `merge` / `rebase` / `repo-default`, default repo-default), `closeout.merge.delete_branch` (bool, default false), `closeout.memento.mode` (`off` / `ask` / `auto`, default off), `closeout.retro.mode` (`off` / `ask` / `auto`, default off), and `closeout.retro.apply_findings` (`off` / `ask` / `auto`, default ask). `auto` removes routine prompts only when action policy allows; policy `ask` still asks and policy `deny` still stops.
 
+**Envelope:**
+- `envelope` — optional config for the `/envelope` skill. Fields: `rubric_path` (optional repo-relative `.md` path, no `..` segments) replacing the skill's built-in AFK-eligibility rubric. See **Envelope shape** below.
+
 **Paired (Phase 4d of ready-for-review):**
 - `domain_expert.agent` — domain expert name (paired with `knowledge_store.path`); kickoff resolves it as a subagent first and, on hosts without a subagent mechanism, may fall back to an installed Beislið skill with the same name
 - `knowledge_store.path` — repo-relative path (paired with `domain_expert.agent`)
@@ -216,10 +219,18 @@ overrides:
     mode: require
   - skills: [implement, ready-for-review, review-response]
     model: sonnet
+tiers:
+  light: [claude:haiku]
+  standard: [claude:sonnet]
+  heavy: [claude:opus]
+  frontier: [claude:opus, openai:gpt-5.5]
+tier_mode: prefer
 ```
 ````
 
 `model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
+
+`tiers` is an optional map from provider-neutral capability tier names — exactly `light`, `standard`, `heavy`, `frontier`; other names are reserved — to ordered provider candidate lists (e.g. `heavy: [claude:opus, openai:gpt-5.5]`). Tiers are how envelope-authored slices declare capability needs without naming providers: export resolves a slice's tier through this table into `runner_extensions.model_routing.candidates`. When the repo omits `tiers`, Beislið resolves through the illustrative shipped defaults documented in `docs/configuration.md`. Optional `tier_mode` (`prefer` / `require`, default `prefer`) sets the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
 
 ## Babysit shape
 
@@ -252,6 +263,20 @@ closeout:
 Closeout mode values are `off`, `ask`, and `auto`. `off` disables that closeout step. `ask` stops for explicit approval. `auto` proceeds without an extra babysit prompt only when action policy allows the specific side effect; policy `ask` still asks and policy `deny` still stops. Invocation args can override config for a single run, for example `stop when green`, `don't merge`, `merge then stop`, `skip memento`, or `skip retro`.
 
 `loop.use_review_response: true` means `babysit` delegates actionable PR feedback handling to `review-response` rather than reimplementing categorization, fixing, safe replies, commits, and pushes. `false` means `babysit` stops with the loaded feedback summary and asks the user how to proceed instead of fixing, replying, committing, or pushing automatically. `loop.run_configured_gates_before_push: true` means babysit-owned pushes and merge preparation must use the same configured gates/scopes/gate sets as other Beislið PR workflows.
+
+## Envelope shape
+
+`envelope` config customizes the `/envelope` skill. All keys are optional; omitting the block means skill defaults.
+
+````markdown
+## Envelope
+
+```beislid:envelope
+rubric_path: docs/afk-rubric.md
+```
+````
+
+`rubric_path` points at a repo-relative `.md` file that replaces the skill's built-in AFK-eligibility rubric (`skills/envelope/afk-rubric.md`, currently `afk-rubric-v1`). The path must be relative, end in `.md`, and contain no `..` segments; anything else is invalid and the skill falls back to the built-in rubric with a warning. Resolution is repo-override-first: when `rubric_path` resolves to a readable file, that rubric's version string is judged against and recorded in exports; otherwise the skill default applies.
 
 ## Fresh-eyes replacement shape
 

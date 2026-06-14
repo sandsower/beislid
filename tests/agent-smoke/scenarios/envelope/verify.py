@@ -74,11 +74,16 @@ def main() -> int:
         bundle = load_json(bundle_json, errors, "bundle.json") or {}
         if bundle and bundle.get("status") != "approved":
             errors.append(f"bundle status must be approved, got {bundle.get('status')!r}")
+        validation = bundle.get("validation") or {}
+        if validation.get("rubric_version") != "afk-rubric-v1":
+            errors.append(
+                f"validation.rubric_version must be afk-rubric-v1, got {validation.get('rubric_version')!r}"
+            )
         children = bundle.get("children") or []
         if not children:
             errors.append("bundle has no children")
         if len(children) != 2:
-            errors.append(f"batch bundle must have exactly 2 children, got {len(children)}")
+            errors.append(f"batch bundle must have exactly 2 exported children, got {len(children)}")
         by_ticket: dict[str, str] = {}
         for child in children:
             ticket = child.get("source_ticket")
@@ -105,6 +110,18 @@ def main() -> int:
                 errors.append("slice_plan.parallel_groups missing or empty")
             elif any(producer in group and consumer in group for group in groups if isinstance(group, list)):
                 errors.append("dependent slices share a parallel group")
+        slices_dir = bundle_dir / "slices"
+        if slices_dir.is_dir():
+            known = {c.get("id") for c in children if isinstance(c, dict)}
+            for slice_file in sorted(slices_dir.iterdir()):
+                if slice_file.suffix in (".json", ".md") and slice_file.stem not in known:
+                    errors.append(f"demoted/unknown slice leaked into bundle: slices/{slice_file.name}")
+                text = slice_file.read_text(encoding="utf-8", errors="replace")
+                if "frobnicate" in text:
+                    errors.append(
+                        f"slices/{slice_file.name} cites the bogus 'frobnicate' gate; the demoted WID-7 Phase 2 "
+                        "slice must appear nowhere in slices/"
+                    )
         for child in children:
             slice_id = child.get("id")
             manifest_path = bundle_dir / "slices" / f"{slice_id}.json"
@@ -136,6 +153,20 @@ def main() -> int:
             provider = manifest.get("process_provider") or {}
             if provider.get("name") != "claude_code":
                 errors.append(f"{slice_id}: process_provider.name must be claude_code, got {provider.get('name')!r}")
+            routing = (manifest.get("runner_extensions") or {}).get("model_routing") or {}
+            if routing.get("tier") != "standard":
+                errors.append(
+                    f"{slice_id}: runner_extensions.model_routing.tier must be 'standard', got {routing.get('tier')!r}"
+                )
+            candidates = routing.get("candidates")
+            if (
+                not isinstance(candidates, list)
+                or not candidates
+                or not all(isinstance(c, str) and c.strip() for c in candidates)
+            ):
+                errors.append(
+                    f"{slice_id}: runner_extensions.model_routing.candidates must be a non-empty list of strings, got {candidates!r}"
+                )
 
     checkpoint_path = repo / ".beislid" / "checkpoints" / "latest.json"
     if not checkpoint_path.is_file():

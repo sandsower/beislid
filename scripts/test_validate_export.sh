@@ -228,6 +228,12 @@ test_missing_rubric_version_rejected() {
   expect_invalid "$TMP/bundle" "rubric_version"
 }
 
+test_rubric_v1_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["validation"]["rubric_version"] = "afk-rubric-v1"'
+  expect_valid "$TMP/bundle"
+}
+
 test_unknown_rubric_version_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_bundle "$TMP/bundle/bundle.json" 'bundle["validation"]["rubric_version"] = "afk-rubric-v99"'
@@ -387,6 +393,36 @@ test_nonlist_parallel_groups_rejected() {
   expect_invalid "$TMP/bundle" "parallel_groups"
 }
 
+test_model_routing_valid_tier_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "rationale": "single-module code+tests", "mode": "prefer", "candidates": ["claude:sonnet"]}'
+  expect_valid "$TMP/bundle"
+}
+
+test_model_routing_unknown_tier_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "mega", "mode": "prefer", "candidates": ["claude:opus"]}'
+  expect_invalid "$TMP/bundle" "model_routing.tier"
+}
+
+test_model_routing_bad_mode_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "heavy", "mode": "always", "candidates": ["claude:opus"]}'
+  expect_invalid "$TMP/bundle" "model_routing.mode"
+}
+
+test_model_routing_empty_candidates_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "light", "mode": "prefer", "candidates": []}'
+  expect_invalid "$TMP/bundle" "model_routing.candidates"
+}
+
+test_model_routing_absent_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"] = {}'
+  expect_valid "$TMP/bundle"
+}
+
 test_cli_dispatch_valid() {
   write_valid_bundle "$TMP/bundle"
   "$CLI" export validate "$TMP/bundle" || { note_fail "beislid export validate failed on valid bundle"; return 1; }
@@ -415,6 +451,7 @@ run_test "empty prompt rejected" test_empty_prompt_rejected
 run_test "missing repo pin rejected" test_missing_repo_pin_rejected
 run_test "missing approval fields rejected" test_missing_approval_fields_rejected
 run_test "missing rubric_version rejected" test_missing_rubric_version_rejected
+run_test "afk-rubric-v1 accepted" test_rubric_v1_accepted
 run_test "unknown rubric_version rejected" test_unknown_rubric_version_rejected
 run_test "invalid supersedes rejected" test_invalid_supersedes_rejected
 run_test "missing supersedes rejected" test_missing_supersedes_rejected
@@ -438,6 +475,11 @@ run_test "parallel group with transitive dependents rejected" test_parallel_grou
 run_test "parallel group with unknown slice rejected" test_parallel_group_unknown_slice_rejected
 run_test "slice in two parallel groups rejected" test_slice_in_two_parallel_groups_rejected
 run_test "non-list parallel_groups rejected" test_nonlist_parallel_groups_rejected
+run_test "model_routing valid tier accepted" test_model_routing_valid_tier_accepted
+run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_rejected
+run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
+run_test "model_routing empty candidates rejected" test_model_routing_empty_candidates_rejected
+run_test "model_routing absent accepted" test_model_routing_absent_accepted
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
 

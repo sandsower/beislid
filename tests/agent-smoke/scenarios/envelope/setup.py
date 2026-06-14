@@ -80,6 +80,11 @@ Approved structure (smoke fixture). Source: smoke ticket WID-7.
 Cuts through: data access, CSV writer, tests.
 Delivers: `export_widgets(items, path)` writing name/status rows; covered by `tests/test_widget_export.py`.
 Validates: the widget data shape supports flat export.
+
+## Phase 2: Widget export audit log (AFK)
+Cuts through: audit hook in `src/widget_export.py`.
+Delivers: each export appends an audit line; verified by running `frobnicate --check` against the audit output.
+Validates: exports leave a verifiable audit trail.
 """)
     write(repo / "plans" / "widget-report-structure.md", """# Widget Report — Implementation Structure
 

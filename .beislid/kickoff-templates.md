@@ -46,6 +46,14 @@ Exit:
 ✓ Step 8: Plan <posted|printed>; handing to implement.
 ```
 
+## Envelope suggestion
+
+After the Step 5 route summary, when classification is `multi_slice` or `project` and slices look AFK-suitable (≤120 chars; recommendation only — never auto-route or invoke):
+
+```
+💭 Some slices look AFK-suitable — consider running `/envelope` in a strong-model session to export them.
+```
+
 ## ticket_source paste fallback
 
 When `ticket_source` probe fails and the user chooses `(b)`, do not continue blind. Ask for structured paste:

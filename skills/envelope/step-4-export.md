@@ -4,7 +4,7 @@ Authoritative JIT protocol for envelope Step 4. Load only with ≥1 approved env
 
 ## Purpose
 
-Write the bundle, validate it mechanically, checkpoint the boundary, and commit. Everything here is deterministic; no new decisions.
+Write, validate, checkpoint, and commit the bundle. Everything here is deterministic; no new decisions.
 
 ## Protocol
 
@@ -12,15 +12,15 @@ Print the Step 4 entry one-liner from `envelope-templates.md`.
 
 ### Write the bundle
 
-Evaluate action policy for `export.bundle.write` with class `workspace-write` before writing. Re-check the collision tripwire (non-revision runs; revision mode rewrites the same dir in place), then write `.beislid/exports/<bundle-id>/` per `docs/configuration.md`:
+Evaluate action policy for `export.bundle.write` (`workspace-write`). Re-check the collision tripwire (non-revision; revision mode rewrites in place), then write `.beislid/exports/<bundle-id>/` per `docs/configuration.md`:
 
-- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 first export; prior+1 revision), `status: approved`, `supersedes` (`null` first export; prior bundle.json sha256 revision), `generated_from`, `source_work_contract`, `slice_plan` (incl. `parallel_groups` from Step 2: list of lists of mutually independent slice ids), `children` (approved slices only; entries `{id, source_ticket}` — record `source_ticket` whenever known), `dependency_graph` (adjacency map spanning every exported slice across all batch tickets; dropped slices, their edges, and their cascade-demoted dependents never appear), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by`), `runner_extensions`, `validation` (`schema_version`, `rubric_version: afk-rubric-v0`, `notes`), `ownership`.
-- `slices/<slice-id>.json` — `approved-slice-v1` per approved envelope: `schema`, `slice_id`, `prompt` (templated sections from Step 2), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract: {id, source: beislid}`, `repo: {url, base_ref, base_sha}`, `allowed_actions: {run_mode, allow, ask, deny}`, `process_provider`, `runner_extensions`.
-- `slices/<slice-id>.md` — human-readable summary: source and approval, objective, scope, autonomy, proof, pause conditions, expected delivery, ownership.
+- `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 first export; prior+1 revision), `status: approved`, `supersedes` (`null` first export; prior bundle sha for revisions), `generated_from`, `source_work_contract`, `slice_plan` (incl. Step 2 `parallel_groups`), approved `children` with `source_ticket` when known, `dependency_graph` across exported batch slices, `proof_requirements`, `guides_and_gates`, `approval`, `runner_extensions`, `validation` (`schema_version`, judged `rubric_version`, default `afk-rubric-v1`, `notes`), `ownership`.
+- `slices/<slice-id>.json` — `approved-slice-v1`: `schema`, `slice_id`, `prompt`, `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo`, `allowed_actions`, `process_provider`, and when tiered, `runner_extensions.model_routing: {tier, rationale, mode, candidates}` resolved from `model_routing.tiers`.
+- `slices/<slice-id>.md` — human summary: source/approval, objective, scope, autonomy, proof, pause conditions, delivery, ownership.
 
 ### Validate (fail-closed)
 
-Run `beislid export validate .beislid/exports/<bundle-id>`. On exit 0, continue. On failure, print the validation-failure copy from `envelope-templates.md` with the validator errors verbatim, fix the listed fields, re-export, re-validate. Never checkpoint or commit an unvalidated bundle; never bypass the validator.
+Run `beislid export validate .beislid/exports/<bundle-id>`. On failure, print the validation-failure copy plus errors verbatim, fix, re-export, re-validate. Never checkpoint/commit an unvalidated bundle.
 
 ### Checkpoint
 

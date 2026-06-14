@@ -39,6 +39,8 @@ Derived prose may still say `fits one PR` for `atomic`/`single_pr` or `needs dec
 
 When routing to `break-spec`, carry the approved spec/requirements or Work Contract, any spec artifact status/path returned by `spec`, ticket, context, domain notes, team constraints, and risks.
 
+For `multi_slice` or `project` with AFK-suitable slices (clear boundaries, machine-checkable proof, low ambiguity), print the envelope suggestion one-liner from `kickoff-templates.md` after the route summary, recommending `/envelope` in a strong-model session for those slices. Recommendation only — never auto-route into or invoke `/envelope`.
+
 ## Exit
 
 Print the Step 5 exit one-liner. Required outputs: `scope_classification`, derived route summary, rationale, spec/Work Contract artifact status/path if present, and selected phase if breakdown is invoked and a phase is chosen.
