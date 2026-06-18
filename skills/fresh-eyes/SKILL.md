@@ -5,6 +5,10 @@ description: "Use when the user asks for 'fresh eyes', 'one last review', 'final
 
 # Fresh Eyes
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `fresh-eyes` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Run a final whole-diff review pass with no session-history bias. This is a side-effect-free review primitive that uses the same output contract as `review`, but with a different posture: look across the entire change set after the obvious iterative fixes are done.
 
 `fresh-eyes` may read files, inspect diffs, and classify findings. It must not edit files, commit, push, post comments, update tickets, create PRs, or run a fix loop. Callers decide what to do with the findings.

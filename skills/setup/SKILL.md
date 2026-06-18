@@ -240,6 +240,8 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Scopes & quality gates** — *Run lint/test commands across the repo, scopes, or changed-file-aware gate sets. Simple gates need only name+command; rich gates may add stage, cost, timeout, selectors, output parser, and failure policy.*
 - **Explore skill** — *Let kickoff Step 2 run a project skill as an exploration enhancer or replacement before design.*
 - **Model routing** — *Declare preferred or required host model candidates per Beislið skill, with fallback/blocking disclosure.*
+- **Agent guidance** — *Configure where retro should suggest/edit visible host-native startup guidance such as AGENTS.md or CLAUDE.md.*
+- **Skill guidance** — *Configure repo-owned Markdown overlays that consuming Beislið skills load before acting; supports all-skills and per-skill guidance.*
 - **Translation sync** — *Run a translation-sync skill during quality gates whenever paths under your trigger globs are touched.*
 - **Browser compatibility** — *Run an advisory browser compatibility skill during quality gates whenever paths under your trigger globs are touched. Doesn't block PR handoff.*
 - **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
@@ -359,6 +361,46 @@ overrides:
 ```
 
 Never create duplicate `beislid:model_routing` blocks; update or remove the existing one.
+
+### Agent guidance
+
+Configure the canonical `beislid:agent_guidance` block under `Agent guidance`. Explain that this stores only routing metadata for visible host-native startup guidance; actual instructions stay in files the host loads, such as `AGENTS.md` or `CLAUDE.md`.
+
+Ask whether to use defaults or customize. Defaults:
+
+```beislid:agent_guidance
+default: AGENTS.md
+hosts:
+  pi: AGENTS.md
+  claude-code: CLAUDE.md
+  codex: AGENTS.md
+edit_policy: prompt
+```
+
+For custom paths, require repo-relative paths with no `..` segments. `edit_policy` is `prompt` in v1: retro may offer edits, but must show a diff and get explicit approval before writing. Never put guidance content in `workflow.md`; if the user starts dictating guidance, offer to write it into the configured target file after the workflow pointer is configured.
+
+Never create duplicate `beislid:agent_guidance` blocks; update or remove the existing one.
+
+### Skill guidance
+
+Configure the canonical `beislid:skill_guidance` block under `Skill guidance`. Explain that this stores pointers to visible repo-owned Markdown files that consuming Beislið skills load before acting. Skills load `all` first, then their own skill key.
+
+Ask whether to configure `all` guidance, one or more skill-specific overlays, or skip. Default paths are `docs/agent-guidance/beislid.md` for `all` and `docs/agent-guidance/{skill}.md` for each skill. Entries use:
+
+```beislid:skill_guidance
+all:
+  - path: docs/agent-guidance/beislid.md
+    mode: read-if-present
+    when: always
+spec:
+  - path: docs/agent-guidance/spec.md
+    mode: must-read
+    when: always
+```
+
+Valid modes are `read-if-present` and `must-read`; default to `read-if-present`. Valid `when` is `always` in v1. For `must-read`, setup may write the pointer only when the file already exists and is non-empty, or when the user approves creating/updating the file in the same change. If the file is not created, either downgrade to `read-if-present` after confirmation or skip the entry. Paths must be repo-relative `.md` files with no `..` segments.
+
+Never create duplicate `beislid:skill_guidance` blocks; update or remove the existing one.
 
 ### Visual surfaces
 

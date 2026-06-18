@@ -5,6 +5,10 @@ description: Use when the user wants to walk through their local changes interac
 
 # Guided Review
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `walk-the-diff` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Simulate sitting next to a colleague who wrote the code and having them walk you through the changes. Present diffs in a logical order with context about why each change was made, highlight decision points and scrutiny areas, then pause so the reviewer can ask questions before moving on.
 
 **Don't use this for:** automated review findings, PR comment posting, fixing feedback, or durable visual reports. Use `review`, `pr-patrol`, `review-response`, or explicit `show-me` instead.

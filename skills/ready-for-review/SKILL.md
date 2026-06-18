@@ -6,6 +6,10 @@ description: >
 
 # Ready for Review
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `ready-for-review` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Take a completed branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small safe new PRs use fast-path: preload aux, parallel safe gates, combined review/final-check.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.

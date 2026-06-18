@@ -5,6 +5,10 @@ description: "Use when the user asks to babysit a PR, run /babysit, keep a PR gr
 
 # Babysit
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `babysit` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Babysit the current pull request until configured live evidence says it is green, then perform the configured closeout path when policy allows it.
 
 This is an outer-loop workflow. It does not replace `review-response`; it repeatedly uses `review-response` for feedback handling, configured gates for proof before push, and host goal mode for persistence across wait/recheck cycles.

@@ -5,6 +5,10 @@ description: Use when starting work on a ticket after checking out the feature b
 
 # Start Work on Ticket
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `kickoff` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Turn a checked-out feature branch and ticket into an implementation-ready plan. Kickoff is the front door of the Beislið lifecycle: ticket → context → spec/blueprint/breakdown → ticket update → `implement`.
 
 **Don't use this for:** creating PRs, handling review/QA feedback, or PR handoff for completed work. Use `ready-for-review` or `review-response` for those.

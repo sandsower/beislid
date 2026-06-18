@@ -32,6 +32,7 @@ setup
 - scopes
 - action policy overrides
 - per-skill model routing hints/requirements
+- visible host-native agent guidance targets and per-skill project guidance overlays
 - Pi automatic fresh-session handoff intent for the Beislið Pi extension
 - visual surfaces such as optional Lavish routing
 - workflow signals such as optional tmux-glance tab markers
@@ -207,6 +208,44 @@ When orchestrators run gates, they summarize each result as an agent-readable en
 ```
 
 Generic text output and pytest-style output have built-in parser guidance in the shared output templates; `output.parser: generic-text` or `output.parser: pytest` metadata can guide parser selection where supported.
+
+## Agent and skill guidance
+
+Workflow config may point Beislið at visible project guidance without storing the guidance content in `workflow.md`.
+
+Use `agent_guidance` when retro should suggest or edit always-loaded host-native instructions:
+
+````markdown
+## Agent guidance
+
+```beislid:agent_guidance
+default: AGENTS.md
+hosts:
+  pi: AGENTS.md
+  claude-code: CLAUDE.md
+  codex: AGENTS.md
+edit_policy: prompt
+```
+````
+
+Use `skill_guidance` for project-owned guidance that specific Beislið skills must read on demand. Skills load `all` first, then their own key. `read-if-present` is non-blocking; `must-read` requires a readable non-empty file and fails closed when broken.
+
+````markdown
+## Skill guidance
+
+```beislid:skill_guidance
+all:
+  - path: docs/agent-guidance/beislid.md
+    mode: read-if-present
+    when: always
+spec:
+  - path: docs/agent-guidance/spec.md
+    mode: must-read
+    when: always
+```
+````
+
+These sections are routing metadata only. Put every-run instructions in the host-native file the host loads, and put skill-specific guidance in visible repo-owned Markdown files.
 
 ## Babysit
 

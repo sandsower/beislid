@@ -5,6 +5,10 @@ description: "Use when the user asks to 'rinse', 'run a review/fix loop', 'itera
 
 # Rinse
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `rinse` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Run an iterative review/fix/verify loop around the side-effect-free `review` primitive. `rinse` is an orchestrator: it may edit files, run verification, and repeat review passes, but only within user-approved boundaries.
 
 The boundary is strict:

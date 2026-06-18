@@ -5,6 +5,10 @@ description: "Review a local diff or supplied patch against requirements. Produc
 
 # Review
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `review` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Review a diff against requirements and return findings. This is a primitive, not a workflow.
 
 `review` may read files, inspect diffs, and classify findings. It must not edit files, commit, push, post comments, update tickets, create PRs, or run a fix loop. Callers decide what to do with the findings.

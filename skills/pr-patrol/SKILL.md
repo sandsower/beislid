@@ -5,6 +5,10 @@ description: "Use when the user wants to review someone else's PR, says 'review 
 
 # PR Patrol
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `pr-patrol` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Review someone else's pull request and optionally post approved review comments. This is an inbound review workflow built around the side-effect-free `review` contract.
 
 Boundary:

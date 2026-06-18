@@ -5,6 +5,10 @@ description: "Use when the user asks for a visual HTML evidence/explanation arti
 
 # Show Me
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `show-me` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Don't tell me. Show me.
 
 `show-me` turns verification, review, explanation, documentation, demos, or subsystem understanding into a polished local HTML portfolio/deck when chat or terminal output is the wrong medium.

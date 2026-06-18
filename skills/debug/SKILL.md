@@ -5,6 +5,10 @@ description: "Use when encountering any bug, test failure, or unexpected behavio
 
 # Debug Method
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `debug` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Find the root cause before touching code. No quick fixes, no guessing, no shotgun debugging.
 
 <HARD-GATE>

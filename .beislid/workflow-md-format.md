@@ -35,6 +35,8 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Model routing`
 - `Probe cache`
 - `Skill-specific overrides`
+- `Agent guidance`
+- `Skill guidance`
 - `Ready-for-review`
 - `Review-response`
 - `Babysit`
@@ -107,6 +109,12 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 
 **Model routing:**
 - `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), and `skills` (required on overrides). `when` is reserved for future conditional routing and is not executable in v1.
+
+**Agent guidance:**
+- `agent_guidance` — pointer-only routing metadata for visible host-native startup guidance files. Fields: `default` (repo-relative path, default `AGENTS.md`), optional `hosts` map (`pi`, `claude-code`, `codex`, or reserved host ids to repo-relative paths), and optional `edit_policy` (`prompt` in v1). Paths must be repo-relative, not absolute, and contain no `..`. This block tells retro where to suggest/edit always-loaded guidance; it must not contain guidance content.
+
+**Skill guidance:**
+- `skill_guidance` — pointer-only project guidance overlays consumed by Beislið skills before they act. Top-level keys are `all` plus skill names such as `spec`, `blueprint`, `implement`, `ready-for-review`, `review-response`, `babysit`, and `retro`; values are lists of entries with `path` (repo-relative `.md`, no `..`), optional `mode` (`read-if-present` or `must-read`, default `read-if-present`), and optional `when` (`always` in v1). Skills load `all` first, then their own key. `must-read` requires a readable non-empty file; `read-if-present` may be absent without blocking. Workflow stores pointers only, not the guidance itself.
 
 **Kickoff overrides:**
 - `explore` — fields: `skill` (Beislið skill name), `mode` (`replace` or `enhance`; default `enhance`). Put this block under a `## Kickoff` or `## Skill-specific overrides` section. Used by kickoff Step 2 before implementation design.

@@ -37,7 +37,9 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 
 - `setup`: configure `.beislid/workflow.md` interactively or run `setup update` for installed Beislið updates.
 - `doctor`: audit `.beislid/workflow.md` and probe each configured capability.
-- `retro`: review run/session evidence and recommend workflow improvements; hands accepted config changes to `setup`.
+- `retro`: review run/session evidence and recommend workflow improvements; routes guidance to workflow config, host-native guidance, or configured skill overlays.
+
+Project guidance overlays can be configured through `beislid:skill_guidance`. Consuming skills load `all` guidance first, then their own skill key, before acting; `must-read` guidance blocks when the referenced file is missing or empty.
 
 ## Skill reference
 
@@ -64,7 +66,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | `show-me`       | Visual evidence/explanation | You want a local HTML deck for proof, review, demos, docs, or understanding                                               | local `index.html` artifact                                   |
 | `setup`         | Project config / updates    | First-time wiring of `workflow.md`, changing config sections, or running `setup update` for installed Beislið updates     | config writes or installer update output                      |
 | `doctor`        | Config audit                | You edited `workflow.md` or want a capability check before running orchestrators                                          | refreshed probe cache plus prose audit                        |
-| `retro`         | Workflow tune-up            | You want post-run/session recommendations for workflow defaults, gates, policies, checkpoints, or handoffs                | `setup`, `doctor`, or no action                               |
+| `retro`         | Workflow tune-up            | You want post-run/session recommendations for workflow defaults, gates, policies, checkpoints, handoffs, or guidance routing | `setup`, `doctor`, guidance edit, or no action                 |
 
 ## Optional integrations
 

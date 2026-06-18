@@ -5,6 +5,10 @@ description: "Trigger immediately when the user says any of: 'spec it out', 'spe
 
 # Spec
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `spec` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Shape an idea, vague ticket, or open product question into a lightweight product spec. This is the product/requirements gate, not the implementation-design gate.
 
 Use this for:

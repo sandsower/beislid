@@ -5,6 +5,10 @@ description: "Use before claiming work is complete, fixed, or passing. Requires 
 
 # Check Done
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `verify` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 No completion claims without fresh verification evidence. Period.
 
 <HARD-GATE>

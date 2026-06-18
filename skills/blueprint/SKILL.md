@@ -5,6 +5,10 @@ description: "Trigger immediately when the user says any of: 'design this', 'pla
 
 # Blueprint
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `blueprint` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 No code until the implementation design is approved. `blueprint` turns a clear ticket/spec/phase into an implementation approach. It does not decide what product should exist; `spec` does that.
 
 Use this when:

@@ -5,6 +5,10 @@ description: "Break an approved spec/PRD or Work Contract into phased vertical s
 
 # Break Spec
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `break-spec` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Takes an approved spec/PRD or Work Contract and produces a phased implementation structure using vertical slices. Each phase cuts through all layers end-to-end rather than building horizontal slabs.
 
 ## Step 1: Load the spec

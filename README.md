@@ -127,6 +127,7 @@ A workflow can define:
 - ticket or PR update commands
 - scopes and quality gates
 - PR babysitting and optional closeout automation
+- visible agent-guidance targets and per-skill project guidance overlays
 - triggered checks such as translation sync or browser compatibility
 - guided walkthrough thresholds
 

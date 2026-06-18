@@ -5,6 +5,10 @@ description: Use when splitting work to another agent, session, or worktree; cre
 
 # Handoff
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `handoff` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Create a paste-ready opening prompt for another agent/session/worktree. This skill is read-only in the parent workspace except for copying text to the local clipboard.
 
 Use this when:

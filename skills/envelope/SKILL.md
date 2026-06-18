@@ -5,6 +5,10 @@ description: Author, approve, and export execution envelopes for AFK slices in a
 
 # Envelope
 
+## Project guidance preflight
+
+If `.beislid/workflow.md` has `beislid:skill_guidance`, load `all` and `envelope` guidance before proceeding; stop on missing/empty `must-read`; report loaded/missing.
+
 Turn approved planning context into exported execution envelopes: one `execution-envelope-v0` per AFK-ready slice, packaged as an `approved-slice-plan-export-v0` bundle that `rondo run-once --manifest <slice-manifest>` can execute in a fresh session with zero additional context.
 
 **Trigger is explicit only.** The human chooses which model/session pays for authoring. When `kickoff` classifies work as multi_slice/AFK-suitable it may *recommend* running `/envelope` in a strong-model session; it never auto-routes here, and this skill never auto-routes back.
