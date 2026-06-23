@@ -277,6 +277,8 @@ JSON
   fi
   assert_contains "$run_dir/events.jsonl" 'tokenizer'
   assert_contains "$run_dir/events.jsonl" 'passwordless'
+  assert_contains "$run_dir/transcript.md" 'tokenizer'
+  assert_contains "$run_dir/transcript.md" 'passwordless'
 }
 
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume

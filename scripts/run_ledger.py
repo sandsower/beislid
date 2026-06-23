@@ -194,9 +194,12 @@ def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transc
     event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
     with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(event, sort_keys=True) + "\n")
-    summary = transcript_summary or json.dumps(safe_payload, sort_keys=True)
+    if transcript_summary is None:
+        summary = json.dumps(safe_payload, sort_keys=True)
+    else:
+        summary = redact_text(transcript_summary)
     with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
-        f.write(f"\n## {redact_text(event_type, 160)}\n- {redact_text(summary)}\n")
+        f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
     run = read_json(run_dir / "run.json")
     run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
     run["updated_at"] = event["timestamp"]
