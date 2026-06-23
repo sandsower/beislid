@@ -23,10 +23,14 @@ SCHEMA_VERSION = 1
 LEDGER_KIND = "run-ledger-v1"
 CHECKPOINT_KIND = "run-ledger-checkpoint-v1"
 SECRETISH = re.compile(
-    r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b\s*[:=]\s*"
+    r"(?i)\b((?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+    r"(?:[_-][a-z0-9]+)*)\b\s*[:=]\s*"
     r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\r\n]+)"
 )
-SECRETISH_JSON_KEY = re.compile(r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b")
+SECRETISH_JSON_KEY = re.compile(
+    r"(?i)\b(?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+    r"(?:[_-][a-z0-9]+)*\b"
+)
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")

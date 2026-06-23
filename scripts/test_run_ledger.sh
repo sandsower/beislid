@@ -247,10 +247,43 @@ assert payload['status'] == 'active', payload
 PY
 }
 
+test_compound_secret_redaction() {
+  local state="$TMP/state" out run_id run_dir event_payload
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Compound redaction' --branch feature/redaction)"
+  run_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  run_dir="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_dir'])
+PY
+)"
+
+  event_payload="$TMP/compound-event.json"
+  cat >"$event_payload" <<'JSON'
+{
+  "message": "GITHUB_TOKEN=compound_text_value\nSECRET_KEY=compound_key_value\ndb_password: compound_password_value",
+  "github_token": "compound_json_value",
+  "notes": "tokenizer and passwordless should remain visible"
+}
+JSON
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" event --run-id "$run_id" --flow kickoff --type ticket_snapshot --json-file "$event_payload") >/dev/null
+
+  if grep -q -e 'compound_text_value' -e 'compound_key_value' -e 'compound_password_value' -e 'compound_json_value' "$run_dir/events.jsonl" "$run_dir/transcript.md"; then
+    note_fail "compound secret-looking values should be redacted"
+    return 1
+  fi
+  assert_contains "$run_dir/events.jsonl" 'tokenizer'
+  assert_contains "$run_dir/events.jsonl" 'passwordless'
+}
+
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
 run_test "rejects unsafe run id" test_rejects_unsafe_run_id
 run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
+run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
