@@ -195,7 +195,7 @@ def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transc
     with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(event, sort_keys=True) + "\n")
     if transcript_summary is None:
-        summary = json.dumps(safe_payload, sort_keys=True)
+        summary = json.dumps(safe_payload, sort_keys=True)[:2000]
     else:
         summary = redact_text(transcript_summary)
     with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:

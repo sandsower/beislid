@@ -262,13 +262,18 @@ PY
 )"
 
   event_payload="$TMP/compound-event.json"
-  cat >"$event_payload" <<'JSON'
-{
-  "message": "GITHUB_TOKEN=compound_text_value\nSECRET_KEY=compound_key_value\ndb_password: compound_password_value",
-  "github_token": "compound_json_value",
-  "notes": "tokenizer and passwordless should remain visible"
+  python3 - <<'PY' "$event_payload"
+import json, sys
+payload = {
+    "message": "GITHUB_TOKEN=compound_text_value\nSECRET_KEY=compound_key_value\ndb_password: compound_password_value",
+    "github_token": "compound_json_value",
+    "notes": "tokenizer and passwordless should remain visible",
+    "z_large": "x" * 2500,
+    "z_tail": "uncapped_tail_marker",
 }
-JSON
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump(payload, f)
+PY
   (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" event --run-id "$run_id" --flow kickoff --type ticket_snapshot --json-file "$event_payload") >/dev/null
 
   if grep -q -e 'compound_text_value' -e 'compound_key_value' -e 'compound_password_value' -e 'compound_json_value' "$run_dir/events.jsonl" "$run_dir/transcript.md"; then
@@ -279,6 +284,11 @@ JSON
   assert_contains "$run_dir/events.jsonl" 'passwordless'
   assert_contains "$run_dir/transcript.md" 'tokenizer'
   assert_contains "$run_dir/transcript.md" 'passwordless'
+  assert_contains "$run_dir/events.jsonl" 'uncapped_tail_marker'
+  if grep -qF 'uncapped_tail_marker' "$run_dir/transcript.md"; then
+    note_fail "transcript summary should keep its length cap"
+    return 1
+  fi
 }
 
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
