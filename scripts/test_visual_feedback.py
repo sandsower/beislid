@@ -89,6 +89,39 @@ class VisualFeedbackTests(unittest.TestCase):
         self.assertEqual(result["must_change"], ["Add a fallback section"])
         self.assertEqual(result["nice_to_have"], ["Add examples"])
 
+    def test_preserves_hash_inside_quoted_yaml_scalars(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: spec
+            action: approve_or_revise_spec
+            decision: approve
+            approval_note: "Keep #audit-trail in the canonical note"
+            must_change:
+              - "Preserve #anchor references"
+            nice_to_have: ['Keep #nice-to-have tags']
+            """
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["approval_note"], "Keep #audit-trail in the canonical note")
+        self.assertEqual(result["must_change"], ["Preserve #anchor references"])
+        self.assertEqual(result["nice_to_have"], ["Keep #nice-to-have tags"])
+
+    def test_strips_unquoted_yaml_comments(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: spec
+            action: approve_or_revise_spec
+            decision: approve
+            approval_note: Looks ready # sidebar note
+            """
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["approval_note"], "Looks ready")
+
     def test_unknown_action_falls_to_manual_review(self) -> None:
         result = self.normalize(
             """

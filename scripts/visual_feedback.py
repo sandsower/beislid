@@ -394,10 +394,10 @@ def _parse_inline_list(value: Any) -> list[str]:
 
 
 def _strip_scalar(value: str) -> str:
-    value = _SCALAR_CLEAN.sub("", value).strip()
+    value = value.strip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
         return value[1:-1]
-    return value
+    return _SCALAR_CLEAN.sub("", value).strip()
 
 
 def _text(value: Any) -> str:

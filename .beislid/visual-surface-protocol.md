@@ -150,7 +150,7 @@ The optional repository helper is dependency-free and does not invoke Lavish:
 beislid visual-feedback normalize --expected-workflow spec --expected-action approve_or_revise_spec feedback.txt
 ```
 
-It prints a normalized JSON event with `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.
+It prints a lossless normalized JSON event for the typed contract, including `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `approval_note`, `revision_summary`, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline; when parsing or normalizing feedback, preserve those audit fields so the accepted decision or manual-review fallback can be copied into the canonical Markdown/chat record. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.
 
 For v1, the canonical action vocabulary is intentionally small:
 
