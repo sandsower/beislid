@@ -32,7 +32,7 @@ Lavish owns:
 - Visual annotation UI, freeform message capture, and any provider-local artifact indexes.
 - Provider-specific command options beyond the stable Beislið prompt contract.
 
-Do not make Lavish required for a Beislið workflow. If command resolution, invocation, editor launch, or feedback retrieval fails, record the fallback in chat and continue with canonical Markdown/chat gates.
+Do not make Lavish required for a Beislið workflow. Disabled user plugin state, absent repo config, `mode: off`, missing `npx` or another configured binary, failed deep checks, declined prompts, command invocation failures, editor launch failures, and feedback retrieval failures all fall back to canonical Markdown/chat gates.
 
 ## Creating Lavish-ready HTML review surfaces
 
@@ -81,9 +81,9 @@ Invocation is local and best-effort. For Lavish v1, the stable file-path session
 <configured-command> end <html_path>      # optional cleanup when the review is finished
 ```
 
-The `BEISLID_VISUAL_PROMPT_V1` prompt text should be visible in the HTML surface and, when the provider supports an agent-message channel, sent there as well. Quote paths, do not shell-interpolate user feedback directly, and do not run deep provider checks unless the workflow explicitly requested them. If the workflow cannot safely determine the provider's exact command form, do not improvise; print the artifact path and continue through Markdown/chat fallback.
+The `BEISLID_VISUAL_PROMPT_V1` prompt text should be visible in the HTML surface and, when the provider supports an agent-message channel, sent there as well. Quote paths, do not shell-interpolate user feedback directly, and do not run deep provider checks unless the workflow explicitly requested them. The light `beislid plugin status lavish` check only resolves the first command binary; `beislid plugin status lavish --check` may invoke `npx -y lavish-axi` or another configured command and may touch npm/network/cache. If the workflow cannot safely determine the provider's exact command form, do not improvise; print the artifact path and continue through Markdown/chat fallback.
 
-If the provider cannot be invoked safely or its response cannot be read, continue through the normal Markdown/chat workflow gate and mention that visual feedback was unavailable.
+If the provider cannot be invoked safely, the user declines a `prompt`-mode path, or the provider response cannot be read, continue through the normal Markdown/chat workflow gate and mention that visual feedback was unavailable.
 
 ## Prompt envelope
 

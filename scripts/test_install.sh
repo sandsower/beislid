@@ -1126,16 +1126,42 @@ PY
 test_cli_plugin_status_lavish_reports_light_probe() {
   cat >"$TMP/bin/npx" <<'SH'
 #!/usr/bin/env bash
+printf '%s\n' "$@" >>"$BEISLID_FAKE_PI_LOG"
 exit 0
 SH
   chmod +x "$TMP/bin/npx"
   run_cli plugin enable lavish
-  run_cli plugin status lavish
+  BEISLID_FAKE_PI_LOG="$TMP/light-probe-should-not-run.log" run_cli plugin status lavish
   assert_stdout_contains "beislid plugin status lavish"
   assert_stdout_contains "enabled: True"
+  assert_stdout_contains "state_note: enabled; repo visual_surfaces config is still required for workflow routing"
   assert_stdout_contains "command: npx -y lavish-axi"
   assert_stdout_contains "artifact_root: .lavish"
+  assert_stdout_contains "routing_note: user plugin state alone does not activate workflows"
   assert_stdout_contains "light_probe: ok (npx)"
+  if [[ -e "$TMP/light-probe-should-not-run.log" ]]; then
+    note_fail "expected light plugin status not to invoke npx"
+  fi
+}
+
+test_cli_plugin_status_lavish_absent_state_defaults_disabled() {
+  run_cli plugin status lavish
+  assert_stdout_contains "beislid plugin status lavish"
+  assert_stdout_contains "enabled: False"
+  assert_stdout_contains "state_note: missing; defaults disabled"
+  assert_stdout_contains "command: npx -y lavish-axi"
+  if [[ -e "$STATE/plugins/lavish.json" ]]; then
+    note_fail "expected plugin status not to create Lavish state"
+  fi
+}
+
+test_cli_plugin_status_lavish_reports_missing_command() {
+  run_cli plugin enable lavish --command missing-lavish-axi
+  run_cli plugin status lavish
+  assert_stdout_contains "enabled: True"
+  assert_stdout_contains "command: missing-lavish-axi"
+  assert_stdout_contains "light_probe: missing (missing-lavish-axi)"
+  assert_stdout_contains "fallback: configured command binary unavailable; Markdown/chat remains canonical"
 }
 
 test_cli_plugin_disable_lavish_preserves_state() {
@@ -1145,6 +1171,10 @@ test_cli_plugin_disable_lavish_preserves_state() {
   assert_json_field "$STATE/plugins/lavish.json" enabled False
   assert_json_field "$STATE/plugins/lavish.json" command lavish-axi
   assert_json_field "$STATE/plugins/lavish.json" artifact_root ".custom-lavish"
+
+  run_cli plugin status lavish
+  assert_stdout_contains "enabled: False"
+  assert_stdout_contains "state_note: disabled; workflows fall back to Markdown/chat unless repo config and runtime are available"
 }
 
 test_cli_plugin_status_lavish_deep_check() {
@@ -1157,10 +1187,28 @@ SH
   chmod +x "$TMP/bin/npx"
   BEISLID_FAKE_PI_LOG="$TMP/deep-check.log" run_cli plugin enable lavish
   BEISLID_FAKE_PI_LOG="$TMP/deep-check.log" run_cli plugin status lavish --check
+  assert_stdout_contains "deep_check_note: may invoke the configured Lavish command and touch npm/network/cache"
   assert_stdout_contains "deep_check: ok"
   assert_file_contains "$TMP/deep-check.log" "-y"
   assert_file_contains "$TMP/deep-check.log" "lavish-axi"
   assert_file_contains "$TMP/deep-check.log" "--help"
+}
+
+test_cli_plugin_status_lavish_deep_check_failure() {
+  cat >"$TMP/bin/lavish-fail" <<'SH'
+#!/usr/bin/env bash
+printf 'lavish unavailable\n' >&2
+printf '%s\n' "$@" >"$BEISLID_FAKE_PI_LOG"
+exit 42
+SH
+  chmod +x "$TMP/bin/lavish-fail"
+  run_cli plugin enable lavish --command lavish-fail
+  if BEISLID_FAKE_PI_LOG="$TMP/deep-check-fail.log" run_cli plugin status lavish --check; then
+    note_fail "expected failing Lavish deep check to exit non-zero"
+  fi
+  assert_stdout_contains "deep_check_note: may invoke the configured Lavish command and touch npm/network/cache"
+  assert_stdout_contains "deep_check: failed (lavish unavailable)"
+  assert_file_contains "$TMP/deep-check-fail.log" "--help"
 }
 
 test_cli_plugin_errors_are_clear() {
@@ -1721,8 +1769,11 @@ run_test "workflow-signal skill override can disable"          test_workflow_sig
 run_test "workflow-signal invalid modes noop"                  test_workflow_signal_invalid_modes_noop
 run_test "CLI plugin enable lavish writes state"               test_cli_plugin_enable_lavish_writes_state
 run_test "CLI plugin status lavish reports light probe"        test_cli_plugin_status_lavish_reports_light_probe
+run_test "CLI plugin status lavish absent state fallback"      test_cli_plugin_status_lavish_absent_state_defaults_disabled
+run_test "CLI plugin status lavish missing command fallback"   test_cli_plugin_status_lavish_reports_missing_command
 run_test "CLI plugin disable lavish preserves state"           test_cli_plugin_disable_lavish_preserves_state
 run_test "CLI plugin status lavish deep check"                 test_cli_plugin_status_lavish_deep_check
+run_test "CLI plugin status lavish deep check failure"         test_cli_plugin_status_lavish_deep_check_failure
 run_test "CLI plugin errors are clear"                         test_cli_plugin_errors_are_clear
 run_test "v0.2 migration repoints previous install"            test_migrate_v0_2_repoints_previous_manifest_install
 run_test "CLI v0.2 migration delegates"                        test_cli_migrate_v0_2_delegates_to_shared_migration

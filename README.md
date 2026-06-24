@@ -132,6 +132,21 @@ A workflow can define:
 
 See [Configuration](./docs/configuration.md) for details and [workflow.md format](./.beislid/workflow-md-format.md) for the full grammar.
 
+### Optional Lavish visual surfaces
+
+Lavish is an optional supplemental visual-surface provider for planning/review loops. Markdown/chat artifacts remain canonical: enabling the user plugin does not activate any workflow by itself, and every Beislið workflow must continue through its normal Markdown/chat gates when Lavish is unavailable.
+
+To discover and prepare the local plugin path:
+
+```bash
+beislid plugin enable lavish
+beislid plugin status lavish
+```
+
+`beislid plugin status lavish` is a light check only. Add `--check` only when you intentionally want to invoke the configured Lavish command, which may touch npm, network, and the local package cache when the command is the default `npx -y lavish-axi`. Environments that need a pinned or local runtime can use `beislid plugin enable lavish --command 'path/to/lavish-axi'`.
+
+Repo-level routing is configured separately with `beislid:visual_surfaces` in `.beislid/workflow.md`; see [Configuration](./docs/configuration.md#visual-surfaces) for modes, fallbacks, troubleshooting, and the Beislið/Lavish ownership boundary.
+
 ## Core workflows
 
 - **Shape work:** `spec`, `break-spec`, `blueprint`, `poke-holes`
@@ -165,6 +180,9 @@ beislid install user
 beislid install project [path]
 beislid status
 beislid status project [path]
+beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
+beislid plugin disable lavish
+beislid plugin status lavish [--check]
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
 beislid update
