@@ -24,7 +24,7 @@ Beislið owns:
 
 - Repo config shape, effective-mode routing, prompt semantics, typed feedback validation, normalization, fallback language, and the canonical Markdown/chat record it accepts.
 - The HTML artifact content it writes before invoking a provider.
-- The optional parser/helper contract in `scripts/visual_feedback.py`; hosts may call it, reimplement the same semantics, or fall back to manual Markdown/chat review.
+- The optional parser/helper contract exposed as `beislid visual-feedback normalize` and implemented in `scripts/visual_feedback.py`; hosts may call it, reimplement the same semantics, or fall back to manual Markdown/chat review.
 
 Lavish owns:
 
@@ -147,7 +147,7 @@ Visual feedback has three outcomes:
 The optional repository helper is dependency-free and does not invoke Lavish:
 
 ```bash
-python3 scripts/visual_feedback.py --expected-workflow spec --expected-action approve_or_revise_spec feedback.txt
+beislid visual-feedback normalize --expected-workflow spec --expected-action approve_or_revise_spec feedback.txt
 ```
 
 It prints a normalized JSON event with `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.

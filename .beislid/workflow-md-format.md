@@ -176,7 +176,7 @@ workflows:
 
 When a workflow's effective visual-surface mode is active, load the portable Lavish contract from canonical `.beislid/visual-surface-protocol.md` or that workflow skill's readable auxiliary copy. That protocol defines the supplemental HTML review surface rules, provider boundary, fallback behavior, the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, and the `BEISLID_VISUAL_FEEDBACK_V1` typed gate validation contract. Workflows must not claim Lavish routing is active without repo-level `beislid:visual_surfaces` config.
 
-Typed gate feedback and freeform annotations are distinct. Only a typed payload that validates for the current workflow/action may count as a visual gate decision; unknown actions, unknown decisions, malformed payloads, freeform-only feedback, or parser-unavailable hosts fall back to manual Markdown/chat review. The optional `scripts/visual_feedback.py` helper normalizes accepted events and reports `manual_review` with `canonical_update_required` so the canonical Markdown/chat record remains auditable.
+Typed gate feedback and freeform annotations are distinct. Only a typed payload that validates for the current workflow/action may count as a visual gate decision; unknown actions, unknown decisions, malformed payloads, freeform-only feedback, or parser-unavailable hosts fall back to manual Markdown/chat review. The optional `beislid visual-feedback normalize` helper normalizes accepted events and reports `manual_review` with `canonical_update_required` so the canonical Markdown/chat record remains auditable.
 
 ## Workflow signals shape
 

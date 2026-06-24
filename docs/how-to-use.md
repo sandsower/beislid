@@ -84,6 +84,7 @@ beislid plugin disable lavish
 beislid plugin status lavish [--check]
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
+beislid visual-feedback normalize [feedback-file]
 beislid update
 beislid help
 ```
