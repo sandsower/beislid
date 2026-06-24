@@ -23,10 +23,14 @@ SCHEMA_VERSION = 1
 LEDGER_KIND = "run-ledger-v1"
 CHECKPOINT_KIND = "run-ledger-checkpoint-v1"
 SECRETISH = re.compile(
-    r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b\s*[:=]\s*"
+    r"(?i)\b((?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+    r"(?:[_-][a-z0-9]+)*)\b\s*[:=]\s*"
     r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\r\n]+)"
 )
-SECRETISH_JSON_KEY = re.compile(r"(?i)\b(token|secret|password|authorization|api[_-]?key)\b")
+SECRETISH_JSON_KEY = re.compile(
+    r"(?i)\b(?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+    r"(?:[_-][a-z0-9]+)*\b"
+)
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -190,9 +194,12 @@ def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transc
     event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
     with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(event, sort_keys=True) + "\n")
-    summary = transcript_summary or json.dumps(safe_payload, sort_keys=True)
+    if transcript_summary is None:
+        summary = json.dumps(safe_payload, sort_keys=True)[:2000]
+    else:
+        summary = redact_text(transcript_summary)
     with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
-        f.write(f"\n## {redact_text(event_type, 160)}\n- {redact_text(summary)}\n")
+        f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
     run = read_json(run_dir / "run.json")
     run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
     run["updated_at"] = event["timestamp"]
