@@ -79,6 +79,9 @@ beislid install project [path]
 beislid install project [path] --copy
 beislid status
 beislid status project [path]
+beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
+beislid plugin disable lavish
+beislid plugin status lavish [--check]
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
 beislid update
@@ -88,6 +91,31 @@ beislid help
 `install.sh --project [path]` is compatibility sugar for `beislid install project [path]`; add `--copy` there too for copied project skills. Project install creates `.agents/skills`, `.claude/skills`, and `.codex/skills` under the target project. Symlink mode is the default. Copy mode writes `.beislid-owner.json` markers inside copied skill dirs and records copy ownership in `.beislid/project-install.json`, so reruns refresh only Beislið-owned copies. Project installs print a suggested managed `.gitignore` block by default; add `--write-gitignore` to create or replace it. It warns if `.beislid/workflow.md` is missing but does not create it; use `setup` for project workflow config.
 
 A draft Homebrew formula lives at `packaging/homebrew/beislid.rb` for packaging validation. It is not the published install path yet; full Homebrew support is tracked separately in the Homebrew packaging work. Packaged layouts should include the Beislið runtime subset and can set `BEISLID_HOME` if `bin/beislid` is separated from that runtime root.
+
+### Optional Lavish visual surfaces
+
+Lavish visual surfaces are optional and supplemental. Beislið's Markdown/chat spec, design, review, and approval artifacts remain canonical even when a local HTML surface is used.
+
+Fresh-reader path:
+
+1. Enable or inspect local plugin state:
+
+   ```bash
+   beislid plugin enable lavish
+   beislid plugin status lavish
+   ```
+
+2. If your environment should avoid the default `npx -y lavish-axi` fetch path, pin a local command instead:
+
+   ```bash
+   beislid plugin enable lavish --command '/opt/tools/lavish-axi' --artifact-root .lavish
+   ```
+
+3. Add repo routing only when you want a workflow to suggest, prompt for, or auto-open supplemental surfaces. Configure `beislid:visual_surfaces` in `.beislid/workflow.md`; user-level plugin state alone does not activate routing.
+
+4. Run `/doctor` to validate the repo config shape. Doctor and normal `plugin status` do not deep-invoke Lavish. Use `beislid plugin status lavish --check` only when you deliberately want to run the configured command and accept possible npm/network/cache activity.
+
+Fallbacks are safe by default: disabled plugin state, absent or disabled repo config, missing `npx` or another configured binary, failed deep checks, runtime failures, or a declined visual prompt all fall back to the normal Markdown/chat workflow gate. See [Configuration: Visual surfaces](./configuration.md#visual-surfaces) for troubleshooting details and the Beislið/Lavish ownership boundary.
 
 ## Common paths
 

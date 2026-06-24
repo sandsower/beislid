@@ -901,7 +901,7 @@ mode: enhance
 
 ## Visual surfaces
 
-`visual_surfaces` lets a repo opt into optional local visual surfaces while keeping Markdown/chat artifacts canonical. Beislið owns workflow routing, config validation, prompt semantics, and fallback guidance; the provider owns the local runtime. In v1 the supported provider is Lavish via `lavish-axi`.
+`visual_surfaces` lets a repo opt into optional local visual surfaces while keeping Markdown/chat artifacts canonical. Beislið owns workflow routing, config validation, prompt semantics, HTML prompt-envelope content, and fallback guidance; Lavish owns the local runtime/editor behavior after Beislið invokes the configured command. In v1 the supported provider is Lavish via `lavish-axi`.
 
 ````markdown
 ## Visual surfaces
@@ -918,11 +918,42 @@ workflows:
 ```
 ````
 
-Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visual surface may help; `prompt` asks before invoking one; `auto` permits configured workflows to use the visual surface without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent.
+Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visual surface may help; `prompt` asks before invoking one; `auto` permits configured workflows to use the visual surface without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
 
-`command` and `artifact_root` are optional. The default command follows Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`. Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
+### Enable and inspect local Lavish state
 
-Use `beislid plugin enable lavish` to enable local plugin state and `beislid plugin status lavish` for the light status check. `beislid plugin status lavish --check` may invoke the configured command and can touch npm/network/cache, so doctor does not run that deep check automatically.
+Use the CLI to discover and manage the local plugin state:
+
+```bash
+beislid plugin enable lavish
+beislid plugin status lavish
+beislid plugin disable lavish
+```
+
+`beislid plugin status lavish` is a light status check: it reads `${BEISLID_STATE_DIR:-~/.local/state/beislid}/plugins/lavish.json`, reports whether the plugin is enabled, prints the configured command/artifact root, and checks only whether the command's first binary is on `PATH`. It does not run `npx`, fetch packages, open Lavish, or touch network/cache.
+
+`beislid plugin status lavish --check` is the deep check. It invokes the configured command with `--help`, so the default `npx -y lavish-axi` command may touch npm, network, and the local package cache. Doctor never runs this deep check automatically. If your environment needs a pinned runtime, a vendored binary, or a no-network boundary, configure it explicitly:
+
+```bash
+beislid plugin enable lavish --command '/opt/tools/lavish-axi' --artifact-root .lavish
+```
+
+`command` and `artifact_root` are also optional in repo config. The workflow default command follows enabled Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`.
+
+### Troubleshooting and fallback behavior
+
+Lavish is never required for a Beislið workflow. Markdown/chat artifacts remain canonical, and all normal approval/revision gates still apply.
+
+| Condition | Behavior |
+| --- | --- |
+| Missing or disabled user plugin state | Repo config can still validate, but runtime command resolution falls back to the repo `command` or documented `npx -y lavish-axi` default; workflows continue in Markdown/chat if invocation is unavailable. |
+| Absent repo config or `mode: off` | Workflows must not claim Lavish routing is active, generate/open visual surfaces, or wait for visual feedback. |
+| Missing `npx` or missing first binary of a pinned command | `beislid plugin status lavish` reports `light_probe: missing (...)`; configure a pinned/local command or install the missing binary. Workflows fall back to Markdown/chat. |
+| Failed deep check | `beislid plugin status lavish --check` exits nonzero and reports the command failure; this is diagnostic only and should not block Markdown/chat workflow use. |
+| Declined prompt in `prompt` mode | The workflow keeps the canonical Markdown/chat gate and records that visual review was declined. |
+| Runtime fallback after command/editor/poll failure | Record the fallback in chat, keep the HTML path if one was created, and continue through the normal Markdown/chat decision gate. |
+
+Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. It does not deep-invoke Lavish or spend npm/network/cache.
 
 When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill readable auxiliary copy for project-local installs. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, and the `BEISLID_VISUAL_PROMPT_V1` prompt envelope. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
 

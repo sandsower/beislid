@@ -372,15 +372,25 @@ beislid_plugin_lavish_status() {
   echo "beislid plugin status lavish"
   echo "  state: $state_path"
   echo "  enabled: $enabled"
+  if [[ ! -f "$state_path" ]]; then
+    echo "  state_note: missing; defaults disabled"
+  elif [[ "$enabled" != "True" ]]; then
+    echo "  state_note: disabled; workflows fall back to Markdown/chat unless repo config and runtime are available"
+  else
+    echo "  state_note: enabled; repo visual_surfaces config is still required for workflow routing"
+  fi
   echo "  provider: lavish-axi"
   echo "  command: $command_value"
   echo "  artifact_root: $artifact_root"
+  echo "  routing_note: user plugin state alone does not activate workflows; configure beislid:visual_surfaces in workflow.md"
   if [[ -n "$binary" ]] && command -v "$binary" >/dev/null 2>&1; then
     echo "  light_probe: ok ($binary)"
   elif [[ -n "$binary" ]]; then
     echo "  light_probe: missing ($binary)"
+    echo "  fallback: configured command binary unavailable; Markdown/chat remains canonical"
   else
     echo "  light_probe: failed (empty command)"
+    echo "  fallback: configure a non-empty Lavish command or continue in Markdown/chat"
   fi
   if [[ "$deep_check" == 1 ]]; then
     echo "  deep_check_note: may invoke the configured Lavish command and touch npm/network/cache"
