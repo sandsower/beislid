@@ -27,6 +27,7 @@
     },
     "unattended-auto": {
       "rules": { "dependency-install": "allow", "git-remote": "allow" },
+      "sandbox": { "minimum": "non-default-branch", "on_uncommitted_changes": "allow" },
       "actions": {
         "dependency.install": "allow",
         "ticket.fetch": "allow",
