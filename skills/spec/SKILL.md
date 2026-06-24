@@ -35,7 +35,7 @@ Collect any supplied context:
 
 If working inside a repo, do light codebase exploration before asking detailed questions. Search for existing patterns, data models, API boundaries, and test coverage that affect the product decision. Record facts, not opinions.
 
-Optional visual routing: only when repo-level `beislid:visual_surfaces` config exists and the effective `spec` mode is active, load the per-skill auxiliary `visual-surface-protocol.md` before presenting approval/revision surfaces. It mirrors canonical `.beislid/visual-surface-protocol.md` so copied skill installs stay readable. Use its `BEISLID_VISUAL_PROMPT_V1` envelope for supplemental Lavish HTML review; keep Markdown/chat spec text canonical, and treat freeform visual annotations as advisory unless a typed workflow-gate response approves or requests revision.
+Optional visual routing: only when repo-level `beislid:visual_surfaces` config exists and the effective `spec` mode is active, load the per-skill auxiliary `visual-surface-protocol.md` before the Step 5 approval/revision surface. It mirrors canonical `.beislid/visual-surface-protocol.md` so copied skill installs stay readable. Use its `BEISLID_VISUAL_PROMPT_V1` envelope for supplemental Lavish HTML review; keep Markdown/chat spec text canonical, and treat freeform visual annotations as advisory unless a typed workflow-gate response approves or requests revision.
 
 ## Step 2: Identify unknowns
 
@@ -74,6 +74,8 @@ Before writing an artifact, present the proposed spec in concise sections and as
 - Work Contract fields when downstream automation needs a stable handoff
 
 Do not proceed until the user approves the product direction.
+
+Optional Lavish review loop: if Step 1 found active `beislid:visual_surfaces` routing for `spec`, apply `visual-surface-protocol.md` here. Respect the effective mode exactly: `suggest` only mentions the option; `prompt` asks before generating/opening and falls back to Markdown/chat if declined or unattended without permission; `auto` may generate/open only within action-policy boundaries and must announce the HTML path before waiting for feedback. The generated surface is supplemental and should use the protocol's `review_spec` prompt, plan/comparison layout guidance, and approve/revise typed gate controls. Copy any requested visual revisions into the Markdown spec, then ask for explicit approval of the canonical Markdown/chat spec; never let a visual control bypass this approval gate.
 
 ## Step 6: Finalize the approved spec
 
