@@ -35,6 +35,8 @@ Collect any supplied context:
 
 If working inside a repo, do light codebase exploration before asking detailed questions. Search for existing patterns, data models, API boundaries, and test coverage that affect the product decision. Record facts, not opinions.
 
+Optional visual routing: only when repo-level `beislid:visual_surfaces` config exists and the effective `spec` mode is active, load `visual-surface-protocol.md` (the per-skill auxiliary link to canonical `.beislid/visual-surface-protocol.md`) before presenting approval/revision surfaces. Use its `BEISLID_VISUAL_PROMPT_V1` envelope for supplemental Lavish HTML review; keep Markdown/chat spec text canonical, and treat freeform visual annotations as advisory unless a typed workflow-gate response approves or requests revision.
+
 ## Step 2: Identify unknowns
 
 Write down 5–10 targeted questions about what you do not know. Frame them as questions, not statements. Focus on:

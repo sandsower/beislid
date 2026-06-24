@@ -924,6 +924,8 @@ Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visu
 
 Use `beislid plugin enable lavish` to enable local plugin state and `beislid plugin status lavish` for the light status check. `beislid plugin status lavish --check` may invoke the configured command and can touch npm/network/cache, so doctor does not run that deep check automatically.
 
+When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill auxiliary link. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, and the `BEISLID_VISUAL_PROMPT_V1` prompt envelope. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
+
 ## Workflow signals
 
 `workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic signal; configured sinks decide how to present it locally. In v1 the supported sink is `tmux-glance`, which annotates the current tmux window/tab when the external `tmux-glance` CLI is available. The Pi-managed Beislið wrapper also surfaces emitted signals in Pi's status/title UI and emits a best-effort start signal when a managed Beislið skill command begins.

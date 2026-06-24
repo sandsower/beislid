@@ -7,6 +7,8 @@ credential_guard.json next to this file or pointing CREDENTIAL_GUARD_CONFIG
 at a JSON path.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

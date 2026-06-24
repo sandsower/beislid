@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Guard visual_surfaces workflow config references from drifting.
 
-The Visual surfaces workflow key is intentionally docs/instruction driven in Phase 1b:
+The Visual surfaces workflow key is intentionally docs/instruction driven:
 workflow grammar is the source of truth, doctor validates it, setup can write it,
-and probe semantics describe the validation-only plugin-state behavior. This
-static check keeps those surfaces in sync without invoking Lavish.
+probe semantics describe validation-only plugin-state behavior, and the protocol
+file defines prompt-envelope semantics. This static check keeps those surfaces in
+sync without invoking Lavish.
 """
 
 from __future__ import annotations
@@ -19,6 +20,16 @@ REQUIRED_REFERENCES = {
         "visual_surfaces",
         "lavish-axi",
         "off | suggest | prompt | auto",
+        ".beislid/visual-surface-protocol.md",
+        "BEISLID_VISUAL_PROMPT_V1",
+    ],
+    ".beislid/visual-surface-protocol.md": [
+        "BEISLID_VISUAL_PROMPT_V1",
+        "BEISLID_VISUAL_FEEDBACK_V1",
+        "Freeform annotations/messages",
+        "Typed workflow-gate input",
+        "Markdown/chat",
+        "lavish-axi",
     ],
     ".beislid/probe-semantics.md": [
         "visual_surfaces validation",
@@ -42,6 +53,22 @@ REQUIRED_REFERENCES = {
         "Visual surfaces",
         "beislid:visual_surfaces",
         "user-level plugin enablement alone is not enough",
+        ".beislid/visual-surface-protocol.md",
+        "BEISLID_VISUAL_PROMPT_V1",
+    ],
+    "skills/spec/SKILL.md": [
+        "beislid:visual_surfaces",
+        "visual-surface-protocol.md",
+        "canonical `.beislid/visual-surface-protocol.md`",
+        "BEISLID_VISUAL_PROMPT_V1",
+        "freeform visual annotations",
+        "typed workflow-gate response",
+    ],
+    "skills/spec/visual-surface-protocol.md": [
+        "BEISLID_VISUAL_PROMPT_V1",
+        "BEISLID_VISUAL_FEEDBACK_V1",
+        "Freeform annotations/messages",
+        "Typed workflow-gate input",
     ],
 }
 

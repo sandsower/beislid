@@ -5,6 +5,8 @@ Requires `name` and `description` keys, both non-empty strings. Exits 1 on
 any violation, printing one line per failure.
 """
 
+from __future__ import annotations
+
 import pathlib
 import re
 import sys
