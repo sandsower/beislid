@@ -267,6 +267,64 @@ class VisualFeedbackTests(unittest.TestCase):
         self.assertEqual(result["reason"], "ambiguous_typed_feedback")
         self.assertIsNone(result["decision"])
 
+    def test_unknown_schema_payload_falls_to_manual_review(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V2
+            workflow: spec
+            action: approve_or_revise_spec
+            decision: approve
+            """
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "unknown_schema")
+        self.assertIsNone(result["decision"])
+
+    def test_schema_payload_plus_unknown_schema_payload_is_ambiguous(self) -> None:
+        result = self.normalize(
+            """
+            ```yaml
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: spec
+            action: approve_or_revise_spec
+            decision: approve
+            ```
+
+            ```yaml
+            schema: BEISLID_VISUAL_FEEDBACK_V2
+            workflow: spec
+            action: launch_downstream_workflow
+            decision: approve
+            ```
+            """
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "ambiguous_typed_feedback")
+        self.assertIsNone(result["decision"])
+
+    def test_schema_payload_plus_unfenced_unknown_schema_payload_is_ambiguous(self) -> None:
+        result = self.normalize(
+            """
+            ```yaml
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: spec
+            action: approve_or_revise_spec
+            decision: approve
+            ```
+
+            schema: BEISLID_VISUAL_FEEDBACK_V2
+            workflow: spec
+            action: launch_downstream_workflow
+            decision: approve
+            """
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "ambiguous_typed_feedback")
+        self.assertIsNone(result["decision"])
+
     def test_schema_payload_plus_legacy_unknown_action_is_ambiguous(self) -> None:
         result = self.normalize(
             """

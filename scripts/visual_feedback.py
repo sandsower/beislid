@@ -77,8 +77,9 @@ def normalize_visual_feedback(
             return _manual(parse_error, raw, expected_workflow, expected_action)
         if parsed is None:
             return _manual("missing_typed_feedback", raw, expected_workflow, expected_action)
-        parsed["schema"] = SCHEMA
-        legacy_schema_omitted = True
+        if "schema" not in parsed:
+            parsed["schema"] = SCHEMA
+            legacy_schema_omitted = True
     else:
         if _outside_fences_has_legacy_shape(raw):
             return _manual("ambiguous_typed_feedback", raw, expected_workflow, expected_action)
@@ -231,6 +232,8 @@ def _parse_legacy_payload(raw: str) -> tuple[dict[str, Any] | None, str | None]:
         if parsed in (_MALFORMED_TYPED_PAYLOAD, _DUPLICATE_JSON_KEY_PAYLOAD):
             return None, "malformed_payload"
         if isinstance(parsed, dict) and "schema" in parsed:
+            if _text(parsed.get("schema")):
+                return parsed, None
             return None, "malformed_payload"
         if isinstance(parsed, dict) and _is_legacy_typed_payload(parsed):
             typed_payloads.append(parsed)
@@ -245,6 +248,7 @@ def _parse_legacy_payload(raw: str) -> tuple[dict[str, Any] | None, str | None]:
 def _parse_payload(raw: str) -> tuple[dict[str, Any] | None, str | None]:
     candidates = _payload_candidates(raw)
     typed_payloads: list[dict[str, Any]] = []
+    unknown_schema_payloads: list[dict[str, Any]] = []
     saw_malformed_schema_payload = False
 
     for candidate in candidates:
@@ -255,19 +259,28 @@ def _parse_payload(raw: str) -> tuple[dict[str, Any] | None, str | None]:
             parsed = _json_loads_reject_duplicates(stripped)
         except json.JSONDecodeError:
             parsed = _parse_minimal_yaml(candidate)
-        if isinstance(parsed, dict) and _text(parsed.get("schema")) == SCHEMA:
-            typed_payloads.append(parsed)
+        if isinstance(parsed, dict) and "schema" in parsed:
+            schema = _text(parsed.get("schema"))
+            if schema == SCHEMA:
+                typed_payloads.append(parsed)
+            elif schema:
+                unknown_schema_payloads.append(parsed)
+            else:
+                saw_malformed_schema_payload = True
         elif isinstance(parsed, dict) and _is_legacy_typed_payload(parsed):
             typed_payloads.append(parsed)
         elif parsed in (_MALFORMED_TYPED_PAYLOAD, _DUPLICATE_JSON_KEY_PAYLOAD):
             saw_malformed_schema_payload = True
 
-    if len(typed_payloads) > 1:
+    schema_payloads = typed_payloads + unknown_schema_payloads
+    if len(schema_payloads) > 1:
         return None, "ambiguous_typed_feedback"
-    if len(typed_payloads) == 1 and saw_malformed_schema_payload:
+    if len(schema_payloads) == 1 and saw_malformed_schema_payload:
         return None, "ambiguous_typed_feedback"
     if len(typed_payloads) == 1:
         return typed_payloads[0], None
+    if len(unknown_schema_payloads) == 1:
+        return unknown_schema_payloads[0], None
     if saw_malformed_schema_payload:
         return None, "malformed_payload"
     return None, None
