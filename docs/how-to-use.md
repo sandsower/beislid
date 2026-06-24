@@ -115,7 +115,7 @@ Fresh-reader path:
 
 4. Run `/doctor` to validate the repo config shape. Doctor and normal `plugin status` do not deep-invoke Lavish. Use `beislid plugin status lavish --check` only when you deliberately want to run the configured command and accept possible npm/network/cache activity.
 
-Fallbacks are safe by default: disabled plugin state, absent or disabled repo config, missing `npx` or another configured binary, failed deep checks, runtime failures, or a declined visual prompt all fall back to the normal Markdown/chat workflow gate. See [Configuration: Visual surfaces](./configuration.md#visual-surfaces) for troubleshooting details and the Beislið/Lavish ownership boundary.
+Fallbacks are safe by default: disabled plugin state, absent or disabled repo config, missing `npx` or another configured binary, failed deep checks, runtime failures, a declined visual prompt, unknown typed action, malformed payload, or freeform-only feedback all fall back to the normal Markdown/chat workflow gate. Typed `BEISLID_VISUAL_FEEDBACK_V1` gate feedback is separate from freeform annotations and must be copied into the canonical Markdown/chat record before it affects routing. See [Configuration: Visual surfaces](./configuration.md#visual-surfaces) for troubleshooting details and the Beislið/Lavish ownership boundary.
 
 ## Common paths
 

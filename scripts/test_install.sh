@@ -891,6 +891,7 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   cp "$REPO_DIR/scripts/run_ledger.py" "$libexec/scripts/run_ledger.py"
   cp "$REPO_DIR/scripts/action_policy.py" "$libexec/scripts/action_policy.py"
   cp "$REPO_DIR/scripts/validate_export.py" "$libexec/scripts/validate_export.py"
+  cp "$REPO_DIR/scripts/visual_feedback.py" "$libexec/scripts/visual_feedback.py"
   cp "$REPO_DIR/install.sh" "$libexec/install.sh"
   chmod +x "$libexec/bin/beislid"
   ln -s "$libexec/bin/beislid" "$cellar/bin/beislid"
@@ -909,6 +910,7 @@ test_homebrew_formula_draft_installs_runtime_subset() {
   assert_file_contains "$formula" "scripts/run_ledger.py"
   assert_file_contains "$formula" "scripts/action_policy.py"
   assert_file_contains "$formula" "scripts/validate_export.py"
+  assert_file_contains "$formula" "scripts/visual_feedback.py"
   assert_file_contains "$formula" "install.sh"
   assert_file_contains "$formula" "Full Homebrew support"
 }

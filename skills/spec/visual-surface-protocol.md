@@ -1,6 +1,6 @@
 # Beislið visual surface protocol v1
 
-Reusable contract for optional Lavish-backed visual review surfaces. This protocol is intentionally convention-level: Markdown/chat artifacts remain canonical, while HTML surfaces and visual feedback are supplemental unless a future repo config explicitly preserves them.
+Reusable contract for optional Lavish-backed visual review surfaces. Markdown/chat artifacts remain canonical, while HTML surfaces and visual feedback are supplemental. Phase 2 hardens the typed feedback lane with a small Beislið-owned validation/normalization helper; Lavish remains optional and is never durable proof storage.
 
 ## Activation
 
@@ -22,9 +22,9 @@ Mode behavior:
 
 Beislið owns:
 
-- Repo config shape, effective-mode routing, prompt semantics, and fallback language.
-- The canonical Markdown/chat record and any typed workflow-gate decision it accepts.
+- Repo config shape, effective-mode routing, prompt semantics, typed feedback validation, normalization, fallback language, and the canonical Markdown/chat record it accepts.
 - The HTML artifact content it writes before invoking a provider.
+- The optional parser/helper contract in `scripts/visual_feedback.py`; hosts may call it, reimplement the same semantics, or fall back to manual Markdown/chat review.
 
 Lavish owns:
 
@@ -32,7 +32,7 @@ Lavish owns:
 - Visual annotation UI, freeform message capture, and any provider-local artifact indexes.
 - Provider-specific command options beyond the stable Beislið prompt contract.
 
-Do not make Lavish required for a Beislið workflow. Disabled user plugin state, absent repo config, `mode: off`, missing `npx` or another configured binary, failed deep checks, declined prompts, command invocation failures, editor launch failures, and feedback retrieval failures all fall back to canonical Markdown/chat gates.
+Do not make Lavish required for a Beislið workflow. Disabled user plugin state, absent repo config, `mode: off`, missing `npx` or another configured binary, failed deep checks, declined prompts, command invocation failures, editor launch failures, feedback retrieval failures, unavailable parser support, and `manual_review` parser results all fall back to canonical Markdown/chat gates.
 
 ## Creating Lavish-ready HTML review surfaces
 
@@ -60,10 +60,10 @@ A `spec` HTML artifact should use Lavish `plan` and `comparison` playbook guidan
 
 - Plan-oriented sections: problem statement, current state, desired state, user stories/acceptance outcomes, key decisions, out of scope, and any Work Contract fields.
 - Comparison-oriented sections: side-by-side current vs desired behavior, accepted vs deferred decisions, must-change vs nice-to-have feedback lanes, and a clear approve/revise decision card.
-- Controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `decision: approve` or `decision: revise`; freeform annotations remain advisory.
+- Controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `decision: approve` or `decision: revise`; `request_changes` and similar request-change wording normalize to `revise`. Freeform annotations remain advisory.
 - Source context: include the ticket id/title when known, canonical Markdown artifact path when one exists, or a chat-boundary note when approval has not yet been written to a file.
 
-After feedback returns, copy any accepted revision request into the canonical Markdown/chat spec before asking for final approval or routing downstream. A visual `approve` response can satisfy the review decision only when it is a typed gate response for `workflow: spec` and `action: approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved.
+After feedback returns, normalize the typed lane before using it. A visual `approve` response can satisfy the review decision only when it validates as an accepted typed gate response for `workflow: spec` and canonical action `approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved. A visual `revise` response means copy the accepted revision request into the canonical Markdown/chat spec, apply `must_change` items, and run another gate. A `manual_review` result, freeform-only feedback, unknown action, unknown decision, malformed payload, or parser-unavailable host continues through the normal Markdown/chat approval/revision gate.
 
 ## Provider invocation expectations
 
@@ -114,6 +114,7 @@ feedback_contract:
     response_schema: BEISLID_VISUAL_FEEDBACK_V1
     allowed_decisions: [approve, revise]
     fields:
+      schema: BEISLID_VISUAL_FEEDBACK_V1
       workflow: spec
       action: approve_or_revise_spec
       decision: approve | revise
@@ -121,17 +122,61 @@ feedback_contract:
       revision_summary: optional short revision request
       must_change: []
       nice_to_have: []
+    backward_compatibility:
+      omitted_schema: accepted only for legacy Phase 1 flat payloads with workflow/action/decision
+      action_aliases:
+        review_spec: approve_or_revise_spec
+      decision_aliases:
+        request_changes: revise
+        changes_requested: revise
+        request_revision: revise
 fallback:
   canonical_if_unavailable: Continue in Markdown/chat and ask for the same approve/revise gate there.
 ```
 
-The prompt may add human-readable instructions before or after the YAML, but the single schema token and field names above are the portable contract.
+The prompt may add human-readable instructions before or after the YAML, but the single prompt schema token and field names above are the portable contract.
+
+## Feedback validation and normalization
+
+Visual feedback has three outcomes:
+
+- `accepted`: one typed workflow-gate input validates for the current workflow/action and normalizes to an allowed decision.
+- `manual_review`: no typed gate is present, the payload is malformed, the schema/workflow/action does not match, or the decision is unknown. Manual review is safe fallback, not failure approval.
+- `unavailable`: the visual provider or host parser cannot return feedback. Continue in Markdown/chat.
+
+The optional repository helper is dependency-free and does not invoke Lavish:
+
+```bash
+python3 scripts/visual_feedback.py --expected-workflow spec --expected-action approve_or_revise_spec feedback.txt
+```
+
+It prints a normalized JSON event with `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.
+
+For v1, the canonical action vocabulary is intentionally small:
+
+| Workflow | Canonical typed action | Accepted decisions | Backward-compatible aliases |
+| --- | --- | --- | --- |
+| `spec` | `approve_or_revise_spec` | `approve`, `revise` | legacy Phase 1 flat payloads may omit `schema` when `workflow`/`action`/`decision` are present; action `review_spec`; decisions `request_changes`, `changes_requested`, `request_revision` → `revise` |
+
+Unknown workflows, actions, decisions, duplicate fields, multiple typed payloads, or mixed valid/malformed payloads must produce `manual_review`. They must never silently approve, auto-route downstream, or bypass action-policy gates.
 
 ## Feedback semantics
 
 Visual feedback has two lanes:
 
 - **Freeform annotations/messages**: comments, highlights, sketches, and chat-like notes created in the visual editor. These are useful revision evidence but never count as approval, rejection, or a workflow-gate answer by themselves.
-- **Typed workflow-gate input**: an explicit `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow`, `action`, `decision`, and revision/approval fields. Beislið may use this as the workflow gate only when it matches the current workflow/action and the decision is unambiguous.
+- **Typed workflow-gate input**: an explicit `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow`, `action`, `decision`, and revision/approval fields. Beislið may use this as the workflow gate only when it validates against the current workflow/action and the decision is unambiguous.
 
-For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text after the approval is visibly recorded there. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances; visual controls never bypass the explicit spec approval record.
+For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text after the approval is visibly recorded there. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances; visual controls never bypass the explicit spec approval record or action-policy gates.
+
+## Canonical record audit requirements
+
+When a workflow consumes visual feedback, the canonical Markdown/chat record must include an auditable note before proceeding:
+
+- visual surface path when known;
+- typed feedback status (`accepted`, `manual_review`, or `unavailable`);
+- accepted `workflow`, `action`, `decision`, and any `approval_note`, `revision_summary`, `must_change`, or `nice_to_have` fields;
+- fallback/manual-review reason for freeform-only, malformed, unknown, mismatched, or parser-unavailable feedback;
+- the downstream decision: approved canonical Markdown, revised canonical Markdown, or continued manual Markdown/chat gate.
+
+This record is what downstream Beislið workflows consume. Lavish runtime state and local annotations are supporting context only unless a future repo policy explicitly preserves them.
