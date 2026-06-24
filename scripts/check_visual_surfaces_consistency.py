@@ -30,6 +30,10 @@ REQUIRED_REFERENCES = {
         "Typed workflow-gate input",
         "Markdown/chat",
         "lavish-axi",
+        "Spec review surface loop",
+        "review_spec",
+        "plan` and `comparison` playbook guidance",
+        "approve_or_revise_spec",
     ],
     ".beislid/probe-semantics.md": [
         "visual_surfaces validation",
@@ -63,12 +67,27 @@ REQUIRED_REFERENCES = {
         "BEISLID_VISUAL_PROMPT_V1",
         "freeform visual annotations",
         "typed workflow-gate response",
+        "review_spec",
+        "plan/comparison layout guidance",
+        "explicit approval of the canonical Markdown/chat spec",
     ],
     "skills/spec/visual-surface-protocol.md": [
         "BEISLID_VISUAL_PROMPT_V1",
         "BEISLID_VISUAL_FEEDBACK_V1",
         "Freeform annotations/messages",
         "Typed workflow-gate input",
+        "Spec review surface loop",
+        "review_spec",
+    ],
+    "docs/plans/2026-06-24-bei-2-spec-visual-feedback-loop-dry-run.md": [
+        "Absent repo config",
+        "`suggest`",
+        "`prompt`",
+        "`auto`",
+        "Unavailable provider",
+        "Declined provider path",
+        "BEISLID_VISUAL_PROMPT_V1",
+        "Markdown-primary approval check",
     ],
 }
 

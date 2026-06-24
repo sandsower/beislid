@@ -45,6 +45,26 @@ When visual routing is active, create a repo-local HTML artifact before provider
 5. Do not embed secrets, hidden chain-of-thought, auth headers, or unrelated transcript content.
 6. Treat the HTML as supplemental. Preserve or discard it according to repo policy; absent explicit preservation config, the canonical record is still Markdown/chat.
 
+## Spec review surface loop
+
+The Phase 1 `spec` integration uses this protocol only at the approval/revision boundary, after the draft product spec is presentable and before downstream routing. Markdown/chat remains the canonical spec record.
+
+Effective mode handling for `spec`:
+
+- absent config or `off`: do not mention or invoke Lavish; continue with the normal Markdown/chat approval gate.
+- `suggest`: mention that a supplemental visual review surface may help compare the problem, desired state, decisions, and acceptance outcomes; do not generate or open one unless the user/host explicitly routes there.
+- `prompt`: ask before generating/opening in interactive runs; in unattended runs, fall back to Markdown/chat unless the run envelope has already granted permission to open visual surfaces.
+- `auto`: generate/open only inside the configured workflow/action-policy boundary, then visibly tell the user the HTML path and prompt contract before waiting for visual feedback.
+
+A `spec` HTML artifact should use Lavish `plan` and `comparison` playbook guidance without making Lavish required:
+
+- Plan-oriented sections: problem statement, current state, desired state, user stories/acceptance outcomes, key decisions, out of scope, and any Work Contract fields.
+- Comparison-oriented sections: side-by-side current vs desired behavior, accepted vs deferred decisions, must-change vs nice-to-have feedback lanes, and a clear approve/revise decision card.
+- Controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `decision: approve` or `decision: revise`; freeform annotations remain advisory.
+- Source context: include the ticket id/title when known, canonical Markdown artifact path when one exists, or a chat-boundary note when approval has not yet been written to a file.
+
+After feedback returns, copy any accepted revision request into the canonical Markdown/chat spec before asking for final approval or routing downstream. A visual `approve` response can satisfy the review decision only when it is a typed gate response for `workflow: spec` and `action: approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved.
+
 ## Provider invocation expectations
 
 Resolve the command in this order:
@@ -114,4 +134,4 @@ Visual feedback has two lanes:
 - **Freeform annotations/messages**: comments, highlights, sketches, and chat-like notes created in the visual editor. These are useful revision evidence but never count as approval, rejection, or a workflow-gate answer by themselves.
 - **Typed workflow-gate input**: an explicit `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow`, `action`, `decision`, and revision/approval fields. Beislið may use this as the workflow gate only when it matches the current workflow/action and the decision is unambiguous.
 
-For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances.
+For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text after the approval is visibly recorded there. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances; visual controls never bypass the explicit spec approval record.
