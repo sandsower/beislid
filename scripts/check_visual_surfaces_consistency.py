@@ -59,7 +59,7 @@ REQUIRED_REFERENCES = {
     "skills/spec/SKILL.md": [
         "beislid:visual_surfaces",
         "visual-surface-protocol.md",
-        "canonical `.beislid/visual-surface-protocol.md`",
+        "mirrors canonical `.beislid/visual-surface-protocol.md`",
         "BEISLID_VISUAL_PROMPT_V1",
         "freeform visual annotations",
         "typed workflow-gate response",
@@ -86,6 +86,12 @@ def main() -> int:
         for needle in needles:
             if needle not in text:
                 errors.append(f"{rel}: missing required visual_surfaces reference `{needle}`")
+
+    canonical = root / ".beislid/visual-surface-protocol.md"
+    spec_aux = root / "skills/spec/visual-surface-protocol.md"
+    if canonical.exists() and spec_aux.exists():
+        if canonical.read_text(encoding="utf-8") != spec_aux.read_text(encoding="utf-8"):
+            errors.append("skills/spec/visual-surface-protocol.md: must mirror canonical .beislid/visual-surface-protocol.md")
 
     if errors:
         for error in errors:

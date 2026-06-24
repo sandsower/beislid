@@ -1299,6 +1299,12 @@ test_cli_project_copy_install_explicit_path() {
     assert_json_field "$project/.agents/skills/$skill/.beislid-owner.json" mode copy
     assert_json_field "$project/.agents/skills/$skill/.beislid-owner.json" skill "$skill"
   done
+  for host in agents claude codex; do
+    assert_file_exists "$project/.$host/skills/spec/visual-surface-protocol.md"
+    assert_not_symlink "$project/.$host/skills/spec/visual-surface-protocol.md"
+    assert_file_contains "$project/.$host/skills/spec/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
+  done
+
   local manifest="$project/.beislid/project-install.json"
   assert_json_field "$manifest" source_path "$REPO_DIR"
   assert_json_field "$manifest" project_path "$project"

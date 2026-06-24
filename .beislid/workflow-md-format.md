@@ -174,7 +174,7 @@ workflows:
 
 `mode` controls proactive use: `off` disables visual routing, `suggest` mentions that a visual surface may help, `prompt` asks before opening/invoking one, and `auto` allows configured workflows to open/invoke without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. `command` defaults to the enabled Lavish plugin command, then `npx -y lavish-axi`; doctor validates shape but should not deep-invoke the command. `artifact_root` defaults to `.lavish` and must be a relative repo-local path with no `..` segments. Repo config is required for proactive routing; user-level plugin enablement alone is not enough.
 
-When a workflow's effective visual-surface mode is active, load the portable Lavish contract from canonical `.beislid/visual-surface-protocol.md` or that workflow skill's auxiliary link to it. That protocol defines the supplemental HTML review surface rules, provider boundary, fallback behavior, and the `BEISLID_VISUAL_PROMPT_V1` prompt envelope. Workflows must not claim Lavish routing is active without repo-level `beislid:visual_surfaces` config.
+When a workflow's effective visual-surface mode is active, load the portable Lavish contract from canonical `.beislid/visual-surface-protocol.md` or that workflow skill's readable auxiliary copy. That protocol defines the supplemental HTML review surface rules, provider boundary, fallback behavior, and the `BEISLID_VISUAL_PROMPT_V1` prompt envelope. Workflows must not claim Lavish routing is active without repo-level `beislid:visual_surfaces` config.
 
 ## Workflow signals shape
 
