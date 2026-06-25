@@ -776,6 +776,34 @@ PY
 }
 
 
+test_beislid_repo_model_routing_configured() {
+  python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" || note_fail "expected repo workflow.md to dogfood step-aware model routing"
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding='utf-8')
+required = [
+    '```beislid:model_routing',
+    'defaults:',
+    'overrides:',
+    'kickoff',
+    'ready-for-review',
+    'step_hints:',
+    'mode: prefer',
+    'ticket_context',
+    'implementation_ready',
+    'gate_execution',
+    'fresh_eyes',
+    'tier: frontier',
+    'tier: standard',
+    'tier: light',
+    'tier: heavy',
+]
+missing = [needle for needle in required if needle not in text]
+if missing:
+    raise SystemExit(f'missing model_routing config: {missing}')
+PY
+}
+
 
 test_status_after_install() {
   run_installer
@@ -1815,6 +1843,7 @@ run_test "pi package manifest includes default extensions"     test_pi_package_m
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "repo workflow dogfoods model routing"               test_beislid_repo_model_routing_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks

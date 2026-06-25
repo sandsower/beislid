@@ -106,7 +106,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `workflow_signals` — optional local workflow-state signal fan-out. Fields: `mode` (`off | auto`, default `auto`), `sinks[]` (v1 supports `type: tmux-glance`; future sink types are reserved), and optional `skills` map for per-skill mode overrides using the same enum. Beislið emits normalized states `working | blocked | waiting | verify | review | done | explore`; sinks consume them best-effort and must not block workflow progress. Workflow signals are local presence/status events, not tracker writes or quality gates.
 
 **Model routing:**
-- `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), and `skills` (required on overrides). `when` is reserved for future conditional routing and is not executable in v1.
+- `model_routing` — optional per-skill host model preferences. Fields: `defaults` (optional route object) and ordered `overrides[]` route objects. Route objects use `model` (single candidate shorthand) or `models` (ordered candidate list), optional `mode` (`prefer` / `require`, default `prefer`), `skills` (required on overrides), and optional ordered `step_hints` refinements for internal phases. `when` is reserved for future conditional routing and is not executable in v1.
 
 **Kickoff overrides:**
 - `explore` — fields: `skill` (Beislið skill name), `mode` (`replace` or `enhance`; default `enhance`). Put this block under a `## Kickoff` or `## Skill-specific overrides` section. Used by kickoff Step 2 before implementation design.
@@ -222,11 +222,31 @@ defaults:
   models: [sonnet]
   mode: prefer
 overrides:
-  - skills: [spec, blueprint, poke-holes]
+  - skills: [kickoff]
     models: [opus, openai:gpt-5.5]
-    mode: require
-  - skills: [implement, ready-for-review, review-response]
+    mode: prefer
+    step_hints:
+      - step: ticket_context
+        tier: frontier
+        mode: prefer
+      - step: context_discovery
+        tier: heavy
+        mode: prefer
+      - step: scope_classification
+        tier: heavy
+        mode: prefer
+      - step: implementation_ready
+        tier: standard
+        mode: prefer
+  - skills: [ready-for-review]
     model: sonnet
+    step_hints:
+      - step: gate_execution
+        tier: light
+        mode: prefer
+      - step: fresh_eyes
+        tier: heavy
+        mode: prefer
 tiers:
   light: [claude:haiku]
   standard: [claude:sonnet]
@@ -238,7 +258,9 @@ tier_mode: prefer
 
 `model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
 
-`tiers` is an optional map from provider-neutral capability tier names — exactly `light`, `standard`, `heavy`, `frontier`; other names are reserved — to ordered provider candidate lists (e.g. `heavy: [claude:opus, openai:gpt-5.5]`). Tiers are how envelope-authored slices declare capability needs without naming providers: export resolves a slice's tier through this table into `runner_extensions.model_routing.candidates`. When the repo omits `tiers`, Beislið resolves through the illustrative shipped defaults documented in `docs/configuration.md`. Optional `tier_mode` (`prefer` / `require`, default `prefer`) sets the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
+`step_hints` are ordered, skill-scoped refinements for internal phases. Each entry names a `step` and a capability `tier`; `mode` defaults to the enclosing route's mode when omitted. The current v1 step vocabulary is `ticket_context`, `context_discovery`, `scope_classification`, `design_review`, `implementation_ready`, `gate_execution`, `review`, `fresh_eyes`, `handoff`, `review_response`, `review_synthesis`, `feedback_intake`, `fix_and_reply`, `monitor`, `closeout`, `roundup`, and `debrief`. Unknown step names are reserved; doctor should warn, and export validation rejects them if they reach a bundle. Step hints stay backward-compatible with the broader skill route: when a step hint matches, the host may resolve that hint instead of the broader skill route; when no hint matches, the broader skill/default route still applies. Step hints are normalized into exported artifacts as self-contained `runner_extensions.model_routing.step_hints` records that repeat the owning skill and resolve `candidates`.
+
+`tiers` is an optional map from provider-neutral capability tier names to ordered provider candidate lists. The known tier vocabulary is exactly `light`, `standard`, `heavy`, and `frontier`; other names are reserved and warn in `doctor`. Tiers let `envelope`-authored slices and step hints declare how much model capability a slice or orchestrator phase needs without naming a provider: at export time the tier is resolved through this table into concrete candidates embedded in `runner_extensions.model_routing` and `runner_extensions.model_routing.step_hints`, which Rondo consumes at run time. Optional `tier_mode` (`prefer` / `require`, default `prefer`) is the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
 
 ## Babysit shape
 

@@ -399,6 +399,12 @@ test_model_routing_valid_tier_accepted() {
   expect_valid "$TMP/bundle"
 }
 
+test_model_routing_step_hints_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "heavy", "rationale": "kickoff context discovery", "mode": "prefer", "candidates": ["claude:opus"], "step_hints": [{"skill": "kickoff", "step": "ticket_context", "tier": "frontier", "mode": "prefer", "candidates": ["claude:opus", "openai:gpt-5.5"]}, {"skill": "ready-for-review", "step": "fresh_eyes", "tier": "heavy", "mode": "prefer", "candidates": ["claude:opus"]}]}'
+  expect_valid "$TMP/bundle"
+}
+
 test_model_routing_unknown_tier_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "mega", "mode": "prefer", "candidates": ["claude:opus"]}'
@@ -409,6 +415,18 @@ test_model_routing_bad_mode_rejected() {
   write_valid_bundle "$TMP/bundle"
   mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "heavy", "mode": "always", "candidates": ["claude:opus"]}'
   expect_invalid "$TMP/bundle" "model_routing.mode"
+}
+
+test_model_routing_unknown_step_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "mode": "prefer", "candidates": ["claude:sonnet"], "step_hints": [{"skill": "kickoff", "step": "mystery_phase", "tier": "heavy", "mode": "prefer", "candidates": ["claude:opus"]}]}'
+  expect_invalid "$TMP/bundle" "step_hints[0].step"
+}
+
+test_model_routing_malformed_step_hints_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "light", "mode": "prefer", "candidates": ["claude:haiku"], "step_hints": [{"skill": "", "step": "ticket_context", "tier": "heavy", "mode": "prefer", "candidates": []}]}'
+  expect_invalid "$TMP/bundle" "step_hints[0].skill"
 }
 
 test_model_routing_empty_candidates_rejected() {
@@ -476,8 +494,11 @@ run_test "parallel group with unknown slice rejected" test_parallel_group_unknow
 run_test "slice in two parallel groups rejected" test_slice_in_two_parallel_groups_rejected
 run_test "non-list parallel_groups rejected" test_nonlist_parallel_groups_rejected
 run_test "model_routing valid tier accepted" test_model_routing_valid_tier_accepted
+run_test "model_routing step_hints accepted" test_model_routing_step_hints_accepted
 run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_rejected
 run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
+run_test "model_routing unknown step rejected" test_model_routing_unknown_step_rejected
+run_test "model_routing malformed step_hints rejected" test_model_routing_malformed_step_hints_rejected
 run_test "model_routing empty candidates rejected" test_model_routing_empty_candidates_rejected
 run_test "model_routing absent accepted" test_model_routing_absent_accepted
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid

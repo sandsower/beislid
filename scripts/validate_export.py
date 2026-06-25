@@ -41,6 +41,27 @@ ALLOWED_SLICE_SCHEMAS = frozenset({"approved-slice-v1", "rondo-execution-request
 REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 KNOWN_TIERS = frozenset({"light", "standard", "heavy", "frontier"})
+KNOWN_STEP_HINT_STEPS = frozenset(
+    {
+        "ticket_context",
+        "context_discovery",
+        "scope_classification",
+        "design_review",
+        "implementation_ready",
+        "gate_execution",
+        "review",
+        "fresh_eyes",
+        "handoff",
+        "review_response",
+        "review_synthesis",
+        "feedback_intake",
+        "fix_and_reply",
+        "monitor",
+        "closeout",
+        "roundup",
+        "debrief",
+    }
+)
 ALLOWED_ROUTING_MODES = frozenset({"prefer", "require"})
 
 
@@ -175,8 +196,46 @@ def _validate_parallel_groups(
                     )
 
 
+def _validate_step_hints(name: str, routing: dict, errors: list[str]) -> None:
+    hints = routing.get("step_hints")
+    if hints is None:
+        return
+    prefix = f"{name}: runner_extensions.model_routing.step_hints"
+    if not isinstance(hints, list) or not hints:
+        errors.append(f"{prefix} must be a non-empty list of step hint objects")
+        return
+    for idx, hint in enumerate(hints):
+        hint_prefix = f"{prefix}[{idx}]"
+        if not isinstance(hint, dict):
+            errors.append(f"{hint_prefix} must be an object")
+            continue
+        step = hint.get("step")
+        if not _nonempty_string(step):
+            errors.append(f"{hint_prefix}.step must be a non-empty string")
+        elif step not in KNOWN_STEP_HINT_STEPS:
+            errors.append(
+                f"{hint_prefix}.step must be one of {sorted(KNOWN_STEP_HINT_STEPS)}, got {step!r}"
+            )
+        skill = hint.get("skill")
+        if not _nonempty_string(skill):
+            errors.append(f"{hint_prefix}.skill must be a non-empty string")
+        tier = hint.get("tier")
+        if tier not in KNOWN_TIERS:
+            errors.append(f"{hint_prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
+        mode = hint.get("mode")
+        if mode not in ALLOWED_ROUTING_MODES:
+            errors.append(f"{hint_prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
+        candidates = hint.get("candidates")
+        if (
+            not isinstance(candidates, list)
+            or not candidates
+            or not all(_nonempty_string(c) for c in candidates)
+        ):
+            errors.append(f"{hint_prefix}.candidates must be a non-empty list of non-empty strings")
+
+
 def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> None:
-    """Validate optional runner_extensions.model_routing tier hints; absent is valid."""
+    """Validate optional runner_extensions.model_routing tier and step hints; absent is valid."""
     extensions = manifest.get("runner_extensions")
     if not isinstance(extensions, dict):
         return
@@ -200,6 +259,7 @@ def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> Non
         or not all(_nonempty_string(c) for c in candidates)
     ):
         errors.append(f"{prefix}.candidates must be a non-empty list of non-empty strings")
+    _validate_step_hints(name, routing, errors)
 
 
 def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> None:

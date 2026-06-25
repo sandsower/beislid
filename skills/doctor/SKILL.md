@@ -178,6 +178,7 @@ Also check model routing:
 
 - `model_routing` is validation-only; doctor does not spend model budget probing candidate availability. Narrate `prefer` routes as advisory and `require` routes as blocking only when a host adapter cannot honor any candidate at runtime.
 - `model` and `models` are mutually exclusive; normalize `model` to a one-item list for summaries. Empty `models`, non-string candidates, unknown `mode`, missing override `skills`, or duplicate/empty skill names are failures.
+- `step_hints` on a route are validated as ordered objects with non-empty `step`, known `tier`, optional `mode`, and optional `rationale`; exported bundles normalize them into self-contained `{skill, step, tier, mode, candidates}` records. Unknown step names are warnings in doctor and export validation rejects them if they reach a bundle.
 - Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`. Namespaced provider strings are valid escape hatches; unknown bare strings should warn that host mapping may be unavailable.
 - `when` is reserved for conditional routing and inactive in v1. Warn and tell the user to remove it or track the conditional-routing issue; do not let it narrow or activate a route.
 

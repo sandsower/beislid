@@ -342,9 +342,10 @@ Configure the canonical `model_routing` block under `Model routing` or `Skill-sp
 
 Ask for an optional default route, then ordered skill overrides. For each route collect:
 
-- skills list (overrides only), using Beislið skill names such as `spec`, `blueprint`, `implement`, `review`, `fresh-eyes`, `ready-for-review`, and `review-response`
+- skills list (overrides only), using Beislių skill names such as `kickoff`, `ready-for-review`, `review-response`, `babysit`, `spec`, `blueprint`, `implement`, `review`, and `fresh-eyes`
 - model candidates as an ordered list; `model` may be written only as shorthand for a single candidate, otherwise write `models`
 - mode: `prefer` or `require`, default `prefer`
+- optional ordered `step_hints` for internal phases; each hint needs a `step` from the v1 routing vocabulary, a `tier`, optional `mode`, and optional rationale
 
 Prefer portable aliases (`opus`, `sonnet`, `haiku`, `default`, `host-default`), but allow namespaced provider strings as escape hatches. Do not collect `when:` conditions in v1; say conditional routing is reserved for later workflow support and should not be written as active config.
 
@@ -353,9 +354,25 @@ defaults:
   models: [sonnet]
   mode: prefer
 overrides:
-  - skills: [spec, blueprint, poke-holes]
+  - skills: [kickoff]
     models: [opus, openai:gpt-5.5]
-    mode: require
+    mode: prefer
+    step_hints:
+      - step: ticket_context
+        tier: frontier
+      - step: context_discovery
+        tier: heavy
+      - step: scope_classification
+        tier: heavy
+      - step: implementation_ready
+        tier: standard
+  - skills: [ready-for-review]
+    model: sonnet
+    step_hints:
+      - step: gate_execution
+        tier: light
+      - step: fresh_eyes
+        tier: heavy
 ```
 
 Never create duplicate `beislid:model_routing` blocks; update or remove the existing one.

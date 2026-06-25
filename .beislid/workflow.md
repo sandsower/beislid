@@ -169,6 +169,48 @@ Disabled — the repo doesn't run drafts through a formatter skill.
 
 Defaults apply: 5 files / 200 lines. No fenced block needed.
 
+## Model routing
+
+```beislid:model_routing
+defaults:
+  models: [sonnet]
+  mode: prefer
+overrides:
+  - skills: [kickoff]
+    models: [opus, openai:gpt-5.5]
+    mode: prefer
+    step_hints:
+      - step: ticket_context
+        tier: frontier
+        mode: prefer
+      - step: context_discovery
+        tier: heavy
+        mode: prefer
+      - step: scope_classification
+        tier: heavy
+        mode: prefer
+      - step: implementation_ready
+        tier: standard
+        mode: prefer
+  - skills: [ready-for-review]
+    model: sonnet
+    step_hints:
+      - step: gate_execution
+        tier: light
+        mode: prefer
+      - step: fresh_eyes
+        tier: heavy
+        mode: prefer
+tiers:
+  light: [claude:haiku]
+  standard: [claude:sonnet]
+  heavy: [claude:opus]
+  frontier: [claude:opus, openai:gpt-5.5]
+tier_mode: prefer
+```
+
+Step hints are ordered and route after the broad skill route; when absent, existing skill/default routing still applies.
+
 ## Probe cache
 
 ```beislid:probe_cache

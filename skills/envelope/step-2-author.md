@@ -45,6 +45,7 @@ For multi-ticket bundles, record what each producer emits (module/schema/API/fix
 - **autonomy mapping** — `allowed_actions: {run_mode, allow, ask, deny}` verbatim; default `run_mode: supervised-auto`.
 - **process_provider** — default `{name: claude_code}`; approval may override per slice.
 - **AFK eligibility** — judge against rubric (`rubric_path` override, else `afk-rubric.md`); record `rubric_version` (default `afk-rubric-v1`) and evidence.
+- **step_hints** — optional ordered phase hints when a slice or its upstream planning context needs different tiers across internal phases; normalize them from the workflow config into exported `runner_extensions.model_routing.step_hints` records with `skill`, `step`, `tier`, `mode`, `rationale`, and resolved `candidates`.
 
 ### Probe-evidence gate (hard)
 

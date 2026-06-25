@@ -603,11 +603,11 @@ Revision mode is self-detecting: re-running `/envelope` with an exported manifes
 
 `bundle.json` carries the BEI-17 required fields: `kind` (`approved-slice-plan-export-v0`), `version`, `status`, `generated_from`, `source_work_contract`, `slice_plan` (which may carry `parallel_groups`: a list of lists of slice ids that can run concurrently — every id must be a known child, each slice appears in at most one group, and no group may contain two slices where one depends transitively on the other), `children` (entries `{id, source_ticket}`; `source_ticket` is optional but must be a non-empty string when present), `dependency_graph` (adjacency map of slice id → dependency ids spanning all slices from all tickets in the bundle; must be acyclic, and a slice absent from the map implicitly has no dependencies), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by` from git identity after an explicit per-envelope verdict), `runner_extensions`, `validation`, and `ownership`, plus an explicit `supersedes` key (`null` for a first export, the prior `bundle.json` sha256 for revisions). Only `status: approved` bundles are exportable — draft, paused, or superseded plans fail validation (fail-closed). Per-envelope verdicts isolate failures: rejecting or demoting one slice drops it and its edges from the exported graph, slices that depend (directly or transitively) on a dropped slice are themselves demoted to HITL, and export proceeds with the remainder.
 
-Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. When a slice carries a capability tier, `runner_extensions.model_routing` is `{tier, rationale, mode, candidates}`: `tier` is one of `light|standard|heavy|frontier` with the authoring rationale, `mode` is `prefer|require` (default `prefer`), and `candidates` is the ordered provider list resolved at export from the `model_routing` `tiers` table (repo override, else the shipped defaults — see Model routing). Rondo consumes the hint at run time; absent `model_routing` is valid. All machine files are JSON; YAML remains a human approval rendering.
+Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. When a slice carries a capability tier, `runner_extensions.model_routing` is `{tier, rationale, mode, candidates}`: `tier` is one of `light|standard|heavy|frontier` with the authoring rationale, `mode` is `prefer|require` (default `prefer`), and `candidates` is the ordered provider list resolved at export from the `model_routing` `tiers` table (repo override, else the shipped defaults — see Model routing). When a slice or its upstream planning context also needs step-aware hints, `runner_extensions.model_routing.step_hints` is an ordered list of self-contained records `{skill, step, tier, mode, rationale, candidates}`; `skill` is the orchestrator skill name, `step` is one of the documented v1 step identifiers, `tier`/`mode` use the same vocabulary, and `candidates` is resolved from the same tier table at export. Rondo consumes the hint at run time; absent `model_routing` is valid. All machine files are JSON; YAML remains a human approval rendering.
 
 AFK eligibility is judged against a versioned rubric: the current default lives at `skills/envelope/afk-rubric.md` (`afk-rubric-v1`), a repo may override it via `rubric_path` in the `beislid:envelope` workflow.md block (repo-override-first resolution), and whichever rubric was judged against is recorded as `validation.rubric_version` in `bundle.json` — the validator rejects versions it does not know.
 
-`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, `source_ticket` shape, `parallel_groups` consistency (known ids, one group per slice, no dependent pairs in a group), known slice schemas and rubric versions, repo pinning, approval metadata, version/supersedes pairing, and optional `runner_extensions.model_routing` tier/mode/candidate shape. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
+`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, `source_ticket` shape, `parallel_groups` consistency (known ids, one group per slice, no dependent pairs in a group), known slice schemas and rubric versions, repo pinning, approval metadata, version/supersedes pairing, and optional `runner_extensions.model_routing` tier/mode/candidate/step_hints shape. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
 
 ## Proof Requirement v1
 
@@ -817,7 +817,7 @@ Local Pi overrides are extension-owned JSON files. User-global settings live at 
 
 ## Model routing
 
-`model_routing` lets a repo describe which host model candidates should run each Beislið skill. It is a host hint plus enforcement contract, not a guarantee that every host can switch the currently running model. Hosts should report whether routing was honored, unsupported, fallen back, or blocked.
+`model_routing` lets a repo describe which host model candidates should run each Beisliš skill. It is a host hint plus enforcement contract, not a guarantee that every host can switch the currently running model. Hosts should report whether routing was honored, unsupported, fallen back, or blocked.
 
 ````markdown
 ## Model routing
@@ -827,25 +827,49 @@ defaults:
   models: [sonnet]
   mode: prefer
 overrides:
-  - skills: [spec, blueprint, poke-holes]
+  - skills: [kickoff]
     models: [opus, openai:gpt-5.5]
-    mode: require
-  - skills: [implement, ready-for-review, review-response]
+    mode: prefer
+    step_hints:
+      - step: ticket_context
+        tier: frontier
+        mode: prefer
+      - step: context_discovery
+        tier: heavy
+        mode: prefer
+      - step: scope_classification
+        tier: heavy
+        mode: prefer
+      - step: implementation_ready
+        tier: standard
+        mode: prefer
+  - skills: [ready-for-review]
     model: sonnet
+    step_hints:
+      - step: gate_execution
+        tier: light
+        mode: prefer
+      - step: fresh_eyes
+        tier: heavy
+        mode: prefer
 tiers:
+  light: [claude:haiku]
   standard: [claude:sonnet]
-  heavy: [claude:opus, openai:gpt-5.5]
+  heavy: [claude:opus]
+  frontier: [claude:opus, openai:gpt-5.5]
 tier_mode: prefer
 ```
 ````
 
 `model` is shorthand for a one-item `models` list. `models` is ordered: the host picks the first supported candidate unless its adapter has a more specific local mapping policy. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings are allowed as escape hatches. `mode: prefer` continues with a disclosed fallback if none can be honored. `mode: require` stops before invoking that skill unless at least one candidate can be honored. Ordered overrides are first-match by skill name, then defaults. Subagents inherit the parent skill's resolved model by default when supported.
 
+`step_hints` are ordered, skill-scoped refinements for internal phases. Each entry names a `step` and a capability `tier`; `mode` defaults to the enclosing route's mode when omitted. The current v1 step vocabulary is `ticket_context`, `context_discovery`, `scope_classification`, `design_review`, `implementation_ready`, `gate_execution`, `review`, `fresh_eyes`, `handoff`, `review_response`, `review_synthesis`, `feedback_intake`, `fix_and_reply`, `monitor`, `closeout`, `roundup`, and `debrief`. Unknown step names are reserved; doctor should warn, and export validation rejects them if they reach a bundle. Step hints stay backward-compatible with the broader skill route: when a step hint matches, the host may resolve that hint instead of the broader skill route; when no hint matches, the broader skill/default route still applies. Step hints are normalized into exported process artifacts as self-contained `runner_extensions.model_routing.step_hints` records that repeat the owning skill and resolve `candidates`.
+
 Conditional `when:` routing is reserved for future work and is not active in v1; do not rely on a `when:` field to narrow a route.
 
 ### Capability tiers
 
-`tiers` is an optional map from provider-neutral capability tier names to ordered provider candidate lists. The known tier vocabulary is exactly `light`, `standard`, `heavy`, and `frontier`; other names are reserved and warn in `doctor`. Tiers let `envelope`-authored slices declare how much model capability a slice needs without naming a provider: at export time the slice's tier is resolved through this table into concrete candidates embedded in `runner_extensions.model_routing` (see Export bundles), which Rondo consumes at run time. Optional `tier_mode` (`prefer` / `require`, default `prefer`) is the default resolution mode stamped into exported tier hints; the human can override tier and mode per envelope at approval.
+`tiers` is an optional map from provider-neutral capability tier names to ordered provider candidate lists. The known tier vocabulary is exactly `light`, `standard`, `heavy`, and `frontier`; other names are reserved and warn in `doctor`. Tiers let `envelope`-authored slices and step hints declare how much model capability a slice or orchestrator phase needs without naming a provider: at export time the slice's tier is resolved through this table into concrete candidates embedded in `runner_extensions.model_routing` and `runner_extensions.model_routing.step_hints` (see Export bundles), which Rondo consumes at run time. Optional `tier_mode` (`prefer` / `require`, default `prefer`) is the default resolution mode stamped into exported tier hints; the human can override tier and mode per envelope at approval.
 
 When a repo does not declare `tiers`, Beislið resolves through these illustrative shipped defaults (override any or all of them in `model_routing`):
 
