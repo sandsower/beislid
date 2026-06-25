@@ -6,6 +6,7 @@ __pycache__/
 *-workspace/
 .claude/
 .playwright-cli/
+.lavish/
 .beislid/show-me/
 .beislid/artifacts/
 /.beislid/checkpoints/

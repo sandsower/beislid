@@ -68,7 +68,22 @@ Repo-local output is allowed only when explicitly requested or configured:
 .beislid/show-me/<timestamp>/
 ```
 
-Generated decks are local artifacts and should not be committed in v1. Current rendering assumes online access for CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js); the source JSON, logs, and copied media stay local in the deck directory, and Markdown source remains visible as a fallback if libraries fail to load.
+Generated decks are local artifacts and should not be committed in v1. `.beislid/show-me/` and `.lavish/` should stay ignored unless a workflow explicitly creates a docs/example artifact with an intentional gitignore exception. Current rendering assumes online access for CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js); the source JSON, logs, and copied media stay local in the deck directory, and Markdown source remains visible as a fallback if libraries fail to load.
+
+## Optional Lavish inspection
+
+`show-me` remains portable without Lavish. If a repo configures `beislid:visual_surfaces` and the effective `show-me` mode is active, the rendered deck can be routed into Lavish after `index.html` exists:
+
+| Effective mode | Show Me behavior |
+| --- | --- |
+| Absent config or `off` | Do not mention or invoke Lavish; return the normal local deck paths. |
+| `suggest` | Mention that the deck can be inspected in Lavish, but do not create `.lavish/` output or invoke a command. |
+| `prompt` | Ask before opening when interactive; unattended runs fall back to the portable deck unless the run envelope/action policy already grants visual-surface invocation. |
+| `auto` | Open the configured Lavish command with the rendered deck path when action policy permits; report the deck path, supplemental wrapper path if used, and fallback if invocation fails. |
+
+The canonical artifact is still the `show-me` deck directory (`index.html`, `show-me.json`, `manifest.json`, assets, logs). A Lavish wrapper, if needed, belongs under the configured `artifact_root` such as `.lavish/show-me/<deck-id>.html` and links back to the canonical deck. Apply `artifact_retention` only to that supplemental wrapper: omitted/`local` keeps it ignored for local inspection, `discard` removes it after the visual path closes, and `preserve-repo` requires explicit workflow intent plus a gitignore exception. Never discard the canonical deck because Lavish was unavailable or declined.
+
+Fallbacks are visible and non-fatal: missing repo config, disabled user plugin state, missing `npx` or a pinned binary, declined prompts, command/editor failures, and freeform-only feedback all keep the normal deck result. Normal Show Me routing must not run `beislid plugin status lavish --check` or require network access unless the user explicitly requests a deep Lavish check or configured command invocation.
 
 ## Artifact structure
 
@@ -154,7 +169,7 @@ It demonstrates the intended `show-me` experience:
 
 The example directory includes the rendered HTML, source `show-me.json`, manifest, command log, and copied walkthrough video asset so it can be opened directly from the repository docs.
 
-Generated decks are still local artifacts by default. This checked-in example is intentional documentation; normal `show-me` output should not be committed unless a workflow explicitly asks for a docs/example artifact. New renders also support Mermaid rendering from markdown fences or `diagram` source blocks and line-colored diffs through CDN presentation libraries; the committed example has not been regenerated for those renderer features yet.
+Generated decks are still local artifacts by default. This checked-in example is intentional documentation; normal `show-me` output and `.lavish/` supplemental wrappers should not be committed unless a workflow explicitly asks for a docs/example artifact. New renders also support Mermaid rendering from markdown fences or `diagram` source blocks and line-colored diffs through CDN presentation libraries; the committed example has not been regenerated for those renderer features yet.
 
 ## Privacy and redaction
 

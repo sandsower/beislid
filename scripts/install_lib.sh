@@ -1149,6 +1149,8 @@ _project_gitignore_block() {
 .agents/skills/
 .claude/skills/
 .codex/skills/
+.lavish/
+.beislid/show-me/
 .beislid/project-install.json
 # END Beislið project install
 EOF
@@ -1173,6 +1175,8 @@ block = """# BEGIN Beislið project install
 .agents/skills/
 .claude/skills/
 .codex/skills/
+.lavish/
+.beislid/show-me/
 .beislid/project-install.json
 # END Beislið project install
 """
@@ -1202,6 +1206,8 @@ PY
           print ".agents/skills/"
           print ".claude/skills/"
           print ".codex/skills/"
+          print ".lavish/"
+          print ".beislid/show-me/"
           print ".beislid/project-install.json"
           print "# END Beislið project install"
         }

@@ -20,11 +20,13 @@ REQUIRED_REFERENCES = {
         "visual_surfaces",
         "lavish-axi",
         "off | suggest | prompt | auto",
+        "artifact_retention",
         ".beislid/visual-surface-protocol.md",
         "BEISLID_VISUAL_PROMPT_V1",
         "BEISLID_VISUAL_FEEDBACK_V1",
         "beislid visual-feedback normalize",
         "manual_review",
+        "Show Me deck routing",
     ],
     ".beislid/visual-surface-protocol.md": [
         "BEISLID_VISUAL_PROMPT_V1",
@@ -47,22 +49,29 @@ REQUIRED_REFERENCES = {
         "missing `npx`",
         "failed deep checks",
         "npm/network/cache",
+        "Show Me deck routing",
+        "inspect_show_me_deck",
+        "required_for_decision: false",
+        ".lavish/show-me/",
+        "artifact_retention",
     ],
     ".beislid/probe-semantics.md": [
         "visual_surfaces validation",
         "provider",
         "artifact_root",
+        "artifact_retention",
         "beislid plugin status lavish",
     ],
     "skills/doctor/SKILL.md": [
         "visual_surfaces",
-        "provider/mode/artifact_root/workflow",
+        "provider/mode/artifact_root/artifact_retention/workflow",
         "Lavish plugin state",
     ],
     "skills/setup/SKILL.md": [
         "**Visual surfaces** — *Configure optional Lavish visual-surface routing",
         "beislid:visual_surfaces",
         "off / suggest / prompt / auto",
+        "artifact_retention",
     ],
     "README.md": [
         "Optional Lavish visual surfaces",
@@ -73,6 +82,8 @@ REQUIRED_REFERENCES = {
         "pinned or local runtime",
         "BEISLID_VISUAL_FEEDBACK_V1",
         "freeform-only visual feedback",
+        "Show Me deck routing",
+        "artifact retention",
     ],
     "docs/how-to-use.md": [
         "Optional Lavish visual surfaces",
@@ -85,6 +96,9 @@ REQUIRED_REFERENCES = {
         "Markdown/chat workflow gate",
         "BEISLID_VISUAL_FEEDBACK_V1",
         "freeform-only feedback",
+        "show-me",
+        "artifact_retention",
+        ".lavish/show-me/",
     ],
     "docs/configuration.md": [
         "visual surfaces such as optional Lavish routing",
@@ -107,6 +121,8 @@ REQUIRED_REFERENCES = {
         "scripts/visual_feedback.py",
         "unknown action",
         "freeform-only feedback",
+        "Show Me deck routing",
+        "artifact_retention",
     ],
     "skills/spec/SKILL.md": [
         "beislid:visual_surfaces",
@@ -135,14 +151,61 @@ REQUIRED_REFERENCES = {
         "missing `npx`",
         "failed deep checks",
         "npm/network/cache",
+        "Show Me deck routing",
+        "inspect_show_me_deck",
+        "required_for_decision: false",
+        ".lavish/show-me/",
+        "artifact_retention",
     ],
     "docs/skills.md": [
         "Lavish visual surfaces",
         "beislid:visual_surfaces",
-        "Markdown/chat artifacts remain canonical",
+        "Show Me deck directories remain canonical",
         "beislid plugin enable lavish",
         "missing `npx`",
         "failed deep checks",
+        "artifact_retention",
+    ],
+    "docs/show-me.md": [
+        "Optional Lavish inspection",
+        "beislid:visual_surfaces",
+        "artifact_retention",
+        ".lavish/show-me/",
+        "portable deck",
+        "missing `npx`",
+        "freeform-only feedback",
+    ],
+    "skills/show-me/SKILL.md": [
+        "Optional Lavish routing",
+        "visual-surface-protocol.md",
+        "Show Me deck routing",
+        "artifact_retention",
+        ".lavish/show-me/",
+        "Freeform Lavish annotations",
+    ],
+    "skills/show-me/visual-surface-protocol.md": [
+        "BEISLID_VISUAL_PROMPT_V1",
+        "BEISLID_VISUAL_FEEDBACK_V1",
+        "Show Me deck routing",
+        "inspect_show_me_deck",
+        "required_for_decision: false",
+        "artifact_retention",
+        ".lavish/show-me/",
+        "npm/network/cache",
+    ],
+    ".gitignore": [
+        ".lavish/",
+        ".beislid/show-me/",
+    ],
+    "scripts/install_lib.sh": [
+        ".lavish/",
+        ".beislid/show-me/",
+        "# BEGIN Beislið project install",
+    ],
+    "scripts/test_install.sh": [
+        "Show Me deck routing",
+        ".lavish/",
+        ".beislid/show-me/",
     ],
     "bin/beislid": [
         "visual-feedback",
@@ -193,10 +256,16 @@ def main() -> int:
                 errors.append(f"{rel}: missing required visual_surfaces reference `{needle}`")
 
     canonical = root / ".beislid/visual-surface-protocol.md"
-    spec_aux = root / "skills/spec/visual-surface-protocol.md"
-    if canonical.exists() and spec_aux.exists():
-        if canonical.read_text(encoding="utf-8") != spec_aux.read_text(encoding="utf-8"):
-            errors.append("skills/spec/visual-surface-protocol.md: must mirror canonical .beislid/visual-surface-protocol.md")
+    aux_copies = [
+        root / "skills/spec/visual-surface-protocol.md",
+        root / "skills/show-me/visual-surface-protocol.md",
+    ]
+    if canonical.exists():
+        canonical_text = canonical.read_text(encoding="utf-8")
+        for aux in aux_copies:
+            if aux.exists() and canonical_text != aux.read_text(encoding="utf-8"):
+                rel = aux.relative_to(root)
+                errors.append(f"{rel}: must mirror canonical .beislid/visual-surface-protocol.md")
 
     if errors:
         for error in errors:

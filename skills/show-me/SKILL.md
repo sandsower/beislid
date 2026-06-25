@@ -19,13 +19,16 @@ Use this for:
 
 Do not use this for:
 - automatic verification inside `verify`, `ready-for-review`, or other flows in v1
-- committing generated decks unless a future workflow explicitly allows it
+- making Lavish a required dependency or replacement renderer
+- committing generated decks or `.lavish/` wrappers unless a workflow explicitly allows it
 - hiding failed checks behind a polished report
 - generating unsourced explanations that look authoritative
 
 <HARD-GATE>
 `show-me` is manual/user-requested in v1. Do not auto-run it from another Beislið skill. If another workflow thinks a visual deck would help, suggest it and wait for the user to ask.
 </HARD-GATE>
+
+Optional Lavish routing: after the canonical deck is created/rendered, apply `beislid:visual_surfaces` only when repo config exists and the effective `show-me` mode is active. Load `visual-surface-protocol.md` from this skill directory or canonical `.beislid/visual-surface-protocol.md`; it defines Show Me deck routing, `suggest`/`prompt`/`auto`, fallback, and `artifact_retention` semantics. The rendered `index.html`, `show-me.json`, and evidence bundle remain canonical and portable. Lavish may inspect them or use a supplemental wrapper under `.lavish/show-me/`, but disabled plugin state, missing command binaries, unavailable `npx`, declined prompts, command/editor failures, and freeform-only feedback are non-fatal fallbacks to the normal deck result.
 
 ## Output modes
 
@@ -88,7 +91,7 @@ Repo-local output is allowed only when explicitly requested or configured:
 .beislid/show-me/<timestamp>/
 ```
 
-Generated decks are local artifacts and should not be committed in v1.
+Generated decks are local artifacts and should not be committed in v1. `.lavish/` supplemental wrappers are ignored local artifacts by default; commit generated decks or wrappers only for explicit docs/example workflow intent.
 
 ### 4. Gather evidence
 
@@ -140,6 +143,16 @@ The rendered `index.html` should be polished and human-reviewable:
 - command logs rendered in terminal-style panels
 - provenance and caveats at the end
 
+### 5b. Route optional Lavish inspection
+
+After `index.html` exists, and only then, evaluate repo `beislid:visual_surfaces` for effective workflow `show-me`:
+- absent config or `off`: keep the normal portable deck result and do not mention or invoke Lavish
+- `suggest`: mention the rendered deck can be inspected in Lavish, without creating `.lavish/` output or invoking a command
+- `prompt`: ask before opening in interactive runs; unattended runs keep the portable deck unless the run envelope/action policy already grants visual-surface invocation
+- `auto`: invoke the configured provider with the rendered deck path only when action policy permits it
+
+If a wrapper is needed for the prompt envelope, write it under `.lavish/show-me/` or the configured `artifact_root` equivalent and apply `artifact_retention` only to that supplemental wrapper. Disabled plugin state, missing command binaries or `npx`, declined prompts, command/editor failures, missing feedback, and freeform-only annotations are visible non-fatal fallbacks to the normal deck result. Never discard the canonical deck because Lavish was declined or unavailable.
+
 ### 6. Report results
 
 Return:
@@ -149,8 +162,9 @@ Return:
 - evidence included
 - evidence missing or marked `NEEDS CAPTURE`
 - redactions or media-sensitivity warnings
+- Lavish routing result when visual surfaces were active: effective mode, opened/suggested/fallback, supplemental wrapper path if any, and retention policy
 
-Do not claim the subject passes unless fresh evidence in the deck supports that claim.
+Do not claim the subject passes unless fresh evidence in the deck supports that claim. Freeform Lavish annotations never change the deck status or verification claim unless the accepted change is copied into the canonical deck source/result.
 
 ## Portable document model
 
