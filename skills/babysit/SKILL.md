@@ -1,23 +1,21 @@
 ---
 name: babysit
-description: "Use when the user asks to babysit a PR, run /babysit, keep a PR green, monitor review/CI until ready, or optionally close out a PR through configured merge/capture/retro automation. Requires an active /goal-capable host; hard-stops without goal support."
+description: "Use when the user asks to babysit a PR, run /babysit, keep a PR green, monitor review/CI until ready, or optionally close out a PR through configured merge/capture/retro automation. Can run directly; host goal/persistence support is optional."
 ---
 
 # Babysit
 
 Babysit the current pull request until configured live evidence says it is green, then perform the configured closeout path when policy allows it.
 
-This is an outer-loop workflow. It does not replace `review-response`; it repeatedly uses `review-response` for feedback handling, configured gates for proof before push, and host goal mode for persistence across wait/recheck cycles.
+This is an outer-loop workflow. It does not replace `review-response`; it repeatedly uses `review-response` for feedback handling, configured gates for proof before push, and optional host persistence for wait/recheck cycles.
 
-## Hard requirement
+## Persistence model
 
-`babysit` requires a `/goal`-capable host or compatible persistent goal mode.
+`babysit` can run directly in any host. Goal/persistence support is optional, not a hard requirement.
 
-Claude already includes `/goal` as a basic command, so no extra Claude extension is required for the goal requirement. Pi needs the separate `pi-goal` package/extension enabled before `/babysit` can run.
-
-If the host cannot keep pursuing a goal after this turn, stop immediately and tell the user to enable the host's goal support before running `/babysit`. Do not run a manual polling loop as a fallback.
-
-In Pi, the bundled `/babysit` command checks for `/goal` and starts the goal. If `/goal` is missing, install/enable `pi-goal`, reload/restart Pi, then run `/babysit` again. If this skill was invoked directly, first confirm it is already running inside an active goal objective; otherwise stop with host-specific setup guidance.
+- In Claude Code, users may manually wrap babysit in `/goal` when they want the host to keep pursuing the PR across wait/recheck cycles.
+- In Pi, the bundled `/babysit` command starts a Beislið-owned babysit runtime that persists loop state and exposes Beislið-specific completion tools. It does not depend on `pi-goal` and does not try to invoke slash commands from another extension.
+- When no persistence mechanism is active, perform the current audit/feedback/gate step normally. If the PR is not at a terminal green or blocked endpoint by the end of the turn, stop with the current evidence and the next recheck/action the user should run.
 
 ## Inputs
 
@@ -68,7 +66,7 @@ Invocation args override config for this run. Examples: `stop when green`, `don'
 ## Workflow
 
 1. **Load project config** — read `.beislid/workflow.md`; hard-fail if missing or wrong version, matching other repo-aware Beislið orchestrators.
-2. **Confirm goal mode** — continue only when the current run is backed by `/goal` or compatible persistent goal mode.
+2. **Detect persistence mode** — note whether the run is direct, manually wrapped in host `/goal`, or managed by the Pi Beislið babysit runtime. Do not stop solely because persistence is absent.
 3. **Find the PR** — use configured PR host data or `gh pr view` when available. If no current PR is found, stop and ask for the PR URL/number.
 4. **Read live state** — collect checks, mergeability/conflict state, review decision, PR-level comments, and inline review threads.
 5. **Detect actionable feedback** — use configured `pr_review_source`; do not rely on a green review-bot status alone when thread data is available. When `loop.use_review_response` is true, unresolved review comments or requested changes route to `review-response`.
@@ -77,13 +75,12 @@ Invocation args override config for this run. Examples: `stop when green`, `don'
 8. **Wait and recheck** — after pushes or pending checks, wait using bounded polling or host monitor facilities. Do not busy-loop. Re-read live PR state after each transition.
 9. **Green audit** — the PR is green only when live evidence shows all required checks successful, mergeable/no conflicts, acceptable review state, and no unaddressed actionable feedback.
 10. **Closeout** — perform configured merge, memento capture, and retro only when green audit passes and action policy allows the side effect. Policy-check closeout side effects before running them: `gh.pr.merge` or `pr.merge` as `git-remote`, `memento.capture` as `workspace-write`, `retro.run` as `read` plus `workspace-write` when it may write artifacts, and `retro.apply`/setup edits as `workspace-write`. Stop for approval when mode is `ask`; proceed only when mode is `auto` and policy allows.
-11. **Complete goal** — call the goal completion tool only after final audit and configured closeout are done, or after reaching the configured stop-when-green endpoint.
+11. **Complete persistence loop when present** — if running under a persistence mechanism, call its completion tool only after final audit and configured closeout are done, or after reaching the configured stop-when-green endpoint. In Pi's Beislið runtime, call `update_beislid_babysit({status:"complete", summary:"..."})`; if blocked, call `update_beislid_babysit({status:"blocked", summary:"..."})`.
 
 ## Safety stops
 
 Stop and ask instead of continuing when any of these occur:
 
-- no active goal support
 - no PR can be identified
 - red or pending required checks at a merge boundary
 - conflicts or unsafe merge resolution
@@ -122,6 +119,6 @@ When stopping, report:
 
 - Treating CI green as enough when review threads are unresolved.
 - Hardcoding project gates instead of reading workflow config.
-- Running without `/goal` and pretending this is babysitting.
+- Assuming `/goal` is required; direct runs are allowed, but must stop with next steps when no persistence mechanism is active and the PR is not terminal.
 - Posting replies or merging without policy and approval handling.
 - Mentioning private provenance in public tracker/PR updates; keep public updates focused on the current repo and PR only.

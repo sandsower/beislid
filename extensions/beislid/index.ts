@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { buildBabysitGoalCommand, hasGoalCommandName } from "./babysit-goal.js";
+import { registerBabysitRuntime } from "./babysit-runtime.js";
 import { readLatestCheckpoint, pickNewBoundary, type BoundaryIdentity, type CheckpointPointerSnapshot } from "./checkpoints.js";
 import { resolveHandoffConfig } from "./config.js";
 import { BEISLID_SKILLS, BOUNDARY_CAPABLE_SKILLS, commandNameForSkill, skillPrompt, type BeislidSkill } from "./skill-commands.js";
@@ -43,6 +43,7 @@ export default function beislidExtension(pi: ExtensionAPI) {
 	let pendingBoundary: BoundaryIdentity | undefined;
 	let pendingWorkflow: string | undefined;
 	const consumed = new Set<string>();
+	const babysitRuntime = registerBabysitRuntime(pi);
 
 	pi.on("session_start", async (_event, ctx) => {
 		refreshConsumed(ctx, consumed);
@@ -60,13 +61,8 @@ export default function beislidExtension(pi: ExtensionAPI) {
 			description: `Run the Beislið ${skill} skill through the managed Pi wrapper`,
 			handler: async (args, ctx) => {
 				if (skill === "babysit") {
-					if (!hasGoalCommandName(pi.getCommands())) {
-						emitWorkflowSignal(ctx, { state: "blocked", skill, phase: "missing-goal" });
-						notify(ctx, "/babysit requires /goal. Install pi-goal with `pi install git:github.com/Michaelliv/pi-goal`, then /reload or restart Pi and run /babysit again.", "warning");
-						return;
-					}
-					emitWorkflowSignal(ctx, { state: "working", skill, phase: "goal" });
-					await pi.sendUserMessage(await buildBabysitGoalCommand(args, { cwd: ctx.cwd }), { deliverAs: "followUp" });
+					emitWorkflowSignal(ctx, { state: "working", skill, phase: "runtime" });
+					await babysitRuntime.start(args, ctx);
 					return;
 				}
 

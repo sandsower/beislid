@@ -731,61 +731,61 @@ PY
 }
 
 
-test_pi_babysit_goal_helper_has_core_requirements() {
-  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit goal helper to include core requirements"
+test_pi_babysit_runtime_has_core_requirements() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit runtime to include core persistence requirements"
 from pathlib import Path
 import sys
 root = Path(sys.argv[1])
-helper = (root / 'extensions' / 'beislid' / 'babysit-goal.ts').read_text(encoding='utf-8')
+runtime = (root / 'extensions' / 'beislid' / 'babysit-runtime.ts').read_text(encoding='utf-8')
 index = (root / 'extensions' / 'beislid' / 'index.ts').read_text(encoding='utf-8')
-required_helper = [
-    'export const BABYSIT_GOAL_OBJECTIVE',
-    'First load and follow the babysit skill',
-    'Treat /goal support as mandatory',
-    ".beislid/workflow.md",
-    'checks/status rollup',
-    'mergeability/conflicts',
-    'review decision',
-    'PR comments',
-    'inline review threads',
-    'review-response workflow',
-    'run the configured applicable gates',
-    'wait with bounded polling',
-    'memento capture',
-    'Never force-push',
-    'never amend published commits',
-    'never merge to bypass failing or pending required checks',
-    'never interpolate review reply bodies into shell commands',
-    'Call update_goal({status:"complete"}) only after the final audit',
-    'User babysit args:',
-    'command.name === "goal" && command.source === "extension"',
+skill = (root / 'skills' / 'babysit' / 'SKILL.md').read_text(encoding='utf-8')
+required_runtime = [
+    'const RUN_ENTRY = "beislid-babysit-run";',
+    'get_beislid_babysit',
+    'update_beislid_babysit',
+    'configuredBabysitTokenBudget',
+    'splitBabysitTokenBudgetArg',
+    'Pi babysit persistence is active for this run',
+    'Load and follow the Beislið babysit skill',
+    'queueContinuation(pi, run)',
+    'ctx.hasPendingMessages()',
+    'status: "budget_limited"',
+    'status: Type.Union([Type.Literal("complete"), Type.Literal("blocked")])',
 ]
-if 'startsWith("goal:")' in helper:
-    raise SystemExit('wrapper injects literal /goal, so suffixed duplicate goal commands must not satisfy availability')
 required_index = [
-    'import { buildBabysitGoalCommand, hasGoalCommandName } from "./babysit-goal.js";',
-    'pi.registerCommand(command',
+    'import { registerBabysitRuntime } from "./babysit-runtime.js";',
+    'const babysitRuntime = registerBabysitRuntime(pi);',
     'skill === "babysit"',
-    'hasGoalCommandName(pi.getCommands())',
-    'pi install git:github.com/Michaelliv/pi-goal',
-    'buildBabysitGoalCommand(args, { cwd: ctx.cwd })',
-    'pi.sendUserMessage(await buildBabysitGoalCommand',
+    'phase: "runtime"',
+    'await babysitRuntime.start(args, ctx);',
 ]
-missing = [needle for needle in required_helper if needle not in helper]
+required_skill = [
+    'Goal/persistence support is optional, not a hard requirement.',
+    'manually wrap babysit in `/goal`',
+    'Beislið-owned babysit runtime',
+    'Do not stop solely because persistence is absent.',
+    'update_beislid_babysit({status:"complete"',
+]
+missing = [needle for needle in required_runtime if needle not in runtime]
 missing += [needle for needle in required_index if needle not in index]
+missing += [needle for needle in required_skill if needle not in skill]
 if missing:
-    raise SystemExit(f'missing babysit goal wrapper requirements: {missing}')
+    raise SystemExit(f'missing babysit runtime requirements: {missing}')
+for forbidden in ['hasGoalCommandName', 'pi install git:github.com/Michaelliv/pi-goal', 'beislid-babysit-goal-prefill']:
+    if forbidden in index:
+        raise SystemExit(f'Pi /babysit must not depend on old /goal wrapper path: {forbidden}')
 PY
 }
 
 
-test_pi_babysit_goal_builder_preserves_args_and_tokens() {
-  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit goal builder to preserve args and token budgets safely"
+test_pi_babysit_token_parsing_preserves_args_and_budgets() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit token parsing to preserve args and token budgets safely"
 from pathlib import Path
-import re, sys
+import sys
 root = Path(sys.argv[1])
-helper = (root / 'extensions' / 'beislid' / 'babysit-goal.ts').read_text(encoding='utf-8')
-required = [
+helper = (root / 'extensions' / 'beislid' / 'babysit-config.ts').read_text(encoding='utf-8')
+runtime = (root / 'extensions' / 'beislid' / 'babysit-runtime.ts').read_text(encoding='utf-8')
+required_helper = [
     'export function splitBabysitTokenBudgetArg',
     '--tokens(?:(?:=|\\s+)(\\S+))?',
     'let withoutToken =',
@@ -795,25 +795,29 @@ required = [
     'export function extractBabysitTokenBudget',
     '```beislid:babysit',
     'token_budget:',
-    'parsed.tokenBudget ?? (await configuredBabysitTokenBudget(options.cwd))',
-    'const tokenArg = tokenBudget ? `--tokens ${tokenBudget} ` : "";',
-    'return `/goal ${tokenArg}${babysitGoalObjective(parsed.args)}`;',
 ]
-missing = [needle for needle in required if needle not in helper]
+required_runtime = [
+    'const rawBudget = parsed.tokenBudget ?? (await configuredBabysitTokenBudget(ctx.cwd));',
+    'tokenBudget: parseTokenBudget(rawBudget)',
+    'args: parsed.args',
+]
+missing = [needle for needle in required_helper if needle not in helper]
+missing += [needle for needle in required_runtime if needle not in runtime]
 if missing:
-    raise SystemExit(f'missing token/args builder logic: {missing}')
+    raise SystemExit(f'missing token/args runtime logic: {missing}')
 if '[0-9_]' in helper or '(?:_[0-9]+)' in helper:
-    raise SystemExit('token budget parsing must stay aligned with pi-goal and reject underscores')
+    raise SystemExit('token budget parsing must reject underscores')
 if 'Number(value.replace(/\\s*[kKmM]$/, "")) <= 0' not in helper:
     raise SystemExit('workflow token budget parsing must reject non-positive values')
-if re.search(r'`/goal \$\{tokenArg\}\$\{parsed\.args\}', helper):
-    raise SystemExit('user args should be labelled in the objective, not blindly prepended before the babysit objective')
+for forbidden in ['BABYSIT_GOAL_OBJECTIVE', 'buildBabysitGoalCommand', 'hasGoalCommandName', 'return `/goal']:
+    if forbidden in helper:
+        raise SystemExit(f'babysit config helper must not retain stale /goal builder code: {forbidden}')
 PY
 }
 
 
-test_pi_babysit_handler_branches_without_skill_fallback() {
-  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit handler to branch on /goal availability without skill fallback"
+test_pi_babysit_handler_uses_runtime_without_goal_fallback() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit handler to use runtime without /goal fallback"
 from pathlib import Path
 import sys
 root = Path(sys.argv[1])
@@ -822,18 +826,16 @@ start = index.index('if (skill === "babysit")')
 end = index.index('const initialSignal = initialSignalForSkill(skill);', start)
 branch = index[start:end]
 required = [
-    'if (!hasGoalCommandName(pi.getCommands()))',
-    'phase: "missing-goal"',
-    'notify(ctx, "/babysit requires /goal.',
+    'phase: "runtime"',
+    'await babysitRuntime.start(args, ctx);',
     'return;',
-    'phase: "goal"',
-    'pi.sendUserMessage(await buildBabysitGoalCommand(args, { cwd: ctx.cwd }), { deliverAs: "followUp" })',
 ]
 missing = [needle for needle in required if needle not in branch]
 if missing:
-    raise SystemExit(f'missing babysit handler branch logic: {missing}')
-if '/skill:babysit' in branch or 'skillPrompt(skill, args)' in branch:
-    raise SystemExit('babysit wrapper must not fall back to a normal /skill:babysit turn')
+    raise SystemExit(f'missing babysit runtime handler logic: {missing}')
+for forbidden in ['hasGoalCommandName', 'buildBabysitGoalCommand', 'setEditorText', 'sendUserMessage', '/skill:babysit', 'skillPrompt(skill, args)']:
+    if forbidden in branch:
+        raise SystemExit(f'babysit wrapper must use runtime directly, found old fallback: {forbidden}')
 PY
 }
 
@@ -1920,9 +1922,9 @@ run_test "CLI project status reports manifest and counts"      test_cli_project_
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
 run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
-run_test "pi babysit goal helper has core requirements"       test_pi_babysit_goal_helper_has_core_requirements
-run_test "pi babysit preserves args and token budgets"        test_pi_babysit_goal_builder_preserves_args_and_tokens
-run_test "pi babysit handler branches without fallback"       test_pi_babysit_handler_branches_without_skill_fallback
+run_test "pi babysit runtime has core requirements"           test_pi_babysit_runtime_has_core_requirements
+run_test "pi babysit preserves args and token budgets"        test_pi_babysit_token_parsing_preserves_args_and_budgets
+run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
