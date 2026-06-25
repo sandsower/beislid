@@ -12,7 +12,7 @@ This dry-run documents the expected Phase 4 behavior for `blueprint` and `poke-h
 
 ```yaml
 provider: lavish-axi
-mode: off
+mode: suggest
 workflows:
   blueprint: suggest
 ```
@@ -26,7 +26,7 @@ workflows:
 
 ```yaml
 provider: lavish-axi
-mode: off
+mode: auto
 artifact_root: .lavish
 workflows:
   blueprint: auto
@@ -59,7 +59,7 @@ Expected normalized outcome:
 
 ```yaml
 provider: lavish-axi
-mode: off
+mode: prompt
 workflows:
   poke-holes: prompt
 ```
@@ -72,7 +72,7 @@ workflows:
 
 ```yaml
 provider: lavish-axi
-mode: off
+mode: auto
 artifact_root: .lavish
 workflows:
   poke-holes: auto
