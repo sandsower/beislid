@@ -45,6 +45,12 @@ When visual routing is active, create a repo-local HTML artifact before provider
 5. Do not embed secrets, hidden chain-of-thought, auth headers, or unrelated transcript content.
 6. Treat the HTML as supplemental. Preserve or discard it according to repo policy; absent explicit preservation config, the canonical record is still Markdown/chat.
 
+Artifact retention policy:
+
+- `artifact_retention: local` or an omitted value keeps supplemental HTML under a gitignored `artifact_root` for local inspection only. Any custom root must also be ignored before local retention is allowed. This is the safe default.
+- `artifact_retention: discard` removes supplemental HTML when the workflow closes or when the user declines the visual path; canonical Markdown/chat records and `show-me` decks remain untouched.
+- `artifact_retention: preserve-repo` is reserved for explicit workflow intent to commit a supplemental artifact. Use it only with a named docs/example path or gitignore exception; never silently commit `.lavish/` output.
+
 ## Spec review surface loop
 
 The Phase 1 `spec` integration uses this protocol only at the approval/revision boundary, after the draft product spec is presentable and before downstream routing. Markdown/chat remains the canonical spec record.
@@ -64,6 +70,30 @@ A `spec` HTML artifact should use Lavish `plan` and `comparison` playbook guidan
 - Source context: include the ticket id/title when known, canonical Markdown artifact path when one exists, or a chat-boundary note when approval has not yet been written to a file.
 
 After feedback returns, normalize the typed lane before using it. A visual `approve` response can satisfy the review decision only when it validates as an accepted typed gate response for `workflow: spec` and canonical action `approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved. A visual `revise` response means copy the accepted revision request into the canonical Markdown/chat spec, apply `must_change` items, and run another gate. A `manual_review` result, freeform-only feedback, unknown action, unknown decision, malformed payload, or parser-unavailable host continues through the normal Markdown/chat approval/revision gate.
+
+## Show Me deck routing
+
+`show-me` is already a visual artifact generator. Lavish routing must inspect or annotate that existing deck, not replace the renderer or make Lavish a prerequisite.
+
+Effective mode handling for `show-me` happens only after the canonical deck has been created or rendered:
+
+- absent config or `off`: do not mention or invoke Lavish; return the portable `index.html`, `show-me.json`, evidence summary, and missing-capture notes as usual.
+- `suggest`: mention that the rendered deck can be opened in Lavish for supplemental inspection; do not create `.lavish/` output or invoke the provider unless the user/host explicitly routes there.
+- `prompt`: ask before opening in interactive runs; in unattended runs, fall back to the portable deck unless the run envelope or workflow action policy already grants visual-surface invocation.
+- `auto`: may invoke the configured provider with the rendered deck path when action policy permits it; announce the canonical deck path, visual-surface path when different, retention policy, and fallback if invocation fails.
+
+A `show-me` Lavish surface should use the rendered deck `index.html` as the stable source whenever possible. If a wrapper is needed to carry the prompt envelope, write it under `.lavish/show-me/<deck-id>.html` or the configured `artifact_root` equivalent, link to the canonical deck files, and include the prompt envelope with `workflow: show-me`, `action: inspect_show_me_deck`, and `source_paths` pointing at the deck's `index.html`, `show-me.json`, and `manifest.json` when present. The canonical deck directory remains the durable artifact; wrapper HTML and provider-local indexes are supplemental.
+
+Show Me uses the same `BEISLID_VISUAL_PROMPT_V1` envelope header but not the spec typed gate. Until a future workflow defines a Show Me typed decision, set `feedback_contract.typed_gate.required_for_decision: false` or omit the typed-gate fields entirely, and state that annotations are advisory inspection notes. Do not emit `workflow: spec`, `action: approve_or_revise_spec`, or any approve/revise decision requirement for `show-me` deck inspection.
+
+Show Me feedback is advisory unless a future workflow defines a typed gate for it. Freeform Lavish annotations can guide deck revisions, but accepted changes must be copied into the canonical deck source or reported in the final `show-me` result before they matter. Unknown, malformed, freeform-only, or unavailable feedback never changes a deck status or verification claim by itself.
+
+Show Me fallback and preservation rules:
+
+- disabled user plugin state, missing command binaries, unavailable `npx`, command failures, editor launch failures, declined prompts, and missing feedback are non-fatal; return the normal deck paths and record the visual fallback.
+- do not run `beislid plugin status lavish --check` or any deep provider check unless explicitly requested; normal routing must not require network access.
+- keep `.lavish/` and `.beislid/show-me/` ignored by default. Commit a generated deck or supplemental wrapper only when explicit workflow intent opts into publication and the gitignore exception is intentional.
+- apply `artifact_retention` to supplemental Lavish wrappers only. Never discard the canonical `show-me` deck because visual routing was declined or unavailable.
 
 ## Provider invocation expectations
 
@@ -134,7 +164,7 @@ fallback:
   canonical_if_unavailable: Continue in Markdown/chat and ask for the same approve/revise gate there.
 ```
 
-The prompt may add human-readable instructions before or after the YAML, but the single prompt schema token and field names above are the portable contract.
+The prompt may add human-readable instructions before or after the YAML, but the single prompt schema token and field names above are the portable contract. The YAML block above is the spec approval/revision variant; advisory `show-me` inspection uses `workflow: show-me`, `action: inspect_show_me_deck`, deck source paths, and no required typed gate unless a later protocol version defines one.
 
 ## Feedback validation and normalization
 

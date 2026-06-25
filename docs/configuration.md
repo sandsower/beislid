@@ -911,6 +911,7 @@ provider: lavish-axi
 mode: prompt
 command: 'npx -y lavish-axi'
 artifact_root: .lavish
+artifact_retention: local
 workflows:
   spec: prompt
   blueprint: suggest
@@ -918,7 +919,7 @@ workflows:
 ```
 ````
 
-Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visual surface may help; `prompt` asks before invoking one; `auto` permits configured workflows to use the visual surface without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
+Modes are `off`, `suggest`, `prompt`, and `auto`. `suggest` mentions that a visual surface may help; `prompt` asks before invoking one; `auto` permits configured workflows to use the visual surface without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. `artifact_retention` applies only to supplemental Lavish HTML wrappers: omitted/`local` keeps ignored local artifacts, `discard` removes wrappers after use, and `preserve-repo` requires explicit workflow intent plus a gitignore exception before anything is committed. Proactive routing requires repo config: user-level plugin enablement alone is not enough.
 
 ### Enable and inspect local Lavish state
 
@@ -938,7 +939,7 @@ beislid plugin disable lavish
 beislid plugin enable lavish --command '/opt/tools/lavish-axi' --artifact-root .lavish
 ```
 
-`command` and `artifact_root` are also optional in repo config. The workflow default command follows enabled Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`.
+`command`, `artifact_root`, and `artifact_retention` are also optional in repo config. The workflow default command follows enabled Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`, and the default retention is ignored local preservation (`local`). Keep `.lavish/` in `.gitignore`; any custom local-retention `artifact_root` must also be ignored unless explicit workflow intent opts into `preserve-repo` with a gitignore exception.
 
 ### Troubleshooting and fallback behavior
 
@@ -952,10 +953,11 @@ Lavish is never required for a Beislið workflow. Markdown/chat artifacts remain
 | Failed deep check | `beislid plugin status lavish --check` exits nonzero and reports the command failure; this is diagnostic only and should not block Markdown/chat workflow use. |
 | Declined prompt in `prompt` mode | The workflow keeps the canonical Markdown/chat gate and records that visual review was declined. |
 | Runtime fallback after command/editor/poll failure | Record the fallback in chat, keep the HTML path if one was created, and continue through the normal Markdown/chat decision gate. |
+| Show Me deck routing | Route only after the canonical `show-me` deck has rendered. Lavish may inspect the deck or a `.lavish/show-me/` wrapper, but the deck directory remains canonical and must not be discarded when Lavish is unavailable or declined. |
 
 Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. It does not deep-invoke Lavish or spend npm/network/cache.
 
-When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill readable auxiliary copy for project-local installs. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, and the typed `BEISLID_VISUAL_FEEDBACK_V1` validation contract. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
+When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill readable auxiliary copy for project-local installs. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, Show Me deck routing, artifact_retention, the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, and the typed `BEISLID_VISUAL_FEEDBACK_V1` validation contract. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
 
 Typed gate feedback is separate from freeform annotations. A workflow may consume a visual decision only after the typed payload validates for the current workflow/action and normalizes to an accepted decision; unknown action, unknown decision, duplicate fields, multiple typed payloads, malformed payload, freeform-only feedback, or unavailable parser support must continue through manual Markdown/chat review. The repository ships a dependency-free helper exposed as `beislid visual-feedback normalize`, for hosts that want a shared parser/normalizer without taking a Lavish runtime dependency or relying on the current working directory. Its normalized event includes `manual_review` fallback reasons and `canonical_update_required` so the accepted visual decision or fallback reason can be copied into the canonical Markdown/chat record before any downstream routing. For Phase 1 compatibility, the helper also accepts the old flat `workflow`/`action`/`decision` payload shape when the schema token was omitted and the gate is otherwise unambiguous.
 
@@ -1074,6 +1076,8 @@ Project installs do not edit `.gitignore` by default. They print this suggested 
 .agents/skills/
 .claude/skills/
 .codex/skills/
+.lavish/
+.beislid/show-me/
 .beislid/project-install.json
 # END Beislið project install
 ```

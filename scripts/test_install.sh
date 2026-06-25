@@ -1353,6 +1353,10 @@ test_cli_project_copy_install_explicit_path() {
     assert_file_exists "$project/.$host/skills/spec/visual-surface-protocol.md"
     assert_not_symlink "$project/.$host/skills/spec/visual-surface-protocol.md"
     assert_file_contains "$project/.$host/skills/spec/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
+    assert_file_exists "$project/.$host/skills/show-me/visual-surface-protocol.md"
+    assert_not_symlink "$project/.$host/skills/show-me/visual-surface-protocol.md"
+    assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "Show Me deck routing"
+    assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
   done
 
   local manifest="$project/.beislid/project-install.json"
@@ -1463,6 +1467,8 @@ test_project_gitignore_write_is_idempotent() {
   assert_file_contains "$project/.gitignore" "node_modules/"
   assert_file_contains "$project/.gitignore" "# BEGIN Beislið project install"
   assert_file_contains "$project/.gitignore" ".agents/skills/"
+  assert_file_contains "$project/.gitignore" ".lavish/"
+  assert_file_contains "$project/.gitignore" ".beislid/show-me/"
   assert_file_contains "$project/.gitignore" ".beislid/project-install.json"
   if [[ "$first" != "$second" ]]; then
     note_fail "expected --write-gitignore to be idempotent"
