@@ -731,6 +731,103 @@ PY
 }
 
 
+test_pi_babysit_goal_helper_has_core_requirements() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit goal helper to include core requirements"
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+helper = (root / 'extensions' / 'beislid' / 'babysit-goal.ts').read_text(encoding='utf-8')
+index = (root / 'extensions' / 'beislid' / 'index.ts').read_text(encoding='utf-8')
+required_helper = [
+    'export const BABYSIT_GOAL_OBJECTIVE',
+    'First load and follow the babysit skill',
+    'Treat /goal support as mandatory',
+    ".beislid/workflow.md",
+    'checks/status rollup',
+    'mergeability/conflicts',
+    'review decision',
+    'PR comments',
+    'inline review threads',
+    'review-response workflow',
+    'run the configured applicable gates',
+    'wait with bounded polling',
+    'memento capture',
+    'Never force-push',
+    'never amend published commits',
+    'never merge to bypass failing or pending required checks',
+    'never interpolate review reply bodies into shell commands',
+    'Call update_goal({status:"complete"}) only after the final audit',
+    'User babysit args:',
+]
+required_index = [
+    'import { buildBabysitGoalCommand, hasGoalCommandName } from "./babysit-goal.js";',
+    'pi.registerCommand(command',
+    'skill === "babysit"',
+    'hasGoalCommandName(pi.getCommands())',
+    'pi install git:github.com/Michaelliv/pi-goal',
+    'buildBabysitGoalCommand(args, { cwd: ctx.cwd })',
+    'pi.sendUserMessage(await buildBabysitGoalCommand',
+]
+missing = [needle for needle in required_helper if needle not in helper]
+missing += [needle for needle in required_index if needle not in index]
+if missing:
+    raise SystemExit(f'missing babysit goal wrapper requirements: {missing}')
+PY
+}
+
+
+test_pi_babysit_goal_builder_preserves_args_and_tokens() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit goal builder to preserve args and token budgets safely"
+from pathlib import Path
+import re, sys
+root = Path(sys.argv[1])
+helper = (root / 'extensions' / 'beislid' / 'babysit-goal.ts').read_text(encoding='utf-8')
+required = [
+    'export function splitBabysitTokenBudgetArg',
+    '--tokens(?:=|\\s+)',
+    'const withoutToken =',
+    'export function extractBabysitTokenBudget',
+    '```beislid:babysit',
+    'token_budget:',
+    'parsed.tokenBudget ?? (await configuredBabysitTokenBudget(options.cwd))',
+    'const tokenArg = tokenBudget ? `--tokens ${tokenBudget} ` : "";',
+    'return `/goal ${tokenArg}${babysitGoalObjective(parsed.args)}`;',
+]
+missing = [needle for needle in required if needle not in helper]
+if missing:
+    raise SystemExit(f'missing token/args builder logic: {missing}')
+if re.search(r'`/goal \$\{tokenArg\}\$\{parsed\.args\}', helper):
+    raise SystemExit('user args should be labelled in the objective, not blindly prepended before the babysit objective')
+PY
+}
+
+
+test_pi_babysit_handler_branches_without_skill_fallback() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected Pi /babysit handler to branch on /goal availability without skill fallback"
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+index = (root / 'extensions' / 'beislid' / 'index.ts').read_text(encoding='utf-8')
+start = index.index('if (skill === "babysit")')
+end = index.index('const initialSignal = initialSignalForSkill(skill);', start)
+branch = index[start:end]
+required = [
+    'if (!hasGoalCommandName(pi.getCommands()))',
+    'phase: "missing-goal"',
+    'notify(ctx, "/babysit requires /goal.',
+    'return;',
+    'phase: "goal"',
+    'pi.sendUserMessage(await buildBabysitGoalCommand(args, { cwd: ctx.cwd }), { deliverAs: "followUp" })',
+]
+missing = [needle for needle in required if needle not in branch]
+if missing:
+    raise SystemExit(f'missing babysit handler branch logic: {missing}')
+if '/skill:babysit' in branch or 'skillPrompt(skill, args)' in branch:
+    raise SystemExit('babysit wrapper must not fall back to a normal /skill:babysit turn')
+PY
+}
+
+
 test_pi_beislid_surfaces_workflow_signals() {
   python3 - <<'PY' "$REPO_DIR" || note_fail "expected Beislið Pi extension to surface workflow signals"
 from pathlib import Path
@@ -1813,6 +1910,9 @@ run_test "CLI project status reports manifest and counts"      test_cli_project_
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
 run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
+run_test "pi babysit goal helper has core requirements"       test_pi_babysit_goal_helper_has_core_requirements
+run_test "pi babysit preserves args and token budgets"        test_pi_babysit_goal_builder_preserves_args_and_tokens
+run_test "pi babysit handler branches without fallback"       test_pi_babysit_handler_branches_without_skill_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
