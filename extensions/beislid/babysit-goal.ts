@@ -13,7 +13,7 @@ type TokenArg = {
 };
 
 export function hasGoalCommandName(commands: Array<{ name?: string }>): boolean {
-	return commands.some((command) => command.name === "goal" || command.name?.startsWith("goal:"));
+	return commands.some((command) => command.name === "goal");
 }
 
 export function splitBabysitTokenBudgetArg(args: string): TokenArg {

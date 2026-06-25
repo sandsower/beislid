@@ -758,7 +758,10 @@ required_helper = [
     'never interpolate review reply bodies into shell commands',
     'Call update_goal({status:"complete"}) only after the final audit',
     'User babysit args:',
+    'command.name === "goal"',
 ]
+if 'startsWith("goal:")' in helper:
+    raise SystemExit('wrapper injects literal /goal, so suffixed duplicate goal commands must not satisfy availability')
 required_index = [
     'import { buildBabysitGoalCommand, hasGoalCommandName } from "./babysit-goal.js";',
     'pi.registerCommand(command',
