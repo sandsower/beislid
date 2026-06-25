@@ -169,15 +169,18 @@ artifact_retention: local
 workflows:
   spec: prompt
   blueprint: suggest
+  poke-holes: suggest
   show-me: auto
 ```
 ````
 
 `mode` controls proactive use: `off` disables visual routing, `suggest` mentions that a visual surface may help, `prompt` asks before opening/invoking one, and `auto` allows configured workflows to open/invoke without another prompt when their own action policy permits it. Per-workflow overrides inherit the global mode when absent. `command` defaults to the enabled Lavish plugin command, then `npx -y lavish-axi`; doctor validates shape but should not deep-invoke the command. `artifact_root` defaults to `.lavish` and must be a relative repo-local path with no `..` segments. `artifact_retention` controls supplemental Lavish HTML only: `local` keeps ignored local wrappers, `discard` removes wrappers after use, and `preserve-repo` requires explicit workflow intent plus a gitignore exception before anything is committed. Repo config is required for proactive routing; user-level plugin enablement alone is not enough.
 
-When a workflow's effective visual-surface mode is active, load the portable Lavish contract from canonical `.beislid/visual-surface-protocol.md` or that workflow skill's readable auxiliary copy. That protocol defines the supplemental HTML review surface rules, provider boundary, fallback behavior, the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, Show Me deck routing and artifact_retention semantics, and the `BEISLID_VISUAL_FEEDBACK_V1` typed gate validation contract. Workflows must not claim Lavish routing is active without repo-level `beislid:visual_surfaces` config.
+Planning workflow routing is conservative: `blueprint` surfaces are for visual plans, implementation-option comparisons, architecture/data-flow diagrams, and risk/test matrices that materially improve design approval; `poke-holes` surfaces are for decision trees, branching tradeoffs, risk maps, and diagram-backed stress tests. Simple linear planning turns stay in Markdown/chat.
 
-Typed gate feedback and freeform annotations are distinct. Only a typed payload that validates for the current workflow/action may count as a visual gate decision; unknown actions, unknown decisions, malformed payloads, freeform-only feedback, or parser-unavailable hosts fall back to manual Markdown/chat review. The optional `beislid visual-feedback normalize` helper normalizes accepted events and reports `manual_review` with `canonical_update_required` so the canonical Markdown/chat record remains auditable.
+When a workflow's effective visual-surface mode is active, load the portable Lavish contract from canonical `.beislid/visual-surface-protocol.md` or that workflow skill's readable auxiliary copy. That protocol defines the supplemental HTML review surface rules, provider boundary, fallback behavior, planning workflow surface loops (`Blueprint design surface loop` and `Poke-holes decision-tree surface loop`), the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, Show Me deck routing and artifact_retention semantics, and the `BEISLID_VISUAL_FEEDBACK_V1` typed gate validation contract. Workflows must not claim Lavish routing is active without repo-level `beislid:visual_surfaces` config.
+
+Typed gate feedback and freeform annotations are distinct. Only a typed payload that validates for the current workflow/action may count as a visual gate decision; unknown actions, unknown decisions, malformed payloads, freeform-only feedback, or parser-unavailable hosts fall back to manual Markdown/chat review. The optional `beislid visual-feedback normalize` helper normalizes accepted events and reports `manual_review` with `canonical_update_required` so the canonical Markdown/chat record remains auditable. V1 planning gates include `blueprint` action `approve_revise_or_choose_blueprint` for approve/revise/choose and `poke-holes` action `resolve_revise_or_choose_poke_holes` for resolved/revise/choose; visual choices require `selected_option` and do not approve implementation by themselves.
 
 ## Workflow signals shape
 

@@ -23,12 +23,20 @@ DEFAULT_EXPECTED_ACTION = "approve_or_revise_spec"
 # unknown workflow/action pairs are manual-review events, not approvals.
 KNOWN_ACTIONS: dict[str, set[str]] = {
     "spec": {"approve_or_revise_spec"},
+    "blueprint": {"approve_revise_or_choose_blueprint"},
+    "poke_holes": {"resolve_revise_or_choose_poke_holes"},
 }
 
 # Backward-compatible aliases for Phase 1 convention-level payloads and common
 # review vocabulary. Aliases normalize before action/decision validation.
 ACTION_ALIASES: dict[tuple[str, str], str] = {
     ("spec", "review_spec"): "approve_or_revise_spec",
+    ("blueprint", "review_blueprint"): "approve_revise_or_choose_blueprint",
+    ("blueprint", "approve_or_revise_blueprint"): "approve_revise_or_choose_blueprint",
+    ("blueprint", "choose_blueprint_option"): "approve_revise_or_choose_blueprint",
+    ("poke_holes", "review_poke_holes"): "resolve_revise_or_choose_poke_holes",
+    ("poke_holes", "stress_test_plan"): "resolve_revise_or_choose_poke_holes",
+    ("poke_holes", "choose_poke_holes_branch"): "resolve_revise_or_choose_poke_holes",
 }
 
 DECISION_ALIASES: dict[str, str] = {
@@ -40,10 +48,20 @@ DECISION_ALIASES: dict[str, str] = {
     "changes_requested": "revise",
     "request_revision": "revise",
     "needs_revision": "revise",
+    "choose": "choose",
+    "choice": "choose",
+    "select": "choose",
+    "selected": "choose",
+    "resolved": "resolved",
+    "resolve": "resolved",
+    "complete": "resolved",
+    "done": "resolved",
 }
 
 ALLOWED_DECISIONS_BY_ACTION: dict[tuple[str, str], set[str]] = {
     ("spec", "approve_or_revise_spec"): {"approve", "revise"},
+    ("blueprint", "approve_revise_or_choose_blueprint"): {"approve", "revise", "choose"},
+    ("poke_holes", "resolve_revise_or_choose_poke_holes"): {"resolved", "revise", "choose"},
 }
 
 _REQUIRED_FIELDS = ("schema", "workflow", "action", "decision")
@@ -67,6 +85,8 @@ def normalize_visual_feedback(
     """
 
     raw = text or ""
+    expected_workflow = _normalize_token(expected_workflow)
+    expected_action = _normalize_token(expected_action)
     legacy_schema_omitted = False
     schema_count = _schema_field_count(raw)
     if schema_count > 1:
@@ -78,6 +98,20 @@ def normalize_visual_feedback(
         if parsed is None:
             return _manual("missing_typed_feedback", raw, expected_workflow, expected_action)
         if "schema" not in parsed:
+            workflow = _normalize_token(parsed.get("workflow"))
+            if workflow != "spec":
+                return _manual(
+                    "missing_required_field",
+                    raw,
+                    expected_workflow,
+                    expected_action,
+                    payload=parsed,
+                    field="schema",
+                    workflow=workflow,
+                    action=_normalize_token(parsed.get("action")),
+                    original_action=_normalize_token(parsed.get("action")),
+                    original_decision=_normalize_token(parsed.get("decision")),
+                )
             parsed["schema"] = SCHEMA
             legacy_schema_omitted = True
     else:
@@ -164,6 +198,21 @@ def normalize_visual_feedback(
             original_decision=original_decision,
         )
 
+    selected_option = _text(parsed.get("selected_option"))
+    if decision == "choose" and not selected_option:
+        return _manual(
+            "missing_required_field",
+            raw,
+            expected_workflow,
+            expected_action,
+            payload=parsed,
+            field="selected_option",
+            workflow=workflow,
+            action=action,
+            original_action=original_action,
+            original_decision=original_decision,
+        )
+
     return {
         "schema": SCHEMA,
         "status": "accepted",
@@ -176,6 +225,7 @@ def normalize_visual_feedback(
         "original_decision": original_decision,
         "approval_note": _text(parsed.get("approval_note")),
         "revision_summary": _text(parsed.get("revision_summary")),
+        "selected_option": selected_option,
         "must_change": _list(parsed.get("must_change")),
         "nice_to_have": _list(parsed.get("nice_to_have")),
         "canonical_update_required": True,
@@ -423,6 +473,17 @@ def _canonical_instruction(decision: str) -> str:
         return (
             "Copy the accepted visual approval into the canonical Markdown/chat record, "
             "including workflow, action, decision, and any approval note, before routing downstream."
+        )
+    if decision == "choose":
+        return (
+            "Copy the accepted visual choice into the canonical Markdown/chat record, "
+            "including workflow, action, decision, selected_option, and rationale before applying it. "
+            "A visual choice is not implementation approval by itself."
+        )
+    if decision == "resolved":
+        return (
+            "Copy the accepted visual resolution into the canonical Markdown/chat record, "
+            "including workflow, action, decision, and any approval note before marking the planning check complete."
         )
     return (
         "Copy the accepted visual revision request into the canonical Markdown/chat record, "

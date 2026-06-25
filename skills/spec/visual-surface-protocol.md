@@ -69,7 +69,49 @@ A `spec` HTML artifact should use Lavish `plan` and `comparison` playbook guidan
 - Controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `decision: approve` or `decision: revise`; `request_changes` and similar request-change wording normalize to `revise`. Freeform annotations remain advisory.
 - Source context: include the ticket id/title when known, canonical Markdown artifact path when one exists, or a chat-boundary note when approval has not yet been written to a file.
 
-After feedback returns, normalize the typed lane before using it. A visual `approve` response can satisfy the review decision only when it validates as an accepted typed gate response for `workflow: spec` and canonical action `approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved. A visual `revise` response means copy the accepted revision request into the canonical Markdown/chat spec, apply `must_change` items, and run another gate. A `manual_review` result, freeform-only feedback, unknown action, unknown decision, malformed payload, or parser-unavailable host continues through the normal Markdown/chat approval/revision gate.
+After feedback returns, normalize the typed lane before using it. A visual `approve` response can satisfy the review decision only when it validates as an accepted typed gate response for `workflow: spec` and canonical action `approve_or_revise_spec`; the skill must still visibly record that the Markdown spec is approved. A visual `revise` response means copy the accepted revision request into the canonical Markdown/chat spec, apply `must_change` items, and run another gate. A `manual_review` result, freeform-only feedback, unknown action, unknown decision, malformed payload, or parser-unavailable hosts continue through the normal Markdown/chat approval/revision gate.
+
+## Blueprint design surface loop
+
+`blueprint` may use Lavish only as a supplemental implementation-design review surface after requirements are clear and a presentable design or set of implementation approaches exists. Do not route every design turn visually. Classify the opportunity conservatively: use a surface only when it materially improves understanding of branching options, architecture/data-flow diagrams, file/module boundaries, tradeoff tables, risk/test matrices, or a concrete approval/choice/revision gate. Early context gathering and one-question-at-a-time design interviews remain Markdown/chat-first.
+
+Effective mode handling for `blueprint`:
+
+- absent config or `off`: do not mention or invoke Lavish; continue with the normal Markdown/chat design approval gate.
+- `suggest`: mention that a supplemental visual design surface may help compare options, diagrams, and tradeoffs; do not generate or open one unless the user/host explicitly routes there.
+- `prompt`: ask before generating/opening in interactive runs; in unattended runs, fall back to Markdown/chat unless the run envelope has already granted permission to open visual surfaces.
+- `auto`: generate/open only inside the configured workflow/action-policy boundary, announce the HTML path and prompt contract, then wait for feedback only when the workflow is allowed to poll.
+
+A `blueprint` HTML artifact should use Lavish `plan`, `comparison`, `diagram`, and `input` playbook guidance:
+
+- Plan sections: design goal, selected requirements/spec source, recommended approach, implementation sequence, tests, risks, explicit approval boundary, and out-of-scope notes.
+- Comparison sections: 2–3 approaches with tradeoffs, recommendation rationale, discarded/deferred options, and approval impact.
+- Diagram sections: architecture, module/data-flow, state/sequence, or dependency diagrams only when they clarify the design; avoid decorative diagrams.
+- Input controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow: blueprint`, canonical action `approve_revise_or_choose_blueprint`, and `decision: approve`, `decision: revise`, or `decision: choose`. `choose` must include `selected_option`; freeform annotations remain advisory.
+- Source context: include ticket/spec/work-contract identifiers and canonical artifact paths when available, or a chat-boundary note when the design is not file-backed.
+
+After feedback returns, normalize the typed lane before using it. A visual `approve` response may count only after the approved design is copied into the canonical Markdown/chat design record and the normal `blueprint` approval gate is visibly satisfied. A visual `choose` response records the selected option in the canonical design, but it is not approval to implement by itself. A visual `revise` response means copy the accepted revision request into the canonical design, apply `must_change` items, and run another design gate. Visual controls must never bypass `blueprint`'s explicit approval before `implement`.
+
+## Poke-holes decision-tree surface loop
+
+`poke-holes` may use Lavish only when there is an existing plan/spec/design to stress-test and the stress test has enough branching structure to benefit from a visual decision tree, tradeoff matrix, risk map, or diagram. Do not use a visual surface to extract requirements from scratch, to replace the interview loop, or for simple linear critique that is clearer in chat.
+
+Effective mode handling for `poke-holes`:
+
+- absent config or `off`: do not mention or invoke Lavish; continue with the normal Markdown/chat interrogation.
+- `suggest`: mention that a supplemental visual decision tree or tradeoff surface may help; do not generate or open one unless the user/host explicitly routes there.
+- `prompt`: ask before generating/opening in interactive runs; in unattended runs, fall back to Markdown/chat unless the run envelope has already granted permission to open visual surfaces.
+- `auto`: generate/open only inside the configured workflow/action-policy boundary, announce the HTML path and prompt contract, then wait for feedback only when the workflow is allowed to poll.
+
+A `poke-holes` HTML artifact should use Lavish `comparison`, `diagram`, and `input` playbook guidance:
+
+- Decision-tree sections: assumptions, open branches, blocking questions, recommended answers, dependencies between decisions, and resolved vs unresolved branches.
+- Tradeoff sections: risk/severity, cost, reversibility, likely failure modes, and mitigation options.
+- Diagram sections: dependency graphs, sequence/state diagrams, or architecture risk sketches only when they clarify the stress test.
+- Input controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow: poke-holes`, canonical action `resolve_revise_or_choose_poke_holes`, and `decision: resolved`, `decision: revise`, or `decision: choose`. `choose` must include `selected_option`; freeform annotations remain advisory.
+- Source context: include the plan/spec/design path or chat-boundary summary and omit unrelated session transcript.
+
+After feedback returns, normalize the typed lane before using it. A visual `resolved` response may close the stress-test only after the canonical Markdown/chat record notes the resolved branches and remaining non-blockers. A visual `choose` response records a branch/option choice, but any affected plan/spec/design must be updated and, where applicable, re-approved before downstream work. A visual `revise` response means copy the accepted revision request into the canonical plan/spec/design and continue the normal `poke-holes` loop or route back to the owning planning skill.
 
 ## Show Me deck routing
 
@@ -164,7 +206,7 @@ fallback:
   canonical_if_unavailable: Continue in Markdown/chat and ask for the same approve/revise gate there.
 ```
 
-The prompt may add human-readable instructions before or after the YAML, but the single prompt schema token and field names above are the portable contract. The YAML block above is the spec approval/revision variant; advisory `show-me` inspection uses `workflow: show-me`, `action: inspect_show_me_deck`, deck source paths, and no required typed gate unless a later protocol version defines one.
+The prompt may add human-readable instructions before or after the YAML, but the single prompt schema token and field names above are the portable contract. The YAML block above is the spec approval/revision variant. Planning surfaces use the same envelope with workflow-specific actions: `workflow: blueprint`, `action: review_blueprint` or typed gate `approve_revise_or_choose_blueprint` for design approval/revision/option choice; `workflow: poke-holes`, `action: review_poke_holes` or typed gate `resolve_revise_or_choose_poke_holes` for stress-test resolution/revision/branch choice. Advisory `show-me` inspection uses `workflow: show-me`, `action: inspect_show_me_deck`, deck source paths, and no required typed gate unless a later protocol version defines one.
 
 ## Feedback validation and normalization
 
@@ -180,13 +222,15 @@ The optional repository helper is dependency-free and does not invoke Lavish:
 beislid visual-feedback normalize --expected-workflow spec --expected-action approve_or_revise_spec feedback.txt
 ```
 
-It prints a lossless normalized JSON event for the typed contract, including `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `approval_note`, `revision_summary`, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline; when parsing or normalizing feedback, preserve those audit fields so the accepted decision or manual-review fallback can be copied into the canonical Markdown/chat record. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.
+It prints a lossless normalized JSON event for the typed contract, including `status`, `reason`, canonical `workflow`, canonical `action`, canonical `decision` when accepted, original action/decision fields, `approval_note`, `revision_summary`, `selected_option`, `must_change`, `nice_to_have`, `canonical_update_required`, and a short raw-feedback excerpt. Hosts may call this helper or apply the same rules inline; when parsing or normalizing feedback, preserve those audit fields so the accepted decision or manual-review fallback can be copied into the canonical Markdown/chat record. The helper accepts JSON, fenced JSON/YAML, or the small flat YAML shape shown above; it is not a general YAML parser.
 
 For v1, the canonical action vocabulary is intentionally small:
 
 | Workflow | Canonical typed action | Accepted decisions | Backward-compatible aliases |
 | --- | --- | --- | --- |
 | `spec` | `approve_or_revise_spec` | `approve`, `revise` | legacy Phase 1 flat payloads may omit `schema` when `workflow`/`action`/`decision` are present; action `review_spec`; decisions `request_changes`, `changes_requested`, `request_revision` → `revise` |
+| `blueprint` | `approve_revise_or_choose_blueprint` | `approve`, `revise`, `choose` | actions `review_blueprint`, `approve_or_revise_blueprint`, `choose_blueprint_option`; `choose`/`select`/`selected` → `choose` and requires `selected_option` |
+| `poke-holes` | `resolve_revise_or_choose_poke_holes` | `resolved`, `revise`, `choose` | workflow normalizes to `poke_holes`; actions `review_poke_holes`, `stress_test_plan`, `choose_poke_holes_branch`; `resolve`/`complete`/`done` → `resolved`; `choose` requires `selected_option` |
 
 Unknown workflows, actions, decisions, duplicate fields, multiple typed payloads, or mixed valid/malformed payloads must produce `manual_review`. They must never silently approve, auto-route downstream, or bypass action-policy gates.
 
@@ -197,7 +241,7 @@ Visual feedback has two lanes:
 - **Freeform annotations/messages**: comments, highlights, sketches, and chat-like notes created in the visual editor. These are useful revision evidence but never count as approval, rejection, or a workflow-gate answer by themselves.
 - **Typed workflow-gate input**: an explicit `BEISLID_VISUAL_FEEDBACK_V1` response with `workflow`, `action`, `decision`, and revision/approval fields. Beislið may use this as the workflow gate only when it validates against the current workflow/action and the decision is unambiguous.
 
-For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text after the approval is visibly recorded there. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances; visual controls never bypass the explicit spec approval record or action-policy gates.
+For the Phase 1 `spec` loop, `decision: approve` means the spec may proceed to the next workflow using the canonical Markdown/chat spec text after the approval is visibly recorded there. `decision: revise` means apply the typed `must_change` items first, then present the revised canonical spec for another gate. For planning workflows, `decision: choose` records a selected option/branch only after `selected_option` is copied into the canonical Markdown/chat plan/design; `decision: resolved` records a completed `poke-holes` stress test only after resolved branches are summarized canonically. Freeform annotations can inform revisions, but the typed gate decides whether the workflow advances; visual controls never bypass the explicit spec/blueprint approval record or action-policy gates.
 
 ## Canonical record audit requirements
 
@@ -205,7 +249,7 @@ When a workflow consumes visual feedback, the canonical Markdown/chat record mus
 
 - visual surface path when known;
 - typed feedback status (`accepted`, `manual_review`, or `unavailable`);
-- accepted `workflow`, `action`, `decision`, and any `approval_note`, `revision_summary`, `must_change`, or `nice_to_have` fields;
+- accepted `workflow`, `action`, `decision`, and any `approval_note`, `revision_summary`, `selected_option`, `must_change`, or `nice_to_have` fields;
 - fallback/manual-review reason for freeform-only, malformed, unknown, mismatched, or parser-unavailable feedback;
 - the downstream decision: approved canonical Markdown, revised canonical Markdown, or continued manual Markdown/chat gate.
 

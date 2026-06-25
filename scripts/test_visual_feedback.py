@@ -18,11 +18,17 @@ import visual_feedback  # noqa: E402
 
 
 class VisualFeedbackTests(unittest.TestCase):
-    def normalize(self, payload: str) -> dict[str, object]:
+    def normalize(
+        self,
+        payload: str,
+        *,
+        expected_workflow: str = "spec",
+        expected_action: str = "approve_or_revise_spec",
+    ) -> dict[str, object]:
         return visual_feedback.normalize_visual_feedback(
             payload,
-            expected_workflow="spec",
-            expected_action="approve_or_revise_spec",
+            expected_workflow=expected_workflow,
+            expected_action=expected_action,
         )
 
     def test_accepts_json_approve_payload(self) -> None:
@@ -512,6 +518,141 @@ class VisualFeedbackTests(unittest.TestCase):
         self.assertEqual(result["status"], "accepted")
         self.assertEqual(result["action"], "approve_or_revise_spec")
         self.assertEqual(result["original_action"], "review_spec")
+
+    def test_accepts_blueprint_choose_with_selected_option(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: blueprint
+            action: choose_blueprint_option
+            decision: choose
+            selected_option: Option B - protocol-only update
+            approval_note: Best balance of safety and scope
+            """,
+            expected_workflow="blueprint",
+            expected_action="approve_revise_or_choose_blueprint",
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["workflow"], "blueprint")
+        self.assertEqual(result["action"], "approve_revise_or_choose_blueprint")
+        self.assertEqual(result["decision"], "choose")
+        self.assertEqual(result["selected_option"], "Option B - protocol-only update")
+        self.assertTrue(result["canonical_update_required"])
+
+    def test_accepts_blueprint_approve_alias(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: blueprint
+            action: approve_or_revise_blueprint
+            decision: approved
+            approval_note: Design is ready after option review
+            """,
+            expected_workflow="blueprint",
+            expected_action="approve_revise_or_choose_blueprint",
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["decision"], "approve")
+        self.assertEqual(result["action"], "approve_revise_or_choose_blueprint")
+
+    def test_blueprint_choose_requires_selected_option(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: blueprint
+            action: approve_revise_or_choose_blueprint
+            decision: choose
+            """,
+            expected_workflow="blueprint",
+            expected_action="approve_revise_or_choose_blueprint",
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "missing_required_field")
+        self.assertEqual(result["field"], "selected_option")
+
+    def test_schema_less_blueprint_feedback_is_not_legacy_accepted(self) -> None:
+        result = self.normalize(
+            """
+            workflow: blueprint
+            action: approve_revise_or_choose_blueprint
+            decision: approve
+            """,
+            expected_workflow="blueprint",
+            expected_action="approve_revise_or_choose_blueprint",
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "missing_required_field")
+        self.assertEqual(result["field"], "schema")
+
+    def test_accepts_poke_holes_resolution_with_hyphenated_workflow(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: poke-holes
+            action: review_poke_holes
+            decision: resolved
+            approval_note: Decision tree has no remaining blocking branches
+            """,
+            expected_workflow="poke-holes",
+            expected_action="resolve_revise_or_choose_poke_holes",
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["workflow"], "poke_holes")
+        self.assertEqual(result["action"], "resolve_revise_or_choose_poke_holes")
+        self.assertEqual(result["decision"], "resolved")
+
+    def test_accepts_poke_holes_choose_alias(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: poke-holes
+            action: choose_poke_holes_branch
+            decision: selected
+            selected_option: Branch 2 - simplify the rollout gate
+            """,
+            expected_workflow="poke-holes",
+            expected_action="resolve_revise_or_choose_poke_holes",
+        )
+
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["decision"], "choose")
+        self.assertEqual(result["selected_option"], "Branch 2 - simplify the rollout gate")
+
+    def test_poke_holes_choose_requires_selected_option(self) -> None:
+        result = self.normalize(
+            """
+            schema: BEISLID_VISUAL_FEEDBACK_V1
+            workflow: poke-holes
+            action: resolve_revise_or_choose_poke_holes
+            decision: choose
+            """,
+            expected_workflow="poke-holes",
+            expected_action="resolve_revise_or_choose_poke_holes",
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "missing_required_field")
+        self.assertEqual(result["field"], "selected_option")
+
+    def test_schema_less_poke_holes_feedback_is_not_legacy_accepted(self) -> None:
+        result = self.normalize(
+            """
+            workflow: poke-holes
+            action: resolve_revise_or_choose_poke_holes
+            decision: resolved
+            """,
+            expected_workflow="poke-holes",
+            expected_action="resolve_revise_or_choose_poke_holes",
+        )
+
+        self.assertEqual(result["status"], "manual_review")
+        self.assertEqual(result["reason"], "missing_required_field")
+        self.assertEqual(result["field"], "schema")
 
 
 if __name__ == "__main__":
