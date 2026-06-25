@@ -955,7 +955,9 @@ Lavish is never required for a Beislið workflow. Markdown/chat artifacts remain
 
 Doctor validates the config shape and reports missing or disabled Lavish plugin state as graceful fallback guidance. It does not deep-invoke Lavish or spend npm/network/cache.
 
-When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill readable auxiliary copy for project-local installs. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, and the `BEISLID_VISUAL_PROMPT_V1` prompt envelope. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
+When visual routing is active for a workflow, the reusable protocol's canonical source lives in `.beislid/visual-surface-protocol.md`; workflow skills may expose it through a per-skill readable auxiliary copy for project-local installs. It defines how to write supplemental Lavish-ready HTML review surfaces, the Beislið/provider boundary, graceful Markdown/chat fallback behavior, the `BEISLID_VISUAL_PROMPT_V1` prompt envelope, and the typed `BEISLID_VISUAL_FEEDBACK_V1` validation contract. Workflows should load that protocol only when repo-level `beislid:visual_surfaces` config makes the effective mode active; user-level plugin state alone is not enough.
+
+Typed gate feedback is separate from freeform annotations. A workflow may consume a visual decision only after the typed payload validates for the current workflow/action and normalizes to an accepted decision; unknown action, unknown decision, duplicate fields, multiple typed payloads, malformed payload, freeform-only feedback, or unavailable parser support must continue through manual Markdown/chat review. The repository ships a dependency-free helper exposed as `beislid visual-feedback normalize`, for hosts that want a shared parser/normalizer without taking a Lavish runtime dependency or relying on the current working directory. Its normalized event includes `manual_review` fallback reasons and `canonical_update_required` so the accepted visual decision or fallback reason can be copied into the canonical Markdown/chat record before any downstream routing. For Phase 1 compatibility, the helper also accepts the old flat `workflow`/`action`/`decision` payload shape when the schema token was omitted and the gate is otherwise unambiguous.
 
 ## Workflow signals
 
@@ -1082,7 +1084,7 @@ Pass `--write-gitignore` to create `.gitignore` if needed, insert the block if a
 
 `packaging/homebrew/beislid.rb` is a draft Homebrew formula for packaging validation. It installs the Beislið runtime subset under Homebrew `libexec` and exposes `bin/beislid` on PATH. This is not published Homebrew support yet; full Homebrew install/upgrade policy is tracked separately in the Homebrew packaging work.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 

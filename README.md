@@ -145,7 +145,7 @@ beislid plugin status lavish
 
 `beislid plugin status lavish` is a light check only. Add `--check` only when you intentionally want to invoke the configured Lavish command, which may touch npm, network, and the local package cache when the command is the default `npx -y lavish-axi`. Environments that need a pinned or local runtime can use `beislid plugin enable lavish --command 'path/to/lavish-axi'`.
 
-Repo-level routing is configured separately with `beislid:visual_surfaces` in `.beislid/workflow.md`; see [Configuration](./docs/configuration.md#visual-surfaces) for modes, fallbacks, troubleshooting, and the Beislið/Lavish ownership boundary.
+Repo-level routing is configured separately with `beislid:visual_surfaces` in `.beislid/workflow.md`; see [Configuration](./docs/configuration.md#visual-surfaces) for modes, fallbacks, troubleshooting, the Beislið/Lavish ownership boundary, and typed `BEISLID_VISUAL_FEEDBACK_V1` handling. Typed gate feedback is distinct from freeform annotations; unknown, malformed, or freeform-only visual feedback falls back to manual Markdown/chat review.
 
 ## Core workflows
 
@@ -185,6 +185,7 @@ beislid plugin disable lavish
 beislid plugin status lavish [--check]
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
+beislid visual-feedback normalize [feedback-file]
 beislid update
 beislid migrate v0.2
 beislid help
