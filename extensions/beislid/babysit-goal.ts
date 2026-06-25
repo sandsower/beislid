@@ -12,8 +12,8 @@ type TokenArg = {
 	tokenBudget?: string;
 };
 
-export function hasGoalCommandName(commands: Array<{ name?: string }>): boolean {
-	return commands.some((command) => command.name === "goal");
+export function hasGoalCommandName(commands: Array<{ name?: string; source?: string }>): boolean {
+	return commands.some((command) => command.name === "goal" && command.source === "extension");
 }
 
 export function splitBabysitTokenBudgetArg(args: string): TokenArg {
