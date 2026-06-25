@@ -787,8 +787,11 @@ root = Path(sys.argv[1])
 helper = (root / 'extensions' / 'beislid' / 'babysit-goal.ts').read_text(encoding='utf-8')
 required = [
     'export function splitBabysitTokenBudgetArg',
-    '--tokens(?:=|\\s+)',
-    'const withoutToken =',
+    '--tokens(?:(?:=|\\s+)(\\S+))?',
+    'let withoutToken =',
+    'trimmed.matchAll(tokenFlagPattern)',
+    'const validBudget = candidate.match(validBudgetPattern);',
+    'Number(validBudget[1]) > 0',
     'export function extractBabysitTokenBudget',
     '```beislid:babysit',
     'token_budget:',
@@ -801,6 +804,8 @@ if missing:
     raise SystemExit(f'missing token/args builder logic: {missing}')
 if '[0-9_]' in helper or '(?:_[0-9]+)' in helper:
     raise SystemExit('token budget parsing must stay aligned with pi-goal and reject underscores')
+if 'Number(value.replace(/\\s*[kKmM]$/, "")) <= 0' not in helper:
+    raise SystemExit('workflow token budget parsing must reject non-positive values')
 if re.search(r'`/goal \$\{tokenArg\}\$\{parsed\.args\}', helper):
     raise SystemExit('user args should be labelled in the objective, not blindly prepended before the babysit objective')
 PY

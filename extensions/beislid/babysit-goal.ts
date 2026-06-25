@@ -18,13 +18,22 @@ export function hasGoalCommandName(commands: Array<{ name?: string; source?: str
 
 export function splitBabysitTokenBudgetArg(args: string): TokenArg {
 	const trimmed = args.trim();
-	const match = trimmed.match(/(?:^|\s)--tokens(?:=|\s+)([0-9]+(?:\.[0-9]+)?\s*[kKmM]?)(?=\s|$)/);
-	if (!match) return { args: trimmed };
-	const tokenBudget = match[1].replace(/\s+/g, "");
-	const start = match.index ?? 0;
-	const end = start + match[0].length;
-	const withoutToken = `${trimmed.slice(0, start)} ${trimmed.slice(end)}`.replace(/\s+/g, " ").trim();
-	return { args: withoutToken, tokenBudget };
+	const tokenFlagPattern = /(?:^|\s)--tokens(?:(?:=|\s+)(\S+))?(?=\s|$)/g;
+	const validBudgetPattern = /^([0-9]+(?:\.[0-9]+)?)([kKmM]?)$/;
+	let tokenBudget: string | undefined;
+	let withoutToken = "";
+	let lastIndex = 0;
+	for (const match of trimmed.matchAll(tokenFlagPattern)) {
+		const candidate = match[1] ?? "";
+		const validBudget = candidate.match(validBudgetPattern);
+		if (tokenBudget === undefined && validBudget && Number(validBudget[1]) > 0) {
+			tokenBudget = candidate;
+		}
+		withoutToken += `${trimmed.slice(lastIndex, match.index)} `;
+		lastIndex = match.index + match[0].length;
+	}
+	withoutToken += trimmed.slice(lastIndex);
+	return { args: withoutToken.replace(/\s+/g, " ").trim(), tokenBudget };
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -49,7 +58,8 @@ export function extractBabysitTokenBudget(workflow: string): string | undefined 
 	const block = workflow.match(/^```beislid:babysit\s*\n([\s\S]*?)^```/m)?.[1];
 	if (!block) return undefined;
 	const value = block.match(/^\s*token_budget:\s*['"]?([0-9]+(?:\.[0-9]+)?\s*[kKmM]?)['"]?\s*$/m)?.[1];
-	return value?.replace(/\s+/g, "");
+	if (!value || Number(value.replace(/\s*[kKmM]$/, "")) <= 0) return undefined;
+	return value.replace(/\s+/g, "");
 }
 
 export async function configuredBabysitTokenBudget(cwd: string): Promise<string | undefined> {
