@@ -28,7 +28,7 @@ Do not use this for:
 `show-me` is manual/user-requested in v1. Do not auto-run it from another Beislið skill. If another workflow thinks a visual deck would help, suggest it and wait for the user to ask.
 </HARD-GATE>
 
-Optional Lavish routing: after the canonical deck is created/rendered, apply `beislid:visual_surfaces` only when repo config exists and the effective `show-me` mode is active. Load `visual-surface-protocol.md` from this skill directory or canonical `.beislid/visual-surface-protocol.md`; it defines Show Me deck routing, `suggest`/`prompt`/`auto`, fallback, and `artifact_retention` semantics. The rendered `index.html`, `show-me.json`, and evidence bundle remain canonical and portable. Lavish may inspect them or use a supplemental wrapper under `.lavish/show-me/`, but disabled plugin state, missing command binaries, unavailable `npx`, declined prompts, command/editor failures, and freeform-only feedback are non-fatal fallbacks to the normal deck result.
+Optional Lavish routing: after the canonical deck is created/rendered, apply `beislid:visual_surfaces` only when repo config exists and the effective `show-me` mode is active. Load the canonical `.beislid/visual-surface-protocol.md`; project installs may also expose a skill-local copy, but it must mirror the canonical file exactly and the canonical file wins on conflict. The protocol defines Show Me deck routing, `suggest`/`prompt`/`auto`, fallback, and `artifact_retention` semantics. The rendered `index.html`, `show-me.json`, and evidence bundle remain canonical and portable. Lavish may inspect them or use a supplemental wrapper under `.lavish/show-me/`, but disabled plugin state, missing command binaries, unavailable `npx`, declined prompts, command/editor failures, and freeform-only feedback are non-fatal fallbacks to the normal deck result.
 
 ## Output modes
 
@@ -117,7 +117,7 @@ For `understanding` decks with `EXPLANATORY` status, bias toward a visual decisi
 - “what gets saved” panels for backend/data behavior
 - PM/reviewer checklist cards for open decisions
 
-Create a local source/evidence directory. Current HTML rendering assumes online access for CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js); source JSON, logs, and copied media remain local, and Markdown source is visible as a fallback if libraries fail to load.
+Create a local source/evidence directory. HTML rendering can use CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js`) when available; source JSON, logs, and copied media remain local, and Markdown source is visible as a fallback if libraries fail to load.
 
 ```text
 show-me/<repo>/<timestamp>/

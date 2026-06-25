@@ -939,7 +939,7 @@ beislid plugin disable lavish
 beislid plugin enable lavish --command '/opt/tools/lavish-axi' --artifact-root .lavish
 ```
 
-`command`, `artifact_root`, and `artifact_retention` are also optional in repo config. The workflow default command follows enabled Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`, and the default retention is ignored local preservation (`local`). Keep `.lavish/` in `.gitignore` unless a workflow intentionally publishes a named docs/example artifact.
+`command`, `artifact_root`, and `artifact_retention` are also optional in repo config. The workflow default command follows enabled Lavish plugin state and otherwise falls back to `npx -y lavish-axi`; the default artifact root is `.lavish`, and the default retention is ignored local preservation (`local`). Keep `.lavish/` in `.gitignore`; any custom local-retention `artifact_root` must also be ignored unless explicit workflow intent opts into `preserve-repo` with a gitignore exception.
 
 ### Troubleshooting and fallback behavior
 

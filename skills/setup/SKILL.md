@@ -370,7 +370,7 @@ Ask:
 Configure visual surfaces? (off / suggest / prompt / auto / skip)
 ```
 
-For any mode except `skip`, ask whether to use the default Lavish command/artifact root/retention or override them. Defaults are `npx -y lavish-axi`, `.lavish`, and `local`. Ask for optional per-workflow overrides only when the user wants them; valid override values are also `off / suggest / prompt / auto`.
+For any mode except `skip`, ask whether to use the default Lavish command/artifact root/retention or override them. Defaults are `npx -y lavish-axi`, `.lavish`, and `local`. If retention is overridden, prompt explicitly for `local`, `discard`, or `preserve-repo`. Ask for optional per-workflow mode overrides only when the user wants them; valid override values are `off / suggest / prompt / auto`.
 
 ```beislid:visual_surfaces
 provider: lavish-axi

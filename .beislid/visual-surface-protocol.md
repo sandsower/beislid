@@ -47,7 +47,7 @@ When visual routing is active, create a repo-local HTML artifact before provider
 
 Artifact retention policy:
 
-- `artifact_retention: local` or an omitted value keeps supplemental HTML under the ignored `artifact_root` for local inspection only. This is the safe default.
+- `artifact_retention: local` or an omitted value keeps supplemental HTML under a gitignored `artifact_root` for local inspection only. Any custom root must also be ignored before local retention is allowed. This is the safe default.
 - `artifact_retention: discard` removes supplemental HTML when the workflow closes or when the user declines the visual path; canonical Markdown/chat records and `show-me` decks remain untouched.
 - `artifact_retention: preserve-repo` is reserved for explicit workflow intent to commit a supplemental artifact. Use it only with a named docs/example path or gitignore exception; never silently commit `.lavish/` output.
 
@@ -92,7 +92,7 @@ Show Me fallback and preservation rules:
 
 - disabled user plugin state, missing command binaries, unavailable `npx`, command failures, editor launch failures, declined prompts, and missing feedback are non-fatal; return the normal deck paths and record the visual fallback.
 - do not run `beislid plugin status lavish --check` or any deep provider check unless explicitly requested; normal routing must not require network access.
-- keep `.lavish/` and `.beislid/show-me/` ignored by default. Commit a generated deck or supplemental wrapper only when a workflow explicitly asks for a docs/example artifact and the gitignore exception is intentional.
+- keep `.lavish/` and `.beislid/show-me/` ignored by default. Commit a generated deck or supplemental wrapper only when explicit workflow intent opts into publication and the gitignore exception is intentional.
 - apply `artifact_retention` to supplemental Lavish wrappers only. Never discard the canonical `show-me` deck because visual routing was declined or unavailable.
 
 ## Provider invocation expectations

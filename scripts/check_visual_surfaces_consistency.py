@@ -64,7 +64,7 @@ REQUIRED_REFERENCES = {
     ],
     "skills/doctor/SKILL.md": [
         "visual_surfaces",
-        "provider/mode/artifact_root/artifact_retention/workflow",
+        "provider/command/mode/artifact_root/artifact_retention/workflow",
         "Lavish plugin state",
     ],
     "skills/setup/SKILL.md": [

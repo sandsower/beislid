@@ -68,7 +68,7 @@ Repo-local output is allowed only when explicitly requested or configured:
 .beislid/show-me/<timestamp>/
 ```
 
-Generated decks are local artifacts and should not be committed in v1. `.beislid/show-me/` and `.lavish/` should stay ignored unless a workflow explicitly creates a docs/example artifact with an intentional gitignore exception. Current rendering assumes online access for CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js); the source JSON, logs, and copied media stay local in the deck directory, and Markdown source remains visible as a fallback if libraries fail to load.
+Generated decks are local artifacts and should not be committed in v1. `.beislid/show-me/` and `.lavish/` should stay ignored unless a workflow explicitly opts into publication with an intentional gitignore exception. Rendering can use CDN presentation libraries (`marked`, DOMPurify, Mermaid, Highlight.js`) when available; the source JSON, logs, and copied media stay local in the deck directory, and Markdown source remains visible as a fallback if libraries fail to load.
 
 ## Optional Lavish inspection
 
@@ -169,7 +169,7 @@ It demonstrates the intended `show-me` experience:
 
 The example directory includes the rendered HTML, source `show-me.json`, manifest, command log, and copied walkthrough video asset so it can be opened directly from the repository docs.
 
-Generated decks are still local artifacts by default. This checked-in example is intentional documentation; normal `show-me` output and `.lavish/` supplemental wrappers should not be committed unless a workflow explicitly asks for a docs/example artifact. New renders also support Mermaid rendering from markdown fences or `diagram` source blocks and line-colored diffs through CDN presentation libraries; the committed example has not been regenerated for those renderer features yet.
+Generated decks are still local artifacts by default. This checked-in example is intentional documentation; normal `show-me` output and `.lavish/` supplemental wrappers should not be committed unless explicit workflow intent opts into publication with a gitignore exception. New renders can also use Mermaid rendering from markdown fences or `diagram` source blocks and line-colored diffs through CDN presentation libraries when available; the committed example has not been regenerated for those renderer features yet.
 
 ## Privacy and redaction
 
