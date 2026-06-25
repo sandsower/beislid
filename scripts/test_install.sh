@@ -799,6 +799,8 @@ required = [
 missing = [needle for needle in required if needle not in helper]
 if missing:
     raise SystemExit(f'missing token/args builder logic: {missing}')
+if '[0-9_]' in helper or '(?:_[0-9]+)' in helper:
+    raise SystemExit('token budget parsing must stay aligned with pi-goal and reject underscores')
 if re.search(r'`/goal \$\{tokenArg\}\$\{parsed\.args\}', helper):
     raise SystemExit('user args should be labelled in the objective, not blindly prepended before the babysit objective')
 PY

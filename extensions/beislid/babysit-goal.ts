@@ -18,7 +18,7 @@ export function hasGoalCommandName(commands: Array<{ name?: string }>): boolean 
 
 export function splitBabysitTokenBudgetArg(args: string): TokenArg {
 	const trimmed = args.trim();
-	const match = trimmed.match(/(?:^|\s)--tokens(?:=|\s+)([0-9]+(?:_[0-9]+)*(?:\.[0-9]+)?\s*[kKmM]?)(?=\s|$)/);
+	const match = trimmed.match(/(?:^|\s)--tokens(?:=|\s+)([0-9]+(?:\.[0-9]+)?\s*[kKmM]?)(?=\s|$)/);
 	if (!match) return { args: trimmed };
 	const tokenBudget = match[1].replace(/\s+/g, "");
 	const start = match.index ?? 0;
@@ -48,7 +48,7 @@ export async function findWorkflowPath(cwd: string): Promise<string | undefined>
 export function extractBabysitTokenBudget(workflow: string): string | undefined {
 	const block = workflow.match(/^```beislid:babysit\s*\n([\s\S]*?)^```/m)?.[1];
 	if (!block) return undefined;
-	const value = block.match(/^\s*token_budget:\s*['"]?([0-9][0-9_]*(?:\.[0-9]+)?\s*[kKmM]?)['"]?\s*$/m)?.[1];
+	const value = block.match(/^\s*token_budget:\s*['"]?([0-9]+(?:\.[0-9]+)?\s*[kKmM]?)['"]?\s*$/m)?.[1];
 	return value?.replace(/\s+/g, "");
 }
 
