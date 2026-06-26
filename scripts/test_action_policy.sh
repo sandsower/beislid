@@ -65,6 +65,29 @@ assert_contains_json_text() {
   grep -qF -- "$needle" <<<"$payload" || { note_fail "expected JSON to contain: $needle"; return 1; }
 }
 
+init_git_repo() {
+  local repo="$1"
+  git init "$repo" >/dev/null 2>&1
+  git -C "$repo" config user.email "beislid-tests@example.invalid"
+  git -C "$repo" config user.name "Beislið Tests"
+}
+
+write_workflow() {
+  local repo="$1"
+  cat >"$repo/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Action policy
+
+```beislid:action_policy
+modes:
+  supervised-auto:
+    actions:
+      pr.review.reply: allow
+```
+MD
+}
+
 test_supervised_read_allows() {
   local out
   out="$(python3 "$POLICY" evaluate --mode supervised-auto --action file.read)"
@@ -111,6 +134,83 @@ JSON
   out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action pr.review.reply)"
   assert_decision "$out" allow
   assert_contains_json_text "$out" '"type": "action"'
+}
+
+test_repo_workflow_policy_is_loaded_for_bare_evaluate() {
+  local repo out
+  repo="$TMP/repo"
+  mkdir -p "$repo/.beislid" "$repo/nested/dir"
+  init_git_repo "$repo"
+  write_workflow "$repo"
+  out="$(cd "$repo/nested/dir" && python3 "$POLICY" evaluate --mode supervised-auto --action pr.review.reply --sandbox-baseline none)"
+  assert_decision "$out" allow
+  assert_contains_json_text "$out" '"type": "action"'
+}
+
+test_policy_file_overrides_repo_workflow_block() {
+  local repo override out
+  repo="$TMP/repo-override"
+  mkdir -p "$repo/.beislid"
+  init_git_repo "$repo"
+  cat >"$repo/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Action policy
+
+```beislid:action_policy
+modes:
+  supervised-auto:
+    sandbox:
+      minimum: separate-worktree
+```
+MD
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "actions": {
+        "pr.review.reply": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(cd "$repo" && python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action pr.review.reply --sandbox-baseline none)"
+  assert_decision "$out" allow
+  assert_contains_json_text "$out" '"type": "action"'
+}
+
+test_validate_loads_repo_workflow_block() {
+  local repo out
+  repo="$TMP/repo-validate"
+  mkdir -p "$repo/.beislid"
+  init_git_repo "$repo"
+  cat >"$repo/.beislid/workflow.md" <<'MD'
+<!-- beislid-workflow: v1 -->
+
+## Action policy
+
+```beislid:action_policy
+modes:
+  unattended-auto:
+    sandbox:
+      minimum: separate-worktree
+```
+MD
+  out="$(cd "$repo" && python3 "$POLICY" validate)"
+  [[ "$(json_get "$out" status)" == "ok" ]] || { note_fail "policy summary did not report ok"; return 1; }
+  assert_contains_json_text "$out" '"minimum": "separate-worktree"'
+}
+
+test_repo_without_workflow_block_falls_back_to_defaults() {
+  local repo out
+  repo="$TMP/repo-defaults"
+  mkdir -p "$repo"
+  init_git_repo "$repo"
+  out="$(cd "$repo" && python3 "$POLICY" evaluate --mode unattended-auto --action git.push --sandbox-baseline non-default-branch)"
+  assert_decision "$out" deny
+  assert_contains_json_text "$out" '"reason": "classes=git-remote"'
 }
 
 test_policy_override_can_deny_workspace_write() {
@@ -343,7 +443,7 @@ JSON
 
 test_cli_dispatch() {
   local out
-  out="$(BEISLID_HOME="$REPO_DIR" "$CLI" action-policy evaluate --mode supervised-auto --action git.push)"
+  out="$(cd "$TMP" && BEISLID_HOME="$REPO_DIR" "$CLI" action-policy evaluate --mode supervised-auto --action git.push)"
   assert_decision "$out" ask
   assert_contains_json_text "$out" '"action": "git.push"'
 }
@@ -353,6 +453,10 @@ run_test "git status is read-only" test_git_status_is_read_only
 run_test "strictest class wins" test_strictest_class_wins
 run_test "unknown unattended asks" test_unknown_unattended_defaults_to_ask
 run_test "action override allows PR reply" test_action_override_can_allow_pr_reply
+run_test "repo workflow policy is loaded" test_repo_workflow_policy_is_loaded_for_bare_evaluate
+run_test "policy file overrides repo workflow block" test_policy_file_overrides_repo_workflow_block
+run_test "validate loads repo workflow block" test_validate_loads_repo_workflow_block
+run_test "no workflow block falls back to defaults" test_repo_without_workflow_block_falls_back_to_defaults
 run_test "policy override denies workspace write" test_policy_override_can_deny_workspace_write
 run_test "unattended requires non-default branch" test_unattended_requires_non_default_branch_by_default
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline

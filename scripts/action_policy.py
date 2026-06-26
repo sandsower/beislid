@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -109,6 +110,217 @@ def load_json(path: str | None) -> dict[str, Any]:
         return {}
     with Path(path).open(encoding="utf-8") as f:
         return json.load(f)
+
+
+def git_root(cwd: Path | None = None) -> Path | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=cwd or Path.cwd(),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    root = result.stdout.strip()
+    return Path(root) if root else None
+
+
+def extract_fenced_block(text: str, key: str) -> str | None:
+    start_pattern = re.compile(rf"^```beislid:{re.escape(key)}\s*$")
+    in_block = False
+    block_lines: list[str] = []
+    for line in text.splitlines():
+        if not in_block:
+            if start_pattern.match(line):
+                in_block = True
+            continue
+        if line.strip() == "```":
+            return "\n".join(block_lines)
+        block_lines.append(line)
+    return None
+
+
+def strip_inline_comment(value: str) -> str:
+    in_single = False
+    in_double = False
+    for index, char in enumerate(value):
+        if char == "'" and not in_double:
+            in_single = not in_single
+        elif char == '"' and not in_single:
+            in_double = not in_double
+        elif char == "#" and not in_single and not in_double and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+    return value.strip()
+
+
+def split_inline_list(value: str) -> list[str]:
+    items: list[str] = []
+    current: list[str] = []
+    in_single = False
+    in_double = False
+    for char in value:
+        if char == "," and not in_single and not in_double:
+            item = "".join(current).strip()
+            if item:
+                items.append(item)
+            current = []
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+        elif char == '"' and not in_single:
+            in_double = not in_double
+        current.append(char)
+    final = "".join(current).strip()
+    if final:
+        items.append(final)
+    return items
+
+
+def parse_scalar(value: str) -> Any:
+    text = strip_inline_comment(value)
+    if not text:
+        return None
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+        return text[1:-1]
+    if text.startswith("[") and text.endswith("]"):
+        return [parse_scalar(item) for item in split_inline_list(text[1:-1])]
+    lower = text.lower()
+    if lower in {"null", "~", "none"}:
+        return None
+    if lower in {"true", "yes", "on"}:
+        return True
+    if lower in {"false", "no", "off"}:
+        return False
+    if re.fullmatch(r"-?\d+", text):
+        return int(text)
+    if re.fullmatch(r"-?\d+\.\d+", text):
+        return float(text)
+    return text
+
+
+def indent_width(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def next_significant_line(lines: list[str], start_index: int) -> int | None:
+    for index in range(start_index, len(lines)):
+        stripped = lines[index].strip()
+        if stripped and not stripped.startswith("#"):
+            return index
+    return None
+
+
+def parse_yaml_sequence(lines: list[str], start_index: int, indent: int) -> tuple[list[Any], int]:
+    items: list[Any] = []
+    index = start_index
+    while index < len(lines):
+        raw = lines[index]
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            index += 1
+            continue
+        current_indent = indent_width(raw)
+        if current_indent < indent:
+            break
+        if current_indent > indent:
+            break
+        content = raw[indent:]
+        if not content.startswith("- "):
+            break
+        value = content[2:].strip()
+        index += 1
+        if value == "":
+            next_index = next_significant_line(lines, index)
+            if next_index is None:
+                items.append(None)
+                break
+            next_indent = indent_width(lines[next_index])
+            if next_indent <= indent:
+                items.append(None)
+                continue
+            if lines[next_index].lstrip().startswith("- "):
+                child, index = parse_yaml_sequence(lines, next_index, next_indent)
+            else:
+                child, index = parse_yaml_mapping(lines, next_index, next_indent)
+            items.append(child)
+        else:
+            items.append(parse_scalar(value))
+    return items, index
+
+
+def parse_yaml_mapping(lines: list[str], start_index: int, indent: int) -> tuple[dict[str, Any], int]:
+    mapping: dict[str, Any] = {}
+    index = start_index
+    while index < len(lines):
+        raw = lines[index]
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            index += 1
+            continue
+        current_indent = indent_width(raw)
+        if current_indent < indent:
+            break
+        if current_indent > indent:
+            break
+        content = raw[indent:]
+        if content.startswith("- "):
+            raise SystemExit("beislid:action_policy must be a mapping")
+        if ":" not in content:
+            raise SystemExit(f"invalid line in beislid:action_policy block: {raw.strip()}")
+        key, raw_value = content.split(":", 1)
+        key = key.strip()
+        if not key:
+            raise SystemExit(f"invalid empty key in beislid:action_policy block: {raw.strip()}")
+        raw_value = raw_value.strip()
+        index += 1
+        if raw_value == "":
+            next_index = next_significant_line(lines, index)
+            if next_index is None:
+                mapping[key] = None
+                break
+            next_indent = indent_width(lines[next_index])
+            if next_indent <= indent:
+                mapping[key] = None
+                continue
+            if lines[next_index].lstrip().startswith("- "):
+                value, index = parse_yaml_sequence(lines, next_index, next_indent)
+            else:
+                value, index = parse_yaml_mapping(lines, next_index, next_indent)
+            mapping[key] = value
+        else:
+            mapping[key] = parse_scalar(raw_value)
+    return mapping, index
+
+
+def parse_yaml_document(text: str) -> dict[str, Any]:
+    lines = text.splitlines()
+    next_index = next_significant_line(lines, 0)
+    if next_index is None:
+        return {}
+    if lines[next_index].lstrip().startswith("- "):
+        raise SystemExit("beislid:action_policy must be a mapping")
+    document, end_index = parse_yaml_mapping(lines, next_index, indent_width(lines[next_index]))
+    for index in range(end_index, len(lines)):
+        if lines[index].strip() and not lines[index].strip().startswith("#"):
+            raise SystemExit("unexpected trailing content in beislid:action_policy block")
+    return document
+
+
+def load_repo_workflow_policy(cwd: Path | None = None) -> dict[str, Any] | None:
+    repo_root = git_root(cwd)
+    if repo_root is None:
+        return None
+    workflow_path = repo_root / ".beislid" / "workflow.md"
+    try:
+        workflow = workflow_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    block = extract_fenced_block(workflow, "action_policy")
+    if block is None:
+        return None
+    return parse_yaml_document(block)
 
 
 def as_list(value: Any) -> list[str]:
@@ -231,7 +443,11 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
     if run_mode not in RUN_MODES:
         raise SystemExit(f"invalid run mode: {run_mode}")
 
-    policy = normalize_policy(payload.get("policy") or {})
+    if "policy" in payload:
+        policy_source = payload.get("policy") or {}
+    else:
+        policy_source = load_repo_workflow_policy() or {}
+    policy = normalize_policy(policy_source)
     mode_policy = policy["modes"][run_mode]
     action = str(payload.get("action") or payload.get("action_id") or "")
     command = str(payload.get("command") or "")
@@ -379,7 +595,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.subcommand == "evaluate":
         envelope = evaluate(build_payload(args))
     elif args.subcommand == "validate":
-        envelope = policy_summary(load_json(args.policy_file))
+        policy = load_json(args.policy_file) if args.policy_file else (load_repo_workflow_policy() or {})
+        envelope = policy_summary(policy)
     else:
         parser.print_help(sys.stderr)
         return 2
