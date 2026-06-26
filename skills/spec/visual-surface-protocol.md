@@ -8,7 +8,7 @@ Only load and apply this protocol when all of the following are true:
 
 1. The repository workflow config contains a valid `beislid:visual_surfaces` block.
 2. The effective mode for the current workflow is not `off`.
-3. The workflow action is one that can benefit from a review/planning surface.
+3. The workflow action meets that workflow's visual-surface disposition: `spec` should lean in for any spec that can be communicated visually, while `blueprint` and `poke-holes` stay selective and route only when diagrams, option tables, decision trees, or similar structure materially improve understanding.
 
 User-level Lavish plugin state alone never activates visual routing. If repo config is absent, invalid, or `off`, continue in normal Markdown/chat mode and do not claim Lavish routing is active.
 
@@ -55,17 +55,19 @@ Artifact retention policy:
 
 The Phase 1 `spec` integration uses this protocol only at the approval/revision boundary, after the draft product spec is presentable and before downstream routing. Markdown/chat remains the canonical spec record.
 
+Disposition: when visual routing is active, `spec` should propose a Lavish surface by default for any non-trivial spec whose content can be communicated visually. The test is not whether the feature is a UI change; it is whether requirements, options, flows, data models, states, scope boundaries, user journeys, acceptance outcomes, or decision trees would be clearer as a structured visual surface. Skip the visual proposal only for trivial one-line changes, purely linear prose with no meaningful structure to lay out, or when the effective mode/fallback rules below prohibit visual routing.
+
 Effective mode handling for `spec`:
 
 - absent config or `off`: do not mention or invoke Lavish; continue with the normal Markdown/chat approval gate.
-- `suggest`: mention that a supplemental visual review surface may help compare the problem, desired state, decisions, and acceptance outcomes; do not generate or open one unless the user/host explicitly routes there.
-- `prompt`: ask before generating/opening in interactive runs; in unattended runs, fall back to Markdown/chat unless the run envelope has already granted permission to open visual surfaces.
+- `suggest`: for visually-communicable specs, mention that a supplemental visual review surface may help compare the problem, desired state, decisions, and acceptance outcomes; do not generate or open one unless the user/host explicitly routes there.
+- `prompt`: for visually-communicable specs, ask before generating/opening in interactive runs; in unattended runs, fall back to Markdown/chat unless the run envelope has already granted permission to open visual surfaces.
 - `auto`: generate/open only inside the configured workflow/action-policy boundary, then visibly tell the user the HTML path and prompt contract before waiting for visual feedback.
 
 A `spec` HTML artifact should use Lavish `plan` and `comparison` playbook guidance without making Lavish required:
 
-- Plan-oriented sections: problem statement, current state, desired state, user stories/acceptance outcomes, key decisions, out of scope, and any Work Contract fields.
-- Comparison-oriented sections: side-by-side current vs desired behavior, accepted vs deferred decisions, must-change vs nice-to-have feedback lanes, and a clear approve/revise decision card.
+- Plan-oriented sections: problem statement, current state, desired state, user stories/acceptance outcomes, requirement maps, flows, data/state models, key decisions, out of scope, and any Work Contract fields.
+- Comparison-oriented sections: side-by-side current vs desired behavior, option/comparison tables, scope in/out maps, accepted vs deferred decisions, must-change vs nice-to-have feedback lanes, and a clear approve/revise decision card.
 - Controls/prompts: include copyable controls or instructions that emit one typed `BEISLID_VISUAL_FEEDBACK_V1` response with `decision: approve` or `decision: revise`; `request_changes` and similar request-change wording normalize to `revise`. Freeform annotations remain advisory.
 - Source context: include the ticket id/title when known, canonical Markdown artifact path when one exists, or a chat-boundary note when approval has not yet been written to a file.
 
@@ -73,7 +75,7 @@ After feedback returns, normalize the typed lane before using it. A visual `appr
 
 ## Blueprint design surface loop
 
-`blueprint` may use Lavish only as a supplemental implementation-design review surface after requirements are clear and a presentable design or set of implementation approaches exists. Do not route every design turn visually. Classify the opportunity conservatively: use a surface only when it materially improves understanding of branching options, architecture/data-flow diagrams, file/module boundaries, tradeoff tables, risk/test matrices, or a concrete approval/choice/revision gate. Early context gathering and one-question-at-a-time design interviews remain Markdown/chat-first.
+`blueprint` may use Lavish only as a supplemental implementation-design review surface after requirements are clear and a presentable design or set of implementation approaches exists. Do not route every design turn visually. Classify the opportunity selectively: for small or linear designs, stay Markdown/chat-first; for large changes comparable to work that benefits from `walk-the-diff`, lean toward suggesting or prompting for a surface when branching options, architecture/data-flow diagrams, file/module boundaries, tradeoff tables, risk/test matrices, or a concrete approval/choice/revision gate would materially improve understanding. Early context gathering and one-question-at-a-time design interviews remain Markdown/chat-first.
 
 Effective mode handling for `blueprint`:
 
