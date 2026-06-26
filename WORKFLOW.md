@@ -24,6 +24,11 @@ workspace:
 hooks:
   after_create: |
     git clone --depth 1 git@github.com:sandsower/beislid.git .
+    git checkout -B rondo/{{ issue.identifier }}
+  before_run: |
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      git checkout -B rondo/{{ issue.identifier }}
+    fi
 gates:
   - name: skill-size-budgets
     command: python3 scripts/check_skill_size_budgets.py
@@ -38,7 +43,7 @@ gates:
     timeout_ms: 600000
 agent:
   adapter: pi
-  max_concurrent_agents: 2
+  max_concurrent_agents: 10
   max_turns: 20
 claude:
   command: claude
