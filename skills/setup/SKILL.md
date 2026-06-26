@@ -358,6 +358,8 @@ overrides:
     mode: require
 ```
 
+If the repo also ships a `WORKFLOW.md` Rondo profile, keep its `step_hints` adapter in sync with the same tier table: kickoff initial spawn should route stronger than the broad default, ideally `heavy`/`frontier`; ordinary implementation should stay on `standard`; ready-for-review gate execution can stay `light` or `standard`; and review/fresh-eyes synthesis should escalate to `heavy`. `when:` remains reserved there as well.
+
 Never create duplicate `beislid:model_routing` blocks; update or remove the existing one.
 
 ### Visual surfaces

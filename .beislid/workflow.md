@@ -78,6 +78,11 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
+- name: model-routing-step-hints-consistency
+  command: 'python3 scripts/check_model_routing_step_hints_consistency.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 ```
 
 Changes to `bin/beislid` runtime-layout checks or `packaging/` must run `bash scripts/test_install.sh` locally before push; the packaged-layout contract is only covered by the install integration tests.
