@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, posix, resolve } from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { redactText, type RedactionSummary } from "./redaction.js";
 import type { CommandLogBlock, ShowMeDocument, ShowMeLog } from "./schema.js";
 import { addBlock, readDeck, writeDeck, writeManifest } from "./store.js";
@@ -23,26 +24,42 @@ function preview(value: string, max = 4000): string | undefined {
 	return value.length > max ? `${value.slice(0, max)}\n[truncated preview; see full log]` : value;
 }
 
-const STREAM_CAPTURE_LIMIT_BYTES = 20 * 1024 * 1024;
+const DEFAULT_STREAM_CAPTURE_LIMIT_BYTES = 20 * 1024 * 1024;
+
+function captureLimitBytes(): number {
+	const raw = Number(process.env.BEISLID_SHOW_ME_CAPTURE_LIMIT_BYTES ?? DEFAULT_STREAM_CAPTURE_LIMIT_BYTES);
+	return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_STREAM_CAPTURE_LIMIT_BYTES;
+}
 
 interface CapturedStream {
 	text: string;
 	bytes: number;
 	truncated: boolean;
+	decoder: StringDecoder;
 }
 
-function appendChunk(captured: CapturedStream, chunk: Buffer): CapturedStream {
+function createCapturedStream(): CapturedStream {
+	return { text: "", bytes: 0, truncated: false, decoder: new StringDecoder("utf8") };
+}
+
+function appendChunk(captured: CapturedStream, chunk: Buffer, limitBytes: number): CapturedStream {
 	const nextBytes = captured.bytes + chunk.length;
-	if (captured.bytes >= STREAM_CAPTURE_LIMIT_BYTES) {
+	if (captured.truncated || captured.bytes >= limitBytes) {
 		return { ...captured, bytes: nextBytes, truncated: true };
 	}
-	const remaining = STREAM_CAPTURE_LIMIT_BYTES - captured.bytes;
+	const remaining = limitBytes - captured.bytes;
 	const kept = chunk.length > remaining ? chunk.subarray(0, remaining) : chunk;
 	return {
-		text: captured.text + kept.toString("utf-8"),
+		...captured,
+		text: captured.text + captured.decoder.write(kept),
 		bytes: nextBytes,
 		truncated: captured.truncated || chunk.length > remaining,
 	};
+}
+
+function finalizeCapturedStream(captured: CapturedStream): CapturedStream {
+	if (captured.truncated) return captured;
+	return { ...captured, text: captured.text + captured.decoder.end() };
 }
 
 const RISKY_PATTERNS = [
@@ -104,8 +121,9 @@ export async function runCommandEvidence(input: RunCommandInput, defaultCwd: str
 	const timeoutMs = clampTimeout(input.timeoutSeconds);
 	const startedAt = nowIso();
 	const redactedCommand = redactText(input.command);
-	let stdout: CapturedStream = { text: "", bytes: 0, truncated: false };
-	let stderr: CapturedStream = { text: "", bytes: 0, truncated: false };
+	const streamCaptureLimitBytes = captureLimitBytes();
+	let stdout: CapturedStream = createCapturedStream();
+	let stderr: CapturedStream = createCapturedStream();
 	let exitCode: number | null = null;
 	let timedOut = false;
 
@@ -142,16 +160,20 @@ export async function runCommandEvidence(input: RunCommandInput, defaultCwd: str
 			forceResolveTimer = setTimeout(() => finish(null), 5000);
 		}, timeoutMs);
 		child.stdout.on("data", (chunk: Buffer) => {
-			stdout = appendChunk(stdout, chunk);
+			stdout = appendChunk(stdout, chunk, streamCaptureLimitBytes);
 		});
 		child.stderr.on("data", (chunk: Buffer) => {
-			stderr = appendChunk(stderr, chunk);
+			stderr = appendChunk(stderr, chunk, streamCaptureLimitBytes);
 		});
 		child.on("error", (error) => {
 			stderr = appendChunk(stderr, Buffer.from(String(error)));
 			finish(null);
 		});
-		child.on("close", (code) => finish(code));
+		child.on("close", (code) => {
+			stdout = finalizeCapturedStream(stdout);
+			stderr = finalizeCapturedStream(stderr);
+			finish(code);
+		});
 	});
 
 	const finishedAt = nowIso();
