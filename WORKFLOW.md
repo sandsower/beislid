@@ -77,6 +77,52 @@ model_routing:
         model: openai-codex/gpt-5.5
       - adapter: pi
         model: openrouter/deepseek/deepseek-v4-pro
+  step_hints:
+    initial:
+      stage: kickoff
+      skill: kickoff
+      phase: context-discovery
+      tier: frontier
+      mode: prefer
+      rationale: kickoff and context discovery need the broadest routing before the default standard tier takes over
+    steps:
+      - stage: kickoff
+        skill: kickoff
+        phase: planning
+        tier: heavy
+        mode: prefer
+        rationale: planning and scope shaping benefit from heavier reasoning
+      - stage: implement
+        skill: implement
+        tier: standard
+        mode: prefer
+        rationale: ordinary coding should stay on the repo default
+      - stage: ready-for-review
+        skill: ready-for-review
+        phase: gates
+        tier: light
+        mode: prefer
+        rationale: gate execution is mechanical and can stay light
+      - stage: review-response
+        skill: review-response
+        phase: fix
+        tier: standard
+        mode: prefer
+        rationale: fixes and replies should remain on the broad repo default
+    phases:
+      - stage: kickoff
+        skill: kickoff
+        phase: context-discovery
+        tier: frontier
+        mode: prefer
+        rationale: the initial kickoff phase should outrun the repo default standard tier
+      - stage: ready-for-review
+        skill: ready-for-review
+        phase: review
+        step: fresh-eyes
+        tier: heavy
+        mode: prefer
+        rationale: the final review synthesis needs stronger reasoning
 action_policy:
   command: beislid
   run_mode: unattended-auto

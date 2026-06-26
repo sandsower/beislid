@@ -173,9 +173,11 @@ Generated decks are still local artifacts by default. This checked-in example is
 
 ## Privacy and redaction
 
-`show-me` should apply best-effort redaction to text logs, JSON, and rendered HTML. Redactions should be noted in provenance.
+`show-me` should apply best-effort redaction to text logs, JSON, and rendered HTML. Redactions should be noted in provenance and accumulate across follow-up saves/renders rather than resetting.
 
 Screenshots, videos, and GIFs may contain sensitive data. Treat them as local/private unless explicitly reviewed for sharing. The skill should warn about media sensitivity and must not claim media redaction unless a real redaction tool was used.
+
+The global deck index is written with atomic replacement and can be rebuilt from existing deck roots if the cache is missing or corrupted.
 
 ## Pi tooling
 

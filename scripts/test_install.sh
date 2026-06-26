@@ -885,6 +885,54 @@ PY
 }
 
 
+test_rondo_step_hints_configured() {
+  python3 - <<'PY' "$REPO_DIR/WORKFLOW.md" || note_fail "expected WORKFLOW.md to dogfood step_hints"
+from pathlib import Path
+import subprocess, sys, tempfile
+profile = Path(sys.argv[1])
+text = profile.read_text(encoding='utf-8')
+required = [
+    'step_hints:',
+    'initial:',
+    'steps:',
+    'phases:',
+    'stage: kickoff',
+    'skill: kickoff',
+    'phase: context-discovery',
+    'tier: frontier',
+    'stage: implement',
+    'tier: standard',
+    'stage: ready-for-review',
+    'phase: gates',
+    'tier: light',
+    'phase: review',
+    'step: fresh-eyes',
+    'tier: heavy',
+]
+missing = [needle for needle in required if needle not in text]
+if missing:
+    raise SystemExit(f'missing step_hints config: {missing}')
+validator = profile.parent / 'scripts' / 'check_model_routing_step_hints_consistency.py'
+subprocess.run(['python3', str(validator), str(profile)], check=True)
+with tempfile.TemporaryDirectory(prefix='beislid-step-hints-') as tmp:
+    tmp_path = Path(tmp)
+    fallback = tmp_path / 'WORKFLOW.md'
+    before, marker, after = text.partition('  step_hints:\n')
+    if not marker:
+        raise SystemExit('missing step_hints block while building fallback profile')
+    _, marker2, after2 = after.partition('\naction_policy:')
+    if not marker2:
+        raise SystemExit('missing action_policy block while building fallback profile')
+    fallback.write_text(before + '\naction_policy:' + after2, encoding='utf-8')
+    subprocess.run(['python3', str(validator), str(fallback)], check=True)
+    broken = tmp_path / 'broken.md'
+    broken.write_text(text.replace('tier: frontier', 'tier: mega', 1), encoding='utf-8')
+    rc = subprocess.run(['python3', str(validator), str(broken)])
+    if rc.returncode == 0:
+        raise SystemExit('malformed step_hints unexpectedly passed validation')
+PY
+}
+
 
 test_status_after_install() {
   run_installer
@@ -1927,6 +1975,7 @@ run_test "pi babysit preserves args and token budgets"        test_pi_babysit_to
 run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks

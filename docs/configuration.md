@@ -839,6 +839,8 @@ tier_mode: prefer
 ```
 ````
 
+Some repos also dogfood a Rondo execution-profile adapter nested under the same `model_routing` block: `step_hints`. `initial` carries the kickoff/context-discovery spawn route; `steps` and `phases` are ordered rule lists that can match on `stage`, `skill`, `phase`, and `step` before resolving back through the repo's `tiers` table. The checked-in `WORKFLOW.md` profile in this repo uses that adapter to push kickoff initial routes to `heavy`/`frontier`, keep ordinary implementation on `standard`, keep ready-for-review gate execution on `light`/`standard`, and escalate review/fresh-eyes synthesis to `heavy`. The dedicated `python3 scripts/check_model_routing_step_hints_consistency.py` gate validates that profile and catches malformed or unknown tier values. When no step hint matches (or `step_hints` is absent), the broad defaults apply.
+
 `model` is shorthand for a one-item `models` list. `models` is ordered: the host picks the first supported candidate unless its adapter has a more specific local mapping policy. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings are allowed as escape hatches. `mode: prefer` continues with a disclosed fallback if none can be honored. `mode: require` stops before invoking that skill unless at least one candidate can be honored. Ordered overrides are first-match by skill name, then defaults. Subagents inherit the parent skill's resolved model by default when supported.
 
 Conditional `when:` routing is reserved for future work and is not active in v1; do not rely on a `when:` field to narrow a route.
