@@ -219,28 +219,28 @@ beislid workflow-signal status --skill ready-for-review
 
 ```beislid:model_routing
 defaults:
-  models: [sonnet]
+  models: [openai:gpt-5.1-codex]
   mode: prefer
 overrides:
   - skills: [spec, blueprint, poke-holes]
-    models: [opus, openai:gpt-5.5]
+    models: [anthropic:claude-opus-4.8, google:gemini-2.5-pro]
     mode: require
   - skills: [implement, ready-for-review, review-response]
-    model: sonnet
+    model: openai:gpt-5.1-codex
 tiers:
-  light: [claude:haiku]
-  standard: [claude:sonnet]
-  heavy: [claude:opus]
-  frontier: [claude:opus, openai:gpt-5.5]
+  light: [google:gemini-2.5-flash, anthropic:claude-haiku-4.5, openrouter:deepseek/deepseek-chat-v3.1]
+  standard: [openai:gpt-5.1-codex, anthropic:claude-sonnet-4.6, google:gemini-2.5-pro]
+  heavy: [anthropic:claude-opus-4.8, openai:gpt-5.1-codex, google:gemini-2.5-pro]
+  frontier: [anthropic:claude-opus-4.8, google:gemini-2.5-pro, openai:gpt-5.1-codex]
 tier_mode: prefer
 ```
 ````
 
-`model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.5` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
+`model` is shorthand for `models: [<value>]`; use one or the other, not both. `models` is an ordered acceptable candidate list. Portable aliases are `opus`, `sonnet`, `haiku`, `default`, and `host-default`; namespaced provider strings such as `openai:gpt-5.1-codex` are allowed as escape hatches. Ordered overrides are first-match by skill name; defaults apply when no override matches. `mode: prefer` continues with a disclosed fallback when unsupported; `mode: require` stops before invoking the routed skill unless at least one candidate can be honored. Subagents inherit the parent skill's resolved model by default when the host supports subagent model selection. `when:` is reserved for future conditional routing and must not be treated as unconditional.
 
 Some repos also carry a separate Rondo execution profile whose `model_routing` block nests `step_hints` (`initial`, `steps`, `phases`) for kickoff/ready-for-review phase routing. That adapter is not part of the `.beislid/workflow.md` v1 skill-routing syntax; it is documented and validated separately.
 
-`tiers` is an optional map from provider-neutral capability tier names — exactly `light`, `standard`, `heavy`, `frontier`; other names are reserved — to ordered provider candidate lists (e.g. `heavy: [claude:opus, openai:gpt-5.5]`). Tiers are how envelope-authored slices declare capability needs without naming providers: export resolves a slice's tier through this table into `runner_extensions.model_routing.candidates`. When the repo omits `tiers`, Beislið resolves through the illustrative shipped defaults documented in `docs/configuration.md`. Optional `tier_mode` (`prefer` / `require`, default `prefer`) sets the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
+`tiers` is an optional map from provider-neutral capability tier names — exactly `light`, `standard`, `heavy`, `frontier`; other names are reserved — to ordered provider candidate lists (e.g. `heavy: [anthropic:claude-opus-4.8, openai:gpt-5.1-codex]`). Tiers are how envelope-authored slices declare capability needs without naming providers: export resolves a slice's tier through this table into `runner_extensions.model_routing.candidates`. When the repo omits `tiers`, Beislið resolves through the versioned shipped defaults documented in `docs/configuration.md` (current table: `research-v1`). Optional `tier_mode` (`prefer` / `require`, default `prefer`) sets the default resolution mode stamped into exported tier hints; per-envelope overrides happen at approval.
 
 ## Babysit shape
 

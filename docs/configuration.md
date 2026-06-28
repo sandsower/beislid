@@ -824,17 +824,19 @@ Local Pi overrides are extension-owned JSON files. User-global settings live at 
 
 ```beislid:model_routing
 defaults:
-  models: [sonnet]
+  models: [openai:gpt-5.1-codex]
   mode: prefer
 overrides:
   - skills: [spec, blueprint, poke-holes]
-    models: [opus, openai:gpt-5.5]
+    models: [anthropic:claude-opus-4.8, google:gemini-2.5-pro]
     mode: require
   - skills: [implement, ready-for-review, review-response]
-    model: sonnet
+    model: openai:gpt-5.1-codex
 tiers:
-  standard: [claude:sonnet]
-  heavy: [claude:opus, openai:gpt-5.5]
+  light: [google:gemini-2.5-flash, anthropic:claude-haiku-4.5, openrouter:deepseek/deepseek-chat-v3.1]
+  standard: [openai:gpt-5.1-codex, anthropic:claude-sonnet-4.6, google:gemini-2.5-pro]
+  heavy: [anthropic:claude-opus-4.8, openai:gpt-5.1-codex, google:gemini-2.5-pro]
+  frontier: [anthropic:claude-opus-4.8, google:gemini-2.5-pro, openai:gpt-5.1-codex]
 tier_mode: prefer
 ```
 ````
@@ -849,14 +851,14 @@ Conditional `when:` routing is reserved for future work and is not active in v1;
 
 `tiers` is an optional map from provider-neutral capability tier names to ordered provider candidate lists. The known tier vocabulary is exactly `light`, `standard`, `heavy`, and `frontier`; other names are reserved and warn in `doctor`. Tiers let `envelope`-authored slices declare how much model capability a slice needs without naming a provider: at export time the slice's tier is resolved through this table into concrete candidates embedded in `runner_extensions.model_routing` (see Export bundles), which Rondo consumes at run time. Optional `tier_mode` (`prefer` / `require`, default `prefer`) is the default resolution mode stamped into exported tier hints; the human can override tier and mode per envelope at approval.
 
-When a repo does not declare `tiers`, Beislið resolves through these illustrative shipped defaults (override any or all of them in `model_routing`):
+When a repo does not declare `tiers`, Beislið resolves through these shipped defaults (table version `research-v1`, researched in BEI-77; override any or all of them in `model_routing`):
 
 | Tier | Default candidates |
 | --- | --- |
-| `light` | `[claude:haiku]` |
-| `standard` | `[claude:sonnet]` |
-| `heavy` | `[claude:opus]` |
-| `frontier` | `[claude:opus, openai:gpt-5.5]` |
+| `light` | `[google:gemini-2.5-flash, anthropic:claude-haiku-4.5, openrouter:deepseek/deepseek-chat-v3.1]` |
+| `standard` | `[openai:gpt-5.1-codex, anthropic:claude-sonnet-4.6, google:gemini-2.5-pro]` |
+| `heavy` | `[anthropic:claude-opus-4.8, openai:gpt-5.1-codex, google:gemini-2.5-pro]` |
+| `frontier` | `[anthropic:claude-opus-4.8, google:gemini-2.5-pro, openai:gpt-5.1-codex]` |
 
 ## Ready-for-review final review
 
