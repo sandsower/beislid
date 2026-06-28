@@ -13,25 +13,44 @@ import pathlib
 import re
 import sys
 
+
 def load_text(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def parser_block(text: str, command: str) -> str | None:
+    match = re.search(
+        rf'^\s*\w+_p = sub\.add_parser\("{re.escape(command)}"\)(.*?)(?=^\s*\w+_p = sub\.add_parser\(|\Z)',
+        text,
+        re.S | re.M,
+    )
+    return match.group(1) if match else None
 
 
 def validate_cli(root: pathlib.Path, errors: list[str]) -> None:
     path = root / "scripts" / "run_ledger.py"
     if not path.is_file():
-        errors.append(f"scripts/run_ledger.py: missing required file")
+        errors.append("scripts/run_ledger.py: missing required file")
         return
 
     text = load_text(path)
-    required = {
-        "--skill": 'add_argument("--skill", required=True)',
-        "--run-id": 'add_argument("--run-id", required=True)',
-        "--name": 'add_argument("--name", required=True)',
+    blocks = {
+        "init": parser_block(text, "init"),
+        "checkpoint": parser_block(text, "checkpoint"),
+        "gate": parser_block(text, "gate"),
     }
-    for flag, needle in required.items():
-        if needle not in text:
-            errors.append(f"scripts/run_ledger.py: missing required parser flag {flag}")
+    required_flags = {
+        "init": ("--skill",),
+        "checkpoint": ("--run-id", "--name"),
+        "gate": ("--run-id", "--name"),
+    }
+    for command, block in blocks.items():
+        if block is None:
+            errors.append(f"scripts/run_ledger.py: missing {command} parser block")
+            continue
+        for flag in required_flags[command]:
+            if f'add_argument("{flag}"' not in block:
+                errors.append(f"scripts/run_ledger.py: {command} parser missing required flag {flag}")
 
 
 def validate_skill_prose(root: pathlib.Path, errors: list[str]) -> None:

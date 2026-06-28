@@ -178,6 +178,30 @@ EOF
     return 1
   fi
   assert_contains "$broken_err" 'split `init/resume`'
+
+  local broken_cli_root="$TMP/broken-run-ledger-cli" broken_cli_err="$TMP/broken-run-ledger-cli.err"
+  mkdir -p "$broken_cli_root/scripts" "$broken_cli_root/skills/kickoff"
+  cp "$REPO_DIR/scripts/run_ledger.py" "$broken_cli_root/scripts/run_ledger.py"
+  python3 - <<'PY' "$broken_cli_root/scripts/run_ledger.py"
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace('    checkpoint_p.add_argument("--name", required=True)\n', '', 1)
+path.write_text(text, encoding="utf-8")
+PY
+  cat > "$broken_cli_root/skills/kickoff/SKILL.md" <<'EOF'
+---
+name: kickoff
+description: cli regression
+---
+EOF
+
+  if python3 "$checker" --root "$broken_cli_root" >"$TMP/broken-run-ledger-cli.out" 2>"$broken_cli_err"; then
+    note_fail "run-ledger skill-example checker should reject checkpoint parser drift"
+    return 1
+  fi
+  assert_contains "$broken_cli_err" 'checkpoint parser missing required flag --name'
 }
 
 test_resume_ignores_completed_without_flag() {
