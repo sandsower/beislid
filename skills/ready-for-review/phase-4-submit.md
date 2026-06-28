@@ -4,7 +4,7 @@ Authoritative protocol for Phase 4. Normal mode loads it after Phase 3 has no un
 
 ## Entry contract
 
-Inputs: branch, base, ticket ID or `none`, diff stats, fast-path state, Phase 2/3 status, accepted/reduced-coverage risks, workflow config, in-memory probe state, verbose/transcript handles, and loaded-aux metadata. Outputs: PR URL/title/base, final notes, domain-capture status, memory brief status, and Phase 4 exit status. Main owns cache write-back.
+Inputs: branch, base, ticket ID or `none`, diff stats, fast-path state, Phase 2/3 status, risks, clean, workflow config, in-memory probe state, verbose/transcript handles, and loaded-aux metadata. Outputs: PR URL/title/base, final notes, clean, domain-capture status, memory brief status, and Phase 4 exit status. Main owns cache write-back.
 
 Print Phase 4 entry; emit workflow-signal `working`. Verbose mode appends load/entry transcript events and exit checks.
 
@@ -79,7 +79,7 @@ Generic session-end auto-capture does not satisfy this step. On successful PR ha
 
 1. If host memory exists or `BEISLID_MEMENTO_CAPTURE=1`, attempt one structured brief.
 2. Append/print exactly one literal marker: `kind: ready-for-review-session-memory-v1` with the brief, or `memory brief unavailable:<reason>`.
-3. Include repo, branch, base, ticket id or `none`, PR URL if any, phase path (`new-pr-fast-path` when used), aux loaded, transcript path/unavailable reason, gates including parallel mode, review/final-check or combined-review status including cancellation/partial output, accepted risks, side effects, host, timestamp, and duration if known.
+3. Include repo, branch, base, ticket id or `none`, PR URL if any, phase path (`new-pr-fast-path` when used), aux loaded, transcript path/unavailable reason, clean, gates including parallel mode, review/final-check or combined-review status including cancellation/partial output, risks, side effects, host, timestamp, and duration if known.
 4. If a run ledger is active: `finalize` only after successful PR handoff; on abort, record `beislid run-ledger interrupt` with context.
 
 Do not finish with only prose such as “brief summarized”; that fails smoke. Do not include secrets, env values, auth headers, or raw stdout/stderr.

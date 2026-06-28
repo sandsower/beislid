@@ -1,12 +1,12 @@
 ---
 name: ready-for-review
 description: >
-  Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when completed work is explicitly ready for PR review handoff. Bookend to kickoff: gates, review, final check, and PR creation/update. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
+  Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when completed work is explicitly ready for PR review handoff. Bookend to kickoff: gates, review, final check, and PR handoff. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
 ---
 
 # Ready for Review
 
-Take a completed branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small safe new PRs use fast-path: preload aux, parallel safe gates, combined review/final-check.
+Take a completed branch through gates, clean evaluator, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small new PRs use fast-path: preload aux, parallel safe gates, combined review/final-check.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 

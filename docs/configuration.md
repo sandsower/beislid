@@ -858,6 +858,34 @@ When a repo does not declare `tiers`, Beislið resolves through these illustrati
 | `heavy` | `[claude:opus]` |
 | `frontier` | `[claude:opus, openai:gpt-5.5]` |
 
+## Ready-for-review clean evaluation
+
+`ready-for-review` can run pre-PR gates in a clean worktree/container before handoff. Configure `clean_eval` when you want that clean-surface path to be required by workflow policy; leave it off when the normal working-tree gate path is enough.
+
+Use a clean-eval requirement:
+
+````markdown
+## Ready-for-review
+
+```beislid:clean_eval
+mode: require
+surface: auto
+artifact_root: .beislid/clean-eval
+```
+````
+
+Or explicitly skip the clean-evaluator path by project policy:
+
+````markdown
+## Ready-for-review
+
+```beislid:clean_eval
+mode: off
+```
+````
+
+`mode: require` means ready-for-review stages the candidate patch in a clean surface and runs configured pre-PR gates there before handoff. `mode: off` keeps the working-tree path. Clean-eval artifacts and logs should live under the configured root or the run-ledger clean-eval artifact tree.
+
 ## Ready-for-review final review
 
 `ready-for-review` runs a primary `review` pass and then a final whole-diff `fresh-eyes` pass. Configure `fresh_eyes` only when you want to replace or explicitly disable that final pass; the primary review still runs.
@@ -1001,7 +1029,7 @@ Future sink types are reserved. They should consume the same normalized signal w
 These skills read `workflow.md`:
 
 - `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
-- `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
+- `ready-for-review`: PR target, clean-eval policy, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.

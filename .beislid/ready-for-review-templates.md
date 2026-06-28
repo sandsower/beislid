@@ -32,6 +32,8 @@ Each phase prints an entry summary on its way in and an exit summary on its way 
 🔄 Phase 2: Quality gates — running <N> gate(s) across <S> scope(s).
 ✓ Phase 2: pre-pr proof satisfied in <duration>; <K> proof item(s) not applicable.
 ⚡ Phase 2: fast-path ran <N> safe proof gate(s) in parallel; proof satisfied in <duration>.
+⚡ Phase 2: clean-eval proof satisfied in <duration>; <N> gate(s) ran on a clean surface.
+⚠️ Phase 2: clean-eval failed as <patch-regression|environment_failure>; <summary>.
 ⚠️ Phase 2: <N> gate(s) needed autofix; resumed after fixes.
 ```
 
@@ -165,6 +167,7 @@ Printed inline at the relevant phase boundary when a capability is intentionally
 💭 Phase 2c skipped: translation sync is disabled for this project.
 💭 Phase 2d skipped: browser compatibility not triggered for this diff.
 💭 Phase 2d skipped: browser compatibility is disabled for this project.
+💭 Phase 2: clean evaluator not configured — using the working-tree gate path.
 💭 Phase 4b: no PR description formatter configured — using the raw draft.
 💭 Phase 4d skipped: domain capture not configured.
 💭 Phase 4d skipped: paired-half-missing — only `domain_expert.agent` set; `knowledge_store.path` is absent.
@@ -358,6 +361,18 @@ Workflow auth preflight warning:
 This PR changes GitHub workflow files, but `gh auth status` does not show `workflow` scope. Refresh auth, proceed with warning, or abort?
 ```
 
+Clean evaluator setup failure prompt:
+
+```text
+⚠️ The clean evaluator couldn't create or attach `<surface>`: <reason>.
+<what's-working: e.g. "The branch, base, and candidate patch are known; only the clean surface is blocked.">
+
+What now?
+  (a) retry with a fresh clean surface
+  (b) proceed without clean eval this session (if policy allows)
+  (c) abort
+```
+
 PR create retry guidance:
 
 ```text
@@ -375,7 +390,7 @@ base: "<base>"
 ticket: {id: "<id or none>", title: "<title or none>", url: "<url if known>"}
 pr: {url: "<PR URL if created>", title: "<PR title>", base: "<base>"}
 phase_path: "<new-pr | new-pr-fast-path | existing-pr-fast-path | aborted>"
-evidence: {loaded_aux_files: ["<files>"], transcript: "<path or unavailable:reason>", gates: "<summary>", review: "<summary>"}
+evidence: {loaded_aux_files: ["<files>"], transcript: "<path or unavailable:reason>", gates: "<summary>", clean_eval: "<summary>", review: "<summary>"}
 decisions: {accepted_risks: ["<risks>"], reduced_review_coverage: "<state>", domain_capture: "<state>"}
 side_effects: ["<commit/push/PR/cache/memory events>"]
 runtime: {host: "<detected>", timestamp: "<ISO-8601>", duration: "<duration if known>"}

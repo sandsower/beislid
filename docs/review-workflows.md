@@ -13,7 +13,7 @@ Beislið has multiple review-oriented skills because "review" can mean different
 | You want to explain your own diff to a human                    | `walk-the-diff` | Runs an interactive walkthrough and saves feedback notes.                                                                                             |
 | Someone already left PR comments or QA feedback on your work    | `review-response`    | Fetches/categorizes feedback, helps fix or push back, verifies, then pushes/replies.                                                                  |
 | An open PR needs goal-backed monitoring through review/CI        | `babysit`       | Requires `/goal`; loops through configured review-response/gates until green, then performs configured closeout automation when policy allows.          |
-| A new branch is ready for review                                   | `ready-for-review`       | Runs quality gates, invokes `review` then the configured final check, and handles PR creation. Existing-PR updates take the fast path.                 |
+| A new branch is ready for review                                   | `ready-for-review`       | Runs quality gates, optional clean-eval gates, `review`, the configured final check, and PR creation. Existing-PR updates take the fast path.       |
 
 ## Review primitives
 
@@ -38,7 +38,7 @@ This boundary is intentional. Findings should be safe to ask for even when you a
 - `pr-patrol` reviews someone else's PR and posts only comments you approve.
 - `review-response` handles feedback already left on your work.
 - `babysit` requires goal mode and keeps rechecking an open PR, delegating feedback fixes/replies to `review-response`, running configured gates, and performing configured closeout steps when safe.
-- `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates.
+- `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates. It can also require a clean worktree/container evaluator before handoff when workflow policy says so.
 
 ## Pre-PR hardening
 

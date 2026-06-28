@@ -245,6 +245,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
 - **PR description formatter** — *Pass drafted PR descriptions through a formatter skill before showing them for approval.*
 - **Guided walkthrough thresholds** — *Offer an interactive walkthrough before review when the diff exceeds N files or N lines. Defaults are 5 files / 200 lines.*
+- **Clean evaluator** — *Run PR-readiness gates in a clean worktree or container, or skip that path by policy; artifacts and logs stay with the run.*
 - **Visual surfaces** — *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
 - **Workflow signals** — *Configure optional local workflow-state signals, starting with tmux-glance tab markers for semantically instrumented skills.*
 - **Babysit** — *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
@@ -459,6 +460,34 @@ closeout:
 ```
 
 Never create duplicate `beislid:babysit` blocks; update or remove the existing one.
+
+### Clean evaluator
+
+Configure the canonical `clean_eval` block under `Ready-for-review` or `Skill-specific overrides`. Explain that `mode: require` runs configured pre-PR gates in a clean worktree/container and that `mode: off` keeps the normal working-tree gate path. The clean surface may be created locally or supplied by the host; artifacts and logs stay under the configured root or run-ledger clean-eval artifacts.
+
+Ask:
+
+```text
+Configure clean evaluator? (off / require)
+```
+
+For `require`, ask for the preferred surface and artifact root:
+
+```text
+Preferred clean surface? (auto / worktree / container)
+```
+
+Default to `auto` and explain that it accepts either a received clean surface or a fresh one created for evaluation. Then ask for an optional artifact root, defaulting to `.beislid/clean-eval`. Write:
+
+```beislid:clean_eval
+mode: require
+surface: auto
+artifact_root: .beislid/clean-eval
+```
+
+For `off`, remove any existing `clean_eval` block.
+
+Never create duplicate `beislid:clean_eval` blocks; update or remove the existing one.
 
 ### Fresh-eyes final review
 

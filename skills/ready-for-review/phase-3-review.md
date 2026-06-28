@@ -18,7 +18,7 @@ Apply this policy to `review`, enabled final checks, and fast-path combined revi
 - Never silently skip review coverage; fast-path combined review must be explicit.
 - Cancellation is not a pass.
 
-If the user chooses cancel-and-salvage, stop waiting and extract any available partial output from the subagent/tool. Carry usable findings forward by severity; mark unsupported or half-written observations as incomplete. If no partial output is available, say so. Before Phase 4, require explicit reduced-coverage risk acceptance; record it in the transcript, Phase 3 exit summary, memory brief, and PR notes when relevant.
+If the user chooses cancel-and-salvage, stop waiting and extract any available partial output from the subagent/tool. Carry usable findings forward by severity; mark unsupported or half-written observations as incomplete. If no partial output is available, say so. Before Phase 4, require explicit reduced-coverage acceptance; record it in transcript, exit summary, memory brief, and PR notes.
 
 ## 3a. Normal review loop
 
@@ -56,7 +56,7 @@ Phase 3 may exit only when review plus enabled final check, fast-path combined r
 
 Print the Phase 3 exit one-liner from `ready-for-review-templates.md`, filling `<N>` with findings addressed across review/final-check or combined review. In verbose mode, append the Phase 3 exit check and transcript boundary.
 
-Outputs to Phase 4: review/fresh-eyes proof status, review mode, final-check mode (`built-in`, `command`, or `disabled-by-workflow`), findings count, accepted/reduced-coverage notes, no unaccepted blockers, and applicable gate rerun confirmation.
+Outputs to Phase 4: clean-eval proof status, review/fresh-eyes proof status, review mode, final-check mode (`built-in`, `command`, or `disabled-by-workflow`), findings count, accepted/reduced-coverage notes, no unaccepted blockers, and applicable gate rerun confirmation.
 
 ## Phase-local tripwires
 
