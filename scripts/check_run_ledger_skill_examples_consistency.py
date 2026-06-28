@@ -39,18 +39,25 @@ def validate_cli(root: pathlib.Path, errors: list[str]) -> None:
         "checkpoint": parser_block(text, "checkpoint"),
         "gate": parser_block(text, "gate"),
     }
-    required_flags = {
-        "init": ("--skill",),
-        "checkpoint": ("--run-id", "--name"),
-        "gate": ("--run-id", "--name"),
+    required_args = {
+        "init": ("add_argument(\"--skill\", required=True)",),
+        "checkpoint": (
+            "add_argument(\"--run-id\", required=True)",
+            "add_argument(\"--name\", required=True)",
+        ),
+        "gate": (
+            "add_argument(\"--run-id\", required=True)",
+            "add_argument(\"--name\", required=True)",
+        ),
     }
     for command, block in blocks.items():
         if block is None:
             errors.append(f"scripts/run_ledger.py: missing {command} parser block")
             continue
-        for flag in required_flags[command]:
-            if f'add_argument("{flag}"' not in block:
-                errors.append(f"scripts/run_ledger.py: {command} parser missing required flag {flag}")
+        for needle in required_args[command]:
+            if needle not in block:
+                flag = needle.split('"')[1]
+                errors.append(f"scripts/run_ledger.py: {command} parser missing required flag {flag} with required=True")
 
 
 def validate_skill_prose(root: pathlib.Path, errors: list[str]) -> None:

@@ -159,7 +159,10 @@ PY
 
 test_run_ledger_skill_examples_consistency_check() {
   local checker="$REPO_DIR/scripts/check_run_ledger_skill_examples_consistency.py" broken_root broken_err
-  (cd "$REPO_DIR" && python3 "$checker") >/dev/null
+  if ! (cd "$REPO_DIR" && python3 "$checker") >/dev/null; then
+    note_fail "baseline run-ledger checker should pass on the repo"
+    return 1
+  fi
 
   broken_root="$TMP/broken-run-ledger-check"
   broken_err="$TMP/broken-run-ledger-check.err"
