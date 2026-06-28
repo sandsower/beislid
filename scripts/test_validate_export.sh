@@ -61,6 +61,68 @@ bundle = {
     "proof_requirements": [],
     "guides_and_gates": {"selected_gates": [], "guides": []},
     "approval": {"approved_at": "2026-06-11T00:00:00Z", "approved_by": "Fixture Human"},
+    "model_routing_hints": {
+        "initial": {
+            "stage": "kickoff",
+            "skill": "kickoff",
+            "phase": "context-discovery",
+            "tier": "frontier",
+            "mode": "prefer",
+            "rationale": "kickoff and context discovery need the broadest routing before the default standard tier takes over",
+        },
+        "steps": [
+            {
+                "stage": "kickoff",
+                "skill": "kickoff",
+                "phase": "planning",
+                "tier": "heavy",
+                "mode": "prefer",
+                "rationale": "planning and scope shaping benefit from heavier reasoning",
+            },
+            {
+                "stage": "implement",
+                "skill": "implement",
+                "tier": "standard",
+                "mode": "prefer",
+                "rationale": "ordinary coding should stay on the repo default",
+            },
+            {
+                "stage": "ready-for-review",
+                "skill": "ready-for-review",
+                "phase": "gates",
+                "tier": "light",
+                "mode": "prefer",
+                "rationale": "gate execution is mechanical and can stay light",
+            },
+            {
+                "stage": "review-response",
+                "skill": "review-response",
+                "phase": "fix",
+                "tier": "standard",
+                "mode": "prefer",
+                "rationale": "fixes and replies should remain on the broad repo default",
+            },
+        ],
+        "phases": [
+            {
+                "stage": "kickoff",
+                "skill": "kickoff",
+                "phase": "context-discovery",
+                "tier": "frontier",
+                "mode": "prefer",
+                "rationale": "the initial kickoff phase should outrun the repo default standard tier",
+            },
+            {
+                "stage": "ready-for-review",
+                "skill": "ready-for-review",
+                "phase": "review",
+                "step": "fresh-eyes",
+                "tier": "heavy",
+                "mode": "prefer",
+                "rationale": "the final review synthesis needs stronger reasoning",
+            },
+        ],
+    },
     "runner_extensions": {},
     "validation": {
         "schema_version": "approved-slice-plan-export-v0",
@@ -423,6 +485,24 @@ test_model_routing_absent_accepted() {
   expect_valid "$TMP/bundle"
 }
 
+test_model_routing_hints_absent_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["model_routing_hints"]'
+  expect_valid "$TMP/bundle"
+}
+
+test_model_routing_hints_unknown_tier_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["model_routing_hints"]["steps"][0]["tier"] = "mega"'
+  expect_invalid "$TMP/bundle" "model_routing_hints.steps[0].tier"
+}
+
+test_model_routing_hints_missing_phase_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'del bundle["model_routing_hints"]["phases"]'
+  expect_invalid "$TMP/bundle" "model_routing_hints"
+}
+
 test_cli_dispatch_valid() {
   write_valid_bundle "$TMP/bundle"
   "$CLI" export validate "$TMP/bundle" || { note_fail "beislid export validate failed on valid bundle"; return 1; }
@@ -480,6 +560,9 @@ run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_r
 run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
 run_test "model_routing empty candidates rejected" test_model_routing_empty_candidates_rejected
 run_test "model_routing absent accepted" test_model_routing_absent_accepted
+run_test "model_routing_hints absent accepted" test_model_routing_hints_absent_accepted
+run_test "model_routing_hints unknown tier rejected" test_model_routing_hints_unknown_tier_rejected
+run_test "model_routing_hints missing phase rejected" test_model_routing_hints_missing_phase_rejected
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
 

@@ -42,6 +42,7 @@ REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 KNOWN_TIERS = frozenset({"light", "standard", "heavy", "frontier"})
 ALLOWED_ROUTING_MODES = frozenset({"prefer", "require"})
+HINT_SELECTOR_FIELDS = ("stage", "skill", "phase", "step")
 
 
 def _nonempty_string(value: object) -> bool:
@@ -202,6 +203,58 @@ def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> Non
         errors.append(f"{prefix}.candidates must be a non-empty list of non-empty strings")
 
 
+def _validate_hint_route(prefix: str, route: object, errors: list[str]) -> None:
+    if not isinstance(route, dict):
+        errors.append(f"{prefix} must be an object")
+        return
+
+    tier = route.get("tier")
+    if tier not in KNOWN_TIERS:
+        errors.append(f"{prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
+
+    mode = route.get("mode")
+    if mode not in ALLOWED_ROUTING_MODES:
+        errors.append(f"{prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
+
+    if "rationale" in route and not _nonempty_string(route.get("rationale")):
+        errors.append(f"{prefix}.rationale must be a non-empty string when present")
+
+    for field in HINT_SELECTOR_FIELDS:
+        if field in route and not _nonempty_string(route.get(field)):
+            errors.append(f"{prefix}.{field} must be a non-empty string when present")
+
+    if not any(_nonempty_string(route.get(field)) for field in HINT_SELECTOR_FIELDS):
+        errors.append(f"{prefix} must specify at least one of {', '.join(HINT_SELECTOR_FIELDS)}")
+
+
+def _validate_model_routing_hints(name: str, bundle: dict, errors: list[str]) -> None:
+    """Validate optional bundle-level step-aware routing hints; absent is valid."""
+    hints = bundle.get("model_routing_hints")
+    if hints is None:
+        return
+
+    prefix = f"{name}: model_routing_hints"
+    if not isinstance(hints, dict):
+        errors.append(f"{prefix} must be an object with initial, steps, and phases")
+        return
+
+    for field in ("initial", "steps", "phases"):
+        if field not in hints:
+            errors.append(f"{prefix}: missing required field '{field}'")
+
+    initial = hints.get("initial")
+    if "initial" in hints:
+        _validate_hint_route(f"{prefix}.initial", initial, errors)
+
+    for field in ("steps", "phases"):
+        entries = hints.get(field)
+        if not isinstance(entries, list) or not entries:
+            errors.append(f"{prefix}.{field} must be a non-empty list of routing rules")
+            continue
+        for idx, entry in enumerate(entries):
+            _validate_hint_route(f"{prefix}.{field}[{idx}]", entry, errors)
+
+
 def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> None:
     manifest = _load_json(path, errors)
     if manifest is None:
@@ -300,6 +353,8 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
             errors.append(
                 f"bundle.json: unknown rubric_version {rubric!r}; known: {sorted(KNOWN_RUBRIC_VERSIONS)}"
             )
+
+    _validate_model_routing_hints("bundle.json", bundle, errors)
 
     children = bundle["children"]
     child_ids: list[str] = []

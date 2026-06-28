@@ -18,6 +18,8 @@ REQUIRED_STAMPS = [
 ]
 
 PROMPT_SECTIONS = ["## Objective", "## Design summary", "## File scope", "## Constraints", "## Verification"]
+KNOWN_TIERS = {"light", "standard", "heavy", "frontier"}
+ALLOWED_ROUTING_MODES = {"prefer", "require"}
 
 
 def load_metadata(run_dir: Path) -> dict:
@@ -79,6 +81,44 @@ def main() -> int:
             errors.append(
                 f"validation.rubric_version must be afk-rubric-v1, got {validation.get('rubric_version')!r}"
             )
+        hints = bundle.get("model_routing_hints")
+        if not isinstance(hints, dict):
+            errors.append("bundle missing model_routing_hints")
+        else:
+            for field in ("initial", "steps", "phases"):
+                if field not in hints:
+                    errors.append(f"model_routing_hints missing {field}")
+            initial = hints.get("initial") or {}
+            if not isinstance(initial, dict):
+                errors.append("model_routing_hints.initial must be an object")
+            else:
+                if initial.get("tier") not in KNOWN_TIERS:
+                    errors.append(
+                        f"model_routing_hints.initial.tier must be one of {sorted(KNOWN_TIERS)}, got {initial.get('tier')!r}"
+                    )
+                if initial.get("tier") == "standard":
+                    errors.append("model_routing_hints.initial should outrank the broad default standard tier")
+                if initial.get("mode") not in ALLOWED_ROUTING_MODES:
+                    errors.append(
+                        f"model_routing_hints.initial.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {initial.get('mode')!r}"
+                    )
+            for field in ("steps", "phases"):
+                entries = hints.get(field)
+                if not isinstance(entries, list) or not entries:
+                    errors.append(f"model_routing_hints.{field} must be a non-empty list")
+                    continue
+                for idx, entry in enumerate(entries):
+                    if not isinstance(entry, dict):
+                        errors.append(f"model_routing_hints.{field}[{idx}] must be an object")
+                        continue
+                    if entry.get("tier") not in KNOWN_TIERS:
+                        errors.append(
+                            f"model_routing_hints.{field}[{idx}].tier must be one of {sorted(KNOWN_TIERS)}, got {entry.get('tier')!r}"
+                        )
+                    if entry.get("mode") not in ALLOWED_ROUTING_MODES:
+                        errors.append(
+                            f"model_routing_hints.{field}[{idx}].mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {entry.get('mode')!r}"
+                        )
         children = bundle.get("children") or []
         if not children:
             errors.append("bundle has no children")
