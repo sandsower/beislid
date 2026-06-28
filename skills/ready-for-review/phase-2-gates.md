@@ -6,7 +6,7 @@ Loaded just in time after Phase 1. If this file cannot be read, hard-fail; do no
 
 Inputs: base/branch/ticket/PR, merge/diff state, gate model, configured gates, optional triggers, notes/warnings.
 
-Outputs: gate envelopes, proof status, clean-eval logs/artifacts, skips, decisions, warnings, and resume route.
+Outputs: gate envelopes, clean-eval proof status + `clean_eval.surface`, logs/artifacts, skips, decisions, warnings, and resume route.
 
 Print Phase 2 entry/exit. Emit workflow-signal `verify` at Phase 2 entry. Verbose mode emits aux/probe/gate summaries.
 
@@ -68,7 +68,7 @@ Otherwise probe `browser_compat.skill` and invoke the configured skill with the 
 
 If `clean_eval` is absent or `mode: off`, print the clean-evaluator skip line from `ready-for-review-templates.md` and continue.
 
-If `clean_eval.mode: require`, reuse a supplied clean worktree/container when available; otherwise create one from the candidate branch and base, apply the patch, run the configured pre-PR gates there with the same selection and log capture rules, store artifacts/logs under `clean_eval.artifact_root` or the run ledger clean-eval tree, and classify failures as `patch-regression` or `environment_failure`. On failure, emit `blocked` for patch regressions or `waiting`/`blocked` for environment failures, then stop unless the user explicitly accepts a supported retry/skip path.
+If `clean_eval.mode: require`, honor `clean_eval.surface` (`auto`/`worktree`/`container`) when picking or creating the clean surface; reuse a matching surface when available; otherwise create the configured surface from the branch and base, apply the patch, run the configured pre-PR gates there with the same selection and log capture rules, store artifacts/logs under `clean_eval.artifact_root` or the run-ledger tree, and classify failures as `patch-regression` or `environment_failure`. On failure, emit `blocked` for patch regressions or `waiting`/`blocked` for environment failures, then stop unless the user explicitly accepts a supported retry/skip path.
 
 ## Phase 2b: Guided walkthrough
 
