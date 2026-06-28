@@ -98,6 +98,13 @@ Agent smoke is intentionally not a default quality gate because it spends model 
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
 ```
 
+## Ready-for-review
+
+```beislid:clean_eval
+mode: require
+surface: auto
+artifact_root: .beislid/clean-eval
+```
 
 ## Workflow signals
 

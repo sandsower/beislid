@@ -129,6 +129,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_kind": "validation",
       "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 10"
     },
+    "clean_eval": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "validation",
+      "value": "mode: require; surface: auto; artifact_root: .beislid/clean-eval"
+    },
     "model_routing": {
       "status": "ok",
       "probe_supported": true,
@@ -196,6 +203,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ lifecycle_actions.implementation_plan_created artifact    ok (auto artifact at runtime)
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
 ✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 10)
+✓ clean_eval validation                                     ok (mode: require; surface: auto; artifact_root: .beislid/clean-eval)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
 ✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)
 cache file:        <path>

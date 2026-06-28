@@ -74,7 +74,7 @@ It is not a fully autonomous coding mode, a replacement for CI, or a replacement
 | `implement`             | wandering through a large change without a file-level plan     |
 | `verify`                | claiming done before fresh evidence exists                     |
 | `review` / `fresh-eyes` | handing off with obvious local findings, drift, or stale docs     |
-| `ready-for-review`               | opening a PR before gates, review, and release notes are ready |
+| `ready-for-review`               | opening a PR before gates, optional clean eval, review, and release notes are ready |
 
 ## 60-second start
 

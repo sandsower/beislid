@@ -116,6 +116,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `browser_compat.skill`, `browser_compat.trigger_paths`
 - `pr_description.formatter_skill`, `pr_description.formatter_args` (optional map)
 
+**Ready-for-review clean evaluation:**
+- `clean_eval` — optional clean worktree/container policy for pre-PR evaluation. Fields: `mode` (`off` / `require`, default `off`); optional `surface` (`auto` / `worktree` / `container`, default `auto`); optional `artifact_root` (repo-relative path, default `.beislid/clean-eval`). `mode: require` means ready-for-review must stage the candidate patch in a clean surface and run configured pre-PR gates there before handing off; `mode: off` keeps the normal working-tree gate path. Failures are classified as patch-regression versus environment/harness failure, and logs/artifacts live under the configured root or run-ledger artifacts.
+
 **Ready-for-review final review:**
 - `fresh_eyes` — optional replacement/disable for the final `fresh-eyes` pass only. Fields: `enabled` (optional bool, defaults true); when enabled and replacing built-in behavior, `type: command` plus `command` are required. `enabled: false` is explicit project policy to skip the final whole-diff pass; the primary `review` pass still runs.
 

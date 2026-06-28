@@ -4,9 +4,9 @@ Loaded just in time after Phase 1. If this file cannot be read, hard-fail; do no
 
 ## Inputs / outputs
 
-Inputs: base/branch/ticket/PR, merge/diff state, gate model (`gate_sets`/scopes/repo-root), configured gates, optional triggered skills/walkthrough, notes/warnings.
+Inputs: base/branch/ticket/PR, merge/diff state, gate model, configured gates, optional triggers, notes/warnings.
 
-Outputs: gate envelopes, proof status, skips, decisions, warnings, and resume route.
+Outputs: gate envelopes, clean-eval proof status + `clean_eval.surface`, logs/artifacts, skips, decisions, warnings, and resume route.
 
 Print Phase 2 entry/exit. Emit workflow-signal `verify` at Phase 2 entry. Verbose mode emits aux/probe/gate summaries.
 
@@ -22,14 +22,16 @@ If conflicts occur, emit workflow-signal `blocked`, then stop and ask the user f
 
 ## 2b. Run scoped or top-level gates
 
-Run applicable checks in order and fail fast; fast-path may parallelize safe gates after probing. Selection is config-driven:
+Run applicable checks in order and fail fast; fast-path may parallelize safe gates after probing.
 
-- `gate_sets`: run Phase 1 selected gates. Apply set `cwd`/`stage` defaults before normalization; gate fields win. Preserve order, de-dupe, and record reasons.
+Selection:
+
+- `gate_sets`: run Phase 1 selected gates. Apply set defaults before normalization; gate fields win.
 - `scopes`: run touched scopes only (`pushd <scope.cwd>`, executable pre-pr gates, `popd`).
 - top-level `gates`: run executable pre-pr gates from repo root.
 - none: print `no gates configured — skipping`.
 
-Normalize per `workflow-md-format.md`: flat `name`+`command` means pre-pr computational sensor. P0 ready-for-review executes legacy gates plus rich gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` exists, and `execution` is absent/`computational`. Record other stages as `skipped-by-stage`; record pre-pr non-computational/non-sensor as `skipped-by-execution`. Treat rich `output`/`failure` as prompt context.
+Flat `name`+`command` means pre-pr computational sensor. P0 ready-for-review executes legacy gates plus rich gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` exists, and `execution` is absent/`computational`. Record other stages as `skipped-by-stage`; record pre-pr non-computational/non-sensor as `skipped-by-execution`. Treat rich `output`/`failure` as prompt context.
 
 Probe each selected gate once (`probe(gate_sets.sets.<set>.gates[<gate>].command)`, scope, or top-level equivalent), plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
 
@@ -37,12 +39,12 @@ Execution:
 
 1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
-3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md` (pytest parser when pytest-like, otherwise generic). Store raw logs by path when possible, else a safe summary.
-4. Autofix only when `fail` and not environment failure: policy-check `gate.autofix` (`workspace-write` plus non-read classes), show summary, run on `allow`/approved `ask`, show diff, ask before commit. Ask the commit approval question exactly once in user-visible output; do not duplicate it across progress prose and the final/blocking response.
-5. For `status: error`, `environment_failure: true`, or no `autofix`, emit workflow-signal `waiting`, then prompt from the envelope (`summary`, failures, flags, action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess. In parallel, wait for siblings and surface all failure envelopes together.
+3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md`. Store raw logs by path when possible, else a safe summary.
+4. Autofix only when `fail` and not environment failure: policy-check `gate.autofix`, show summary/diff, ask before commit.
+5. For `status: error`, `environment_failure: true`, or no `autofix`, emit workflow-signal `waiting`, then prompt from the envelope plus failure/output context. Wait for siblings and surface all failure envelopes together.
 6. After a fix, re-run the applicable gate before advancing. If the user explicitly proceeds without a passing gate, record that decision/risk.
 
-Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state for cache write-back. Plain git checks are not probe-cache entries.
+Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state. Plain git checks are not probe-cache entries.
 
 Track envelopes, skips/reasons, proof status, gate model, duration, autofix, probes, metadata, exceptions. Phase exits only after required proof is satisfied or handled by `failure_policy`.
 
@@ -52,13 +54,7 @@ If Phase 1 did not trigger `translation_sync`, print the not-triggered skip line
 
 If `translation_sync.skill` is not configured, print the disabled inline note from `ready-for-review-templates.md` and skip.
 
-Otherwise:
-
-1. `probe(translation_sync.skill)`. On failure, use the Phase 2c prompt from `ready-for-review-templates.md`.
-2. If probe resolves, invoke the configured skill via the host agent's skill mechanism. The skill owns pull/push cycles and may commit translation files.
-3. If translation edits result, policy-check `git.commit` (`workspace-write`, `git-local`), then ask before committing.
-
-If the invoked skill reports machine- or AI-generated user-facing content, carry that warning to Phase 4. Do not silently pass AI-authored translations/localized copy to reviewers.
+Otherwise probe `translation_sync.skill`, invoke the configured skill, and policy-check any translation edits before committing. Carry AI-generated user-facing-content warnings to Phase 4.
 
 ## 2d. Browser compatibility check
 
@@ -66,12 +62,13 @@ If Phase 1 did not trigger `browser_compat`, print the not-triggered skip line f
 
 If `browser_compat.skill` is not configured, print the disabled inline note from `ready-for-review-templates.md` and skip.
 
-Otherwise:
+Otherwise probe `browser_compat.skill` and invoke the configured skill with the diff. Browser compatibility is advisory and does not block PR handoff by itself.
 
-1. `probe(browser_compat.skill)`. On failure, use the Phase 2d prompt from `ready-for-review-templates.md`.
-2. If probe resolves, invoke the configured skill with the diff.
+## Clean evaluator
 
-Browser compatibility is advisory and does not block PR handoff by itself.
+If `clean_eval` is absent or `mode: off`, print the clean-evaluator skip line from `ready-for-review-templates.md` and continue.
+
+If `clean_eval.mode: require`, honor `clean_eval.surface` (`auto`/`worktree`/`container`) when picking or creating the clean surface; reuse a matching surface when available; otherwise create the configured surface from the branch and base, apply the patch, run the configured pre-PR gates there with the same selection and log capture rules, store artifacts/logs under `clean_eval.artifact_root` or the run-ledger tree, and classify failures as `patch-regression` or `environment_failure`. On failure, emit `blocked` for patch regressions or `waiting`/`blocked` for environment failures, then stop unless the user explicitly accepts a supported retry/skip path.
 
 ## Phase 2b: Guided walkthrough
 
@@ -103,4 +100,5 @@ If the user explicitly asks for a durable visual proof/review artifact, suggest 
 - Run only applicable gates: `gate_sets` selection when configured, otherwise touched scopes when scoped, otherwise top-level gates only when scopes are absent.
 - Fast-path parallelism requires `parallel_safe: true`; absence of `autofix` alone is not enough, and `mutates: true` gates are never parallel candidates.
 - Only configured `autofix` commands may run after policy; other failures need user direction.
+- Clean evaluator is policy-driven: `mode: off` skips it; `mode: require` must run a clean surface and classify failures instead of silently falling back to the working tree.
 - Walkthrough is optional and `show-me` requires an explicit user request; neither is an automatic blocker.
