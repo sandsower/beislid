@@ -36,6 +36,7 @@ Routing rules:
 - Use Work Contract `scope_classification` for routing: `atomic`/`single_pr` go to `blueprint`, `multi_slice` goes to `break-spec`, and `project` starts with spec refinement before slice planning.
 - Use `implement` after the design is approved. It creates the file-level execution plan and task list.
 - When configured, `spec` and `blueprint` write local planning artifacts after approval through lifecycle actions; default `plans/` paths feed downstream skills.
+- When configured, `kickoff`, `spec`, `blueprint`, `implement`, and review-side workflows can load staged guide artifacts from `beislid:guides` before the next decision. Guides are feedforward controls, not readiness gates, so they shape context without proving branch health.
 - Use `verify` before any done/fixed/passing claim.
 - Use `rinse` when you want an approved review/fix/verify loop before PR handoff.
 - Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, push, and PR creation.

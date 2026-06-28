@@ -6,7 +6,7 @@ description: >
 
 # Ready for Review
 
-Take a completed branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small safe new PRs use fast-path: preload aux, parallel safe gates, combined review/final-check.
+Take a completed branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small safe PRs use fast-path review/final-check.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 
@@ -34,6 +34,8 @@ workflow_hash=$(git hash-object .beislid/workflow.md)
 Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` and starts with empty in-memory state; matching hash means `fresh` and loads capability entries. Per-cap freshness uses `cache_ttl_hours` from workflow.md, default 24.
 
 After config/cache setup, initialize verbose transcript if enabled and best-effort `beislid run-ledger init/resume ... --flow ready-for-review`. Record safe aux/phase/approval/gate/review/side-effect/final events. Warn on ledger failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
+
+If `beislid:guides` is configured, load guides.
 
 ## Internal: probe(<cap>)
 

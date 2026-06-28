@@ -22,6 +22,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Scopes`
 - `Quality gates`
 - `Gate sets`
+- `Guides`
 - `Lifecycle actions`
 - `Pi handoff`
 - `Action policy`
@@ -89,6 +90,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `split_policy` — single string; `exclusive` is the only recognized value
 - `gates` (top-level) — single gate list when `scopes` is not configured; same gate object shape as a scope's gates
 - `gate_sets` — changed-file-aware gate selection. Fields: `sets` (map of set name → object with `gates`, optional `cwd`, optional `stage`) and `selectors` (ordered list with `name`, `paths`, `gate_sets`, optional `exclude`). See **Gate-set selection shape** below.
+- `guides` — ordered feedforward guide registry. Each entry has `name`, `path`, `stage`, and optional `scopes` / `paths` / `exclude` selectors that narrow when the guide should load. See **Guide registry shape** below.
 
 **Lifecycle actions:**
 - `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; spec/design approval events and checkpoint events support `type: artifact` only. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command` and require `approval` (`auto` / `prompt`). Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and placeholders `{feature}`, `{kind}`, `{ticket_id}`, and `{event}` where documented for checkpoint artifacts. Actions run in order.
@@ -394,7 +396,7 @@ Rich gates may add harness metadata. `name` is always required. `command` is req
 
 Supported stage values are `preflight`, `per-edit`, `pre-commit`, `pre-pr`, `post-pr`, `continuous`, and `human-interrupt`. P0 `ready-for-review` and `review-response` execute legacy gates and computational `stage: pre-pr` sensor gates only; other stages are valid metadata for Rondo/future orchestrators and must be reported, not silently executed at the wrong lifecycle point.
 
-`kind` currently recognizes `sensor` for gates that observe readiness. Future guide/feedforward artifacts are tracked separately from gate lists. P0 command execution runs only gates where `kind` is absent or `sensor`; other `kind` values are metadata declarations that are reported as non-sensor and not executed. `execution` may be `computational`, `inferential`, or `human`; P0 command execution supports `computational` gates directly and reports `inferential`/`human` entries as non-command metadata declarations unless a future orchestrator owns them.
+`kind` currently recognizes `sensor` for gates that observe readiness. Guide/feedforward artifacts belong in the separate `guides` registry, not the gate list. P0 command execution runs only gates where `kind` is absent or `sensor`; other `kind` values are metadata declarations that are reported as non-sensor and not executed. `execution` may be `computational`, `inferential`, or `human`; P0 command execution supports `computational` gates directly and reports `inferential`/`human` entries as non-command metadata declarations unless a future orchestrator owns them.
 
 `cost` is free-form but recommended values are `cheap`, `medium`, and `expensive`. `required_tools` is a list of additional CLI binaries the gate depends on beyond the command's first word; doctor and gate-running orchestrators probe each with `command -v` before treating the gate as runnable. `mutates: true` means the gate may edit files or external state and must not be auto-batched as read-only. `parallel_safe: true` remains the fast-path batching flag and is only honored when the gate has no `autofix` and `mutates` is not true.
 
@@ -438,6 +440,39 @@ Selection is driven by the changed file list. Orchestrators evaluate selectors i
 Every run should explain selection. For each selected gate, record the changed file(s), selector, and gate set that selected it. For skipped selectors, record that no changed file matched. For skipped gates, record whether the reason was stage, execution/kind, missing command/tools, or another normalized-gate rule. P0 `ready-for-review` and `review-response` execute only selected gates that also normalize to executable computational `pre-pr` sensors; other stages remain metadata and are reported as skipped, not run at the wrong lifecycle point.
 
 Gate sets work with the same **Gate object shape** as `gates` and scope gates. A set-level `cwd` applies to gates in that set unless a gate declares its own `cwd`; absent `cwd` runs from the repo root. A set-level `stage` may be used as metadata for all gates in the set, but gate-level `stage` wins.
+
+## Guide registry shape
+
+`guides` is a feedforward registry for Markdown artifacts that shape context before a workflow step. They are distinct from gates and sensors: guides inform what to read next, while gates still prove readiness.
+
+````markdown
+## Guides
+
+```beislid:guides
+- name: workflow-overview
+  path: docs/workflows.md
+  stage: kickoff
+  paths: ['skills/**', '.beislid/**', 'WORKFLOW.md']
+- name: configuration-reference
+  path: docs/configuration.md
+  stage: spec
+  paths: ['docs/**', 'README.md']
+- name: skills-reference
+  path: docs/skills.md
+  stage: blueprint
+  paths: ['skills/**', 'extensions/**']
+- name: developer-usage
+  path: docs/how-to-use.md
+  stage: implement
+  paths: ['bin/**', 'scripts/**', 'extensions/**']
+- name: review-workflows
+  path: docs/review-workflows.md
+  stage: review
+  paths: ['tests/**', 'scripts/test_install.sh']
+```
+````
+
+`name` is a stable label for the guide. `path` must be a relative repo-local `.md` file that exists. `stage` is the workflow phase that should load it (`kickoff`, `spec`, `blueprint`, `implement`, or `review`). Optional `scopes` / `paths` / `exclude` selectors narrow the guide to named workflow scopes or touched areas. Doctor validates the registry and flags missing or broken guide paths, but guide loading itself stays a feedforward hint, not a readiness gate.
 
 ## Lifecycle actions shape
 

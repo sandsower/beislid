@@ -885,6 +885,32 @@ PY
 }
 
 
+test_beislid_repo_guides_configured() {
+  python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" "$REPO_DIR" || note_fail "expected repo workflow.md to dogfood guide registry"
+from pathlib import Path
+import subprocess, sys
+workflow = Path(sys.argv[1]).read_text(encoding='utf-8')
+required = [
+    '```beislid:guides',
+    'stage: kickoff',
+    'stage: spec',
+    'stage: blueprint',
+    'stage: implement',
+    'stage: review',
+    'docs/workflows.md',
+    'docs/configuration.md',
+    'docs/skills.md',
+    'docs/review-workflows.md',
+    'python3 scripts/check_guide_registry_consistency.py',
+]
+missing = [needle for needle in required if needle not in workflow]
+if missing:
+    raise SystemExit(f'missing guide registry config: {missing}')
+subprocess.run(['python3', str(Path(sys.argv[2]) / 'scripts' / 'check_guide_registry_consistency.py')], check=True)
+PY
+}
+
+
 test_rondo_step_hints_configured() {
   python3 - <<'PY' "$REPO_DIR/WORKFLOW.md" || note_fail "expected WORKFLOW.md to dogfood step_hints"
 from pathlib import Path
@@ -1975,6 +2001,7 @@ run_test "pi babysit preserves args and token budgets"        test_pi_babysit_to
 run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "repo workflow dogfoods guide registry"             test_beislid_repo_guides_configured
 run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump

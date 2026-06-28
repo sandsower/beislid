@@ -28,6 +28,7 @@ setup
 - PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
 - planning artifacts written after approved specs/designs
+- guide/feedforward registries that preload docs before a workflow step
 - quality gates
 - scopes
 - action policy overrides
@@ -786,6 +787,39 @@ beislid run-ledger resume --flow kickoff --ticket-id 15 --branch victor/15-run-l
 ```
 
 The ledger may link to workflow-configured checkpoint artifacts, but it does not replace them. `.beislid/checkpoints/latest.json` remains a lightweight repo-local rediscovery pointer; the ledger is the durable run history with run IDs, event history, gate log indexes, interruptions, approved risks, and final reports.
+
+## Guide registry
+
+`guides` lets a repo declare feedforward Markdown artifacts that orchestrators may load before a workflow step. They are guidance, not gates: guides shape what to read next, while gates and proofs still decide readiness.
+
+```beislid:guides
+- name: workflow-overview
+  path: docs/workflows.md
+  stage: kickoff
+  paths:
+    - skills/**
+    - .beislid/**
+- name: configuration-reference
+  path: docs/configuration.md
+  stage: spec
+  paths:
+    - docs/**
+    - README.md
+- name: skills-reference
+  path: docs/skills.md
+  stage: blueprint
+  paths:
+    - skills/**
+    - extensions/**
+- name: review-workflows
+  path: docs/review-workflows.md
+  stage: review
+  paths:
+    - tests/**
+    - scripts/test_install.sh
+```
+
+Fields are `name`, `path`, `stage`, and optional `scopes` / `paths` / `exclude` selectors. `path` must be a repo-relative `.md` file that exists. `stage` is one of `kickoff`, `spec`, `blueprint`, `implement`, or `review`. Review-stage guides are the feedforward docs for review-side workflows such as `ready-for-review`, `review-response`, and `babysit`. `scopes` can name workflow scopes, while `paths` / `exclude` narrow loading by touched area using git-style globs. Doctor validates guide existence and reports missing or broken guide paths; guide loading itself remains feedforward metadata, not a sensor or readiness gate.
 
 ## Pi handoff
 

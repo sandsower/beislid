@@ -2,6 +2,8 @@
 
 This is the full skill catalog. For first-run guidance, start with [How to use Beislið](./how-to-use.md). For lifecycle diagrams, see [Workflows](./workflows.md).
 
+Repo workflow configs can also declare `guides`: feedforward Markdown artifacts that orchestrators preload by stage or touched area. They are context, not gates, so they shape what the next skill reads without proving branch readiness.
+
 ## Plan
 
 - `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.

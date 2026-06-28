@@ -37,6 +37,8 @@ If working inside a repo, do light codebase exploration before asking detailed q
 
 Optional visual routing: only when repo-level `beislid:visual_surfaces` config exists and the effective `spec` mode is active, load the per-skill auxiliary `visual-surface-protocol.md` before the Step 5 approval/revision surface. It mirrors canonical `.beislid/visual-surface-protocol.md` so copied skill installs stay readable. When active, lean toward proposing a supplemental Lavish surface for any non-trivial spec whose requirements, options, flows, data/state models, scope boundaries, acceptance outcomes, or decisions can be communicated visually; do not reserve visual routing for UI changes. Use its `BEISLID_VISUAL_PROMPT_V1` envelope for supplemental Lavish HTML review; keep Markdown/chat spec text canonical, treat freeform visual annotations as advisory, and accept only typed workflow-gate responses that validate/normalize to `approve` or `revise`. Unknown, malformed, or freeform-only visual feedback falls back to manual Markdown/chat review.
 
+If `beislid:guides` is configured, load any guide whose `stage` is `spec` or whose selectors match the files or touched areas under discussion. Guides are feedforward context, not proof: they help shape requirements, but they never approve the spec by themselves.
+
 ## Step 2: Identify unknowns
 
 Write down 5–10 targeted questions about what you do not know. Frame them as questions, not statements. Focus on:

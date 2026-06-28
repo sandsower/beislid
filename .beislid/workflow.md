@@ -78,6 +78,11 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
+- name: guide-registry-consistency
+  command: 'python3 scripts/check_guide_registry_consistency.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 - name: model-routing-step-hints-consistency
   command: 'python3 scripts/check_model_routing_step_hints_consistency.py'
   parallel_safe: true
@@ -93,6 +98,45 @@ Agent smoke is intentionally not a default quality gate because it spends model 
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900 --changed-only
 ```
 
+
+## Guides
+
+Feedforward guide artifacts are staged context, not readiness proof. They let orchestrators preload the right Markdown before a workflow step without turning docs into gates.
+
+```beislid:guides
+- name: workflow-overview
+  path: docs/workflows.md
+  stage: kickoff
+  paths:
+    - "skills/**"
+    - ".beislid/**"
+    - "WORKFLOW.md"
+- name: configuration-reference
+  path: docs/configuration.md
+  stage: spec
+  paths:
+    - "docs/**"
+    - "README.md"
+- name: skills-reference
+  path: docs/skills.md
+  stage: blueprint
+  paths:
+    - "skills/**"
+    - "extensions/**"
+- name: developer-usage
+  path: docs/how-to-use.md
+  stage: implement
+  paths:
+    - "bin/**"
+    - "scripts/**"
+    - "extensions/**"
+- name: review-workflows
+  path: docs/review-workflows.md
+  stage: review
+  paths:
+    - "tests/**"
+    - "scripts/test_install.sh"
+```
 
 ## Workflow signals
 

@@ -124,6 +124,10 @@ Optional `tiers` must be a map whose keys are known tier names (`light`, `standa
 
 The repo's checked-in `WORKFLOW.md` Rondo profile may also carry `step_hints` under the same `model_routing` block. `initial` is the kickoff/context-discovery spawn hint; `steps` and `phases` are ordered rule lists that match on `stage`, `skill`, `phase`, and `step`. The dedicated step-routing consistency gate validates that file and should report malformed or unknown tier values, while the broad defaults continue to apply when `step_hints` is absent.
 
+### guides validation
+
+`beislid:guides` is validated as feedforward Markdown registry data. Doctor checks each entry's `name`, `path`, and `stage`, plus optional `scopes` / `paths` / `exclude` selectors. `path` must resolve to a repo-relative `.md` file that exists; `stage` must be one of `kickoff`, `spec`, `blueprint`, `implement`, or `review`. Valid registry data records `probe_kind: validation` and a concise value naming guide count, stage count, and path health. Missing or broken guide paths are failures, but loading guides remains feedforward context rather than readiness proof.
+
 ### visual_surfaces validation
 
 `beislid:visual_surfaces` is validated, not deep-probed as an external provider. Doctor checks shape only: `provider` must be `lavish-axi`; `mode` and every `workflows.*` override must be one of `off`, `suggest`, `prompt`, or `auto`; optional `command` must be a non-empty string; optional `artifact_root` must be a relative repo-local path with no `..` segments; optional `artifact_retention` must be one of `local`, `discard`, or `preserve-repo`; optional `workflows` must be a map. It should record `probe_kind: validation` and summarize provider, mode, override count, artifact root, artifact retention, and Lavish plugin state guidance. Doctor may read user-level Lavish plugin state and may recommend `beislid plugin status lavish`, but it must not run a deep provider check or invoke the configured command. Missing or disabled plugin state is graceful fallback guidance, not a config failure when the workflow shape is valid.

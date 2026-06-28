@@ -548,6 +548,28 @@ events:
         path: 'plans/{feature}-design.md'
 ```
 
+### Guide registry
+
+Configure feedforward guide artifacts? (kickoff / spec / blueprint / implement / review / skip)
+
+For each selected guide, ask for:
+- name
+- path
+- stage
+- optional scope selectors
+- optional path selectors to narrow loading by touched area
+
+```beislid:guides
+- name: workflow-overview
+  path: docs/workflows.md
+  stage: kickoff
+  paths:
+    - "skills/**"
+    - ".beislid/**"
+```
+
+Explain that guides are feedforward context, not gates or sensors. `path` must be a repo-relative `.md` file, `stage` should match the workflow phase that loads it, and scope/path selectors should stay small and targeted. Never create duplicate `beislid:guides` blocks; update or remove the existing one.
+
 ### Checkpoint artifacts
 
 When the user asks for clear-context, Rondo-style, or checkpoint workflow support, configure checkpoint artifact actions inside the canonical `lifecycle_actions` block. Explain that this is a lightweight workflow option, not the durable run ledger: skills write human-readable Markdown checkpoints and update `.beislid/checkpoints/latest.json` for rediscovery, but do not create run IDs, event history, gate logs, or automatic resume state.

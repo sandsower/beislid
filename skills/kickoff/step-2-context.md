@@ -28,7 +28,11 @@ Record concise evidence:
 - open uncertainties that should go to spec or blueprint
 - explore mode (`default`, `replace`, or `enhance`) and skill status when configured
 
-### 2b. Domain context
+### 2b. Guide context
+
+If `beislid:guides` is configured, load any guide whose `stage` is `kickoff` or whose selectors match the touched areas you already discovered. Treat guides as feedforward Markdown context: they shape the next step, but they are not gates or readiness proof.
+
+### 2c. Domain context
 
 `domain_expert.agent` remains useful for read-only context and is separate from `explore.skill`. If configured and the work is not a pure UI/styling change, formatting-only refactor, or simple dependency bump:
 

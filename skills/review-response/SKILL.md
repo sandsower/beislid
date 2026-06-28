@@ -44,6 +44,8 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `review-response-templates.md` (≤240 chars).
 
+If `beislid:guides` is configured, preload any guide whose `stage` is `review` or whose selectors match the feedback or touched files. Guides are feedforward context, not gate output: they help shape the repair path, but they never count as a passing signal.
+
 ---
 
 ## Internal: probe(<cap>)
