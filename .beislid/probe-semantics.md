@@ -22,7 +22,9 @@ If the host has no MCP tool registry mechanism at all, status is `failed` with `
 
 Known multi-tool logical MCP capabilities:
 
+- `ticket_source` (`tool`, optional `list_tool` for batch roster discovery)
 - `ticket_update` (`comment_tool`, optional `issue_tool`)
+- `afk_queue` (`move_tool` when `type: mcp`)
 - future PR review MCP providers, when added to the grammar
 
 ### cli
@@ -43,6 +45,7 @@ Known multi-command logical capabilities:
 - `pr_review_update` (`reply_command`, optional `rerequest_command`)
 - `fresh_eyes.command` when `beislid:fresh_eyes` uses `type: command`; probe the command's first binary. `enabled: false` has no probe and records an explicit policy value.
 - `ticket_update` when `comment_command` is configured, with optional `issue_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`) is performed by setup/orchestrators before execution.
+- `afk_queue` when `move_command` is configured; probe the move command's first binary.
 - `lifecycle_actions.<event>` for P0 CLI actions under one event's `actions[]` list. Probe every unique first binary from that event's `type: cli` action commands and record one logical capability. Orchestrators probe only events they execute, e.g. kickoff probes `lifecycle_actions.kickoff_start`; future events must not block current-event execution. Non-CLI providers such as `mcp` are reserved for CLI lifecycle events; orchestrators must not execute unsupported providers.
 
 ### path

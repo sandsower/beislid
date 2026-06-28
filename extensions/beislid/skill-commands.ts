@@ -16,6 +16,7 @@ export const BEISLID_SKILLS = [
 	"review",
 	"review-response",
 	"rinse",
+	"roundup",
 	"setup",
 	"show-me",
 	"spec",

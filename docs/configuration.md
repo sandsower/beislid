@@ -25,6 +25,8 @@ setup
 - PR host
 - PR review source and update path
 - ticket update path
+- AFK queue handoff target for roundup
+- batch roster `list_tool` on `ticket_source` when a workflow needs prose-to-ticket-set intake
 - PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
 - planning artifacts written after approved specs/designs
@@ -94,6 +96,8 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 ````
 
 Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-md-format.md).
+
+For roundup-style intake, `workflow.md` may also define an `AFK queue handoff` section with an `afk_queue` block for the queue move tool/command and the target queue label or id. When a batch intake needs prose-to-ticket-set discovery, `ticket_source.list_tool` can sit alongside the primary issue fetch tool.
 
 ## Scopes and quality gates
 
@@ -1000,7 +1004,7 @@ Future sink types are reserved. They should consume the same normalized signal w
 
 These skills read `workflow.md`:
 
-- `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
+- `kickoff`: ticket source (including optional batch `list_tool`), branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, AFK queue handoff target, scopes, triggered checks, and model-routing disclosure for downstream skills. Use `roundup` first when a ticket set needs AFK/HITL ordering.
 - `ready-for-review`: PR target, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.

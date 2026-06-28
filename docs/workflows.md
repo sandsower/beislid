@@ -42,7 +42,7 @@ Routing rules:
 
 ## Ticket flow
 
-Most ticket work starts with `kickoff`. It reads `<repo>/.beislid/workflow.md`, fetches the ticket when configured, explores the codebase, then routes to the right next step.
+Most ticket work starts with `kickoff`. It reads `<repo>/.beislid/workflow.md`, fetches the ticket when configured, explores the codebase, then routes to the right next step. If a ticket set needs ordering first, use `roundup` before `kickoff`.
 
 ```mermaid
 flowchart TD
@@ -78,6 +78,26 @@ Use the routing this way:
 - If planning artifact lifecycle actions are configured, `spec` / `blueprint` own those approval events and return artifact status/path to kickoff for handoff and ticket-update context.
 - If checkpoint artifact lifecycle actions are configured, `kickoff` can write `kickoff_context_ready` after readiness routing, and `implement` can write `implementation_plan_created` after the task plan but before code changes. These checkpoints are safe points to clear context manually and later say “continue this ticket” or “continue from checkpoint.” In Pi, managed Beislið extension commands can automatically start a fresh session from a readable checkpoint pointer at configured boundaries.
 - For Rondo-style durable run state, orchestrators can additionally use `beislid run-ledger ...`. The ledger stores run IDs, events, gate log indexes, interruptions, and final reports under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/`; it links to checkpoint artifacts instead of replacing them.
+
+## AFK intake triage
+
+Use this when a ticket set needs ordering before kickoff or AFK execution.
+
+```mermaid
+flowchart LR
+  A["ticket ids / prose roster"] --> B["roundup<br/>Triage into pens"]
+  B --> C["AFK-ready wave 1<br/>-> configured AFK queue"]
+  B --> D["AFK-blocked<br/>-> spec / break-spec"]
+  B --> E["HITL<br/>-> kickoff"]
+```
+
+Routing rules:
+
+- Use `roundup` for explicit ticket-id lists, or for prose rosters only after the roster is confirmed.
+- `roundup` sorts tickets into AFK-ready, AFK-blocked, and HITL pens, then writes an approval-gated pen sheet under `plans/`.
+- Only wave 1 AFK-ready tickets may move into the configured AFK queue; later waves wait for a rerun after wave 1 lands.
+- AFK-blocked tickets keep the exact missing pieces and route guidance (`spec` or `break-spec`); HITL tickets keep the ordered kickoff list.
+- If no AFK queue is configured, `roundup` still returns the pen sheet and routing guidance without side effects.
 
 ## Envelope flow (AFK execution)
 

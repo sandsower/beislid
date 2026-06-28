@@ -134,7 +134,7 @@ Use this when the desired product behavior is not clear yet. `spec` shapes the w
 kickoff → spec or break-spec or blueprint → implement
 ```
 
-Use this when a branch or ticket already exists. `kickoff` reads `<repo>/.beislid/workflow.md`, fetches ticket context when configured, explores the repo using default or configured explore-skill behavior, then routes to the right next step.
+Use this when a branch or ticket already exists. `kickoff` reads `<repo>/.beislid/workflow.md`, fetches ticket context when configured, explores the repo using default or configured explore-skill behavior, then routes to the right next step. If a batch of tickets needs AFK/HITL ordering first, start with `roundup`.
 
 ### Bug fix
 

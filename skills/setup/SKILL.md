@@ -113,7 +113,7 @@ Try MCP discovery via `probe-semantics.md` (search for tools matching `*linear*`
 (`<tool-name>`). Use this for ticket fetching? [Y/n/different]
 ```
 
-On `Y`: capture `type: mcp, tool: <tool-name>, id_pattern: '^[A-Z]+-\d+$'`. Ask once for the workspace name to populate `link_template: 'https://linear.app/<workspace>/issue/{id}'`.
+On `Y`: capture `type: mcp, tool: <tool-name>, id_pattern: '^[A-Z]+-\d+$'`. If the same provider can also list tickets for batch intake, ask whether to capture a `list_tool`; on yes, record the second tool name and note that roundup uses it only for roster discovery / prose intake. Ask once for the workspace name to populate `link_template: 'https://linear.app/<workspace>/issue/{id}'`.
 
 If MCP discovery returns no Linear-shaped tools: do NOT ask the user to type an MCP tool name. Pivot:
 
@@ -250,6 +250,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Babysit** — *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
+- **AFK queue handoff** — *Describe the queue move tool/command and queue label that roundup can use for wave 1 AFK-ready tickets.*
 - **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
 - **Lifecycle actions** — *Run configured side effects at Beislið workflow events, such as assigning or moving a ticket when kickoff starts.*
 - **PR review source / replies** — *Let review-response read PR review comments and either post clear-fix replies or print manual reply instructions.*
@@ -510,6 +511,30 @@ For `cli`, ask for `comment_command` first and `issue_command` second. Commands 
 type: cli
 comment_command: '... {id} ... {body_file} ...'
 issue_command: '... {title_file} ... {body_file} ...'
+```
+
+### AFK queue handoff
+
+Configure the canonical `AFK queue handoff` section and `afk_queue` block. Explain that roundup uses this only after explicit per-pen approval, and only wave 1 AFK-ready tickets move.
+
+Ask:
+
+```text
+Configure AFK queue handoff? (mcp / cli / skip)
+```
+
+For `mcp`, ask for `move_tool` first and `queue` second. For `cli`, ask for `move_command` first and `queue` second. The queue value is the human-readable id/label roundup uses when moving wave 1.
+
+```beislid:afk_queue
+type: mcp
+move_tool: mcp__example__move_ticket
+queue: AFK intake
+```
+
+```beislid:afk_queue
+type: cli
+move_command: 'queue-move --ticket {id} --queue AFK intake'
+queue: AFK intake
 ```
 
 ### Planning artifacts

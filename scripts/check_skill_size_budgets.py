@@ -43,6 +43,7 @@ BUDGETS = {
     "skills/review-response/phase-2-fix.md": 5_000,
     "skills/review-response/phase-3-push.md": 5_000,
     "skills/walk-the-diff/SKILL.md": 6_000,
+    "skills/roundup/SKILL.md": 7_000,
     "skills/walk-the-diff/phase-1-context.md": 4_000,
     "skills/walk-the-diff/phase-2-tour-plan.md": 4_000,
     "skills/walk-the-diff/phase-3-present.md": 4_000,

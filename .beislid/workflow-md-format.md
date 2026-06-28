@@ -17,6 +17,7 @@ Doctor reads this line. A mismatch hard-fails with prose pointing at upgrading B
 Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators identify sections by these canonical names (case-insensitive on the first H2 occurrence):
 
 - `Issue tracker`
+- `AFK queue handoff`
 - `PR target`
 - `PR reviews`
 - `Scopes`
@@ -72,9 +73,12 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 Keys recognized by Beislið orchestrators. Optional fields are noted; the rest are required when the parent key is set.
 
 **Issue tracker:**
-- `ticket_source` — fields: `type` (`mcp` / `cli` / `file` / `paste`), `tool` (when `type: mcp`), `command` (when `type: cli`, with `{id}` placeholder), `file_glob` (when `type: file`), `id_pattern` (regex), `link_template` (optional, with `{id}` placeholder)
+- `ticket_source` — fields: `type` (`mcp` / `cli` / `file` / `paste`), `tool` (when `type: mcp`), `list_tool` (optional batch-roster tool when `type: mcp`), `command` (when `type: cli`, with `{id}` placeholder), `file_glob` (when `type: file`), `id_pattern` (regex), `link_template` (optional, with `{id}` placeholder)
 - `branch_pattern` — single regex string; per-project only, never user-level
 - `ticket_update` — shared by kickoff and review-response. Fields: `type` (`mcp` / `cli`); comment channel is used for kickoff plan comments and review-response ticket replies (`comment_tool` when `type: mcp`, `comment_command` when `type: cli`); issue channel is optional for review-response child tickets (`issue_tool` / `issue_command`). CLI comment commands use `{id}` + `{body_file}` placeholders; issue commands use `{title_file}` + `{body_file}`. Orchestrators write temp files and substitute file paths — never interpolate raw user-authored body/title text into shell commands.
+
+**AFK queue handoff:**
+- `afk_queue` — fields: `type` (`mcp` / `cli`), `move_tool` (when `type: mcp`), `move_command` (when `type: cli`), `queue` (optional queue id/label)
 
 **PR target:**
 - `pr_base.default` — base branch name (e.g. `main`)

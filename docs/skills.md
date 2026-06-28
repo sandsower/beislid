@@ -5,6 +5,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 ## Plan
 
 - `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.
+- `roundup`: triage ticket sets into AFK-ready, AFK-blocked, and HITL pens; may write an approval-gated pen sheet and wave-1 AFK queue handoff.
 - `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and write approved spec artifacts when configured.
 - `break-spec`: break large specs into vertical implementation phases.
 - `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
@@ -46,6 +47,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 | `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec or Work Contract writing; runs configured spec artifact actions after approval | `break-spec` or `blueprint`                                   |
 | `break-spec`    | Product decomposition       | A spec or Work Contract is classified as `multi_slice`, or `project` boundaries are approved for slicing                  | `blueprint` for one phase                                     |
 | `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may derive a Work Contract and write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
+| `roundup`       | Intake gate                 | Triage ticket sets into AFK-ready, AFK-blocked, and HITL pens; writes an approval-gated pen sheet and wave-1 AFK queue handoff | `kickoff`, `spec`, or `break-spec`                            |
 | `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design artifact actions after approval | `implement`                                                   |
 | `implement`     | Execution planning          | Implementation design is approved; may consume approved execution envelopes and write configured implementation-plan checkpoints | code changes + `verify`                                       |
 | `envelope`      | AFK export flow             | Explicitly invoked to author/approve/export execution envelopes for AFK slices in a standalone session; fail-closed export validated by `beislid export validate` | external runner execution (e.g. `rondo run-once`)             |
