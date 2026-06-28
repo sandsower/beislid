@@ -83,6 +83,11 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
+- name: run-ledger-skill-examples-consistency
+  command: 'python3 scripts/check_run_ledger_skill_examples_consistency.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
 ```
 
 Changes to `bin/beislid` runtime-layout checks or `packaging/` must run `bash scripts/test_install.sh` locally before push; the packaged-layout contract is only covered by the install integration tests.

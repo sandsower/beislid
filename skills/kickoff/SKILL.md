@@ -36,9 +36,9 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
-On `continue this ticket` / `continue from checkpoint`, read `.beislid/checkpoints/latest.json` before Step 1. Prefer matching `kickoff_context_ready`; ask if unclear. Use as planning context; validate live ticket context before side effects. Bad/missing pointers are non-blocking. `beislid run-ledger resume --flow kickoff --ticket-id <id> --branch <branch>` may add context but never replaces live validation or checkpoint artifacts.
+On `continue this ticket` / `continue from checkpoint`, read `.beislid/checkpoints/latest.json` first. Prefer matching `kickoff_context_ready`; ask if unclear. Use as planning context; validate live ticket first. Bad/missing pointers are non-blocking. `beislid run-ledger resume --flow kickoff --ticket-id <id> --branch <branch>` may add context but never replaces live validation or checkpoint artifacts.
 
-For durable evidence, best-effort `beislid run-ledger` init/resume after cache setup. Use `--flow kickoff`; record safe aux/side-effect events, ticket snapshot, step checkpoints with `--resume-hint`, and any Step 4b artifact path. Warn on ledger failure; don't block kickoff.
+For durable evidence, best-effort `beislid run-ledger init --skill kickoff --flow kickoff` after cache setup; record checkpoints with `beislid run-ledger checkpoint --run-id <run_id> --flow kickoff --name kickoff_context_ready` (later checkpoints use `--name <step_name>`). Warn on ledger failure; don't block kickoff.
 
 ## Internal: probe(<cap>)
 

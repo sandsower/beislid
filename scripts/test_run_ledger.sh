@@ -157,6 +157,29 @@ assert payload['run_dir']
 PY
 }
 
+test_run_ledger_skill_examples_consistency_check() {
+  local checker="$REPO_DIR/scripts/check_run_ledger_skill_examples_consistency.py" broken_root broken_err
+  (cd "$REPO_DIR" && python3 "$checker") >/dev/null
+
+  broken_root="$TMP/broken-run-ledger-check"
+  broken_err="$TMP/broken-run-ledger-check.err"
+  mkdir -p "$broken_root/scripts" "$broken_root/skills/kickoff"
+  cp "$REPO_DIR/scripts/run_ledger.py" "$broken_root/scripts/run_ledger.py"
+  cat > "$broken_root/skills/kickoff/SKILL.md" <<'EOF'
+---
+name: kickoff
+description: broken example
+---
+For durable evidence, best-effort `beislid run-ledger init/resume ... --flow kickoff`.
+EOF
+
+  if python3 "$checker" --root "$broken_root" >"$TMP/broken-run-ledger-check.out" 2>"$broken_err"; then
+    note_fail "run-ledger skill-example checker should reject init/resume prose"
+    return 1
+  fi
+  assert_contains "$broken_err" 'split `init/resume`'
+}
+
 test_resume_ignores_completed_without_flag() {
   local state="$TMP/state" out completed_id interrupted_id resume_out report="$TMP/report.md"
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Completed run' --branch feature/ledger)"
@@ -297,6 +320,7 @@ run_test "rejects unsafe run id" test_rejects_unsafe_run_id
 run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
 run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
+run_test "run-ledger skill-example consistency check" test_run_ledger_skill_examples_consistency_check
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 if (( fail > 0 )); then
