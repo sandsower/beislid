@@ -13,6 +13,8 @@ Before ANY claim that work is done, tests pass, a bug is fixed, or code is worki
 
 ## The Gate
 
+When reporting durable evidence, use the terse Verification report shape from `artifact-templates.md`.
+
 For every positive claim about work state:
 
 1. **Identify** the verification command (test suite, linter, build, curl, etc.)

@@ -221,10 +221,11 @@ Don't assume tools are available. Beislið skills use lazy capability probing: t
 
 ### Shared format docs via symlinks
 
-Skills that consume shared format-reference docs (probe semantics, output templates, workflow.md grammar) use symlinks to `.beislid/<doc>.md` masters:
+Skills that consume shared format-reference docs (probe semantics, output templates, lifecycle artifact templates, workflow.md grammar) use symlinks to `.beislid/<doc>.md` masters:
 
 ```text
 skills/my-skill/workflow-md-format.md → ../../.beislid/workflow-md-format.md
+skills/my-skill/artifact-templates.md → ../../.beislid/artifact-templates.md
 ```
 
 Editing the symlinked file edits the master. Never replace symlinks with regular files — CI catches this in validation. Use `git ls-files -s` to verify: mode `120000` is a symlink, `100644` is a regular file.

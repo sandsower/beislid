@@ -1532,6 +1532,11 @@ test_cli_project_copy_install_explicit_path() {
     assert_not_symlink "$project/.$host/skills/show-me/visual-surface-protocol.md"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "Show Me deck routing"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
+    for artifact_skill in blueprint fresh-eyes implement ready-for-review review-response review spec verify; do
+      assert_file_exists "$project/.$host/skills/$artifact_skill/artifact-templates.md"
+      assert_not_symlink "$project/.$host/skills/$artifact_skill/artifact-templates.md"
+      assert_file_contains "$project/.$host/skills/$artifact_skill/artifact-templates.md" "Lifecycle artifact templates v1"
+    done
   done
 
   local manifest="$project/.beislid/project-install.json"

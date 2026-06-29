@@ -80,6 +80,8 @@ Use the same Review Contract as `review`. Do not fix findings. Return control to
 
 ## Review Contract
 
+This is the Fresh-eyes report shape from `artifact-templates.md`; keep it terse and evidence-focused.
+
 Severity semantics:
 - **Critical** — must fix before PR handoff. Security, data loss, broken core behavior, or high-confidence production breakage.
 - **Important** — should fix before PR handoff unless the user explicitly accepts the risk.

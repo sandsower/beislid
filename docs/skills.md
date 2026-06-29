@@ -2,6 +2,8 @@
 
 This is the full skill catalog. For first-run guidance, start with [How to use Beislið](./how-to-use.md). For lifecycle diagrams, see [Workflows](./workflows.md). For guidance on writing your own portable custom skills, see [Skill authoring](./skill-authoring.md).
 
+Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.md`](../.beislid/artifact-templates.md): spec, blueprint, implementation plan, verification report, review report, fresh-eyes report, ship summary, and feedback response log. Skills default to local/chat artifacts for planning/proof/review and public ticket/PR summaries only when a workflow or orchestrator owns posting.
+
 ## Plan
 
 - `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.

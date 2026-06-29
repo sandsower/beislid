@@ -18,7 +18,7 @@ Action-risk decisions follow `action-policy-protocol.md`; read it before checkpo
 ## Phase 1: Write the Plan
 
 ### Header
-Every plan starts with:
+Every plan follows the Implementation plan artifact shape from `artifact-templates.md` and starts with:
 - **Goal**: one sentence
 - **Architecture**: 2-3 sentences on how it fits together
 - **Files touched**: list every file that will be created or modified
