@@ -1,4 +1,4 @@
-import { Type } from "typebox";
+import { Type, type TSchema } from "typebox";
 
 export const SHOW_ME_MODES = [
 	"verification",
@@ -208,9 +208,13 @@ export interface ShowMeDocument {
 	provenance: ShowMeProvenance;
 }
 
-const ModeSchema = Type.Union(SHOW_ME_MODES.map((value) => Type.Literal(value)) as any);
-const StatusSchema = Type.Union(SHOW_ME_STATUSES.map((value) => Type.Literal(value)) as any);
-const PresentationSchema = Type.Union(SHOW_ME_PRESENTATIONS.map((value) => Type.Literal(value)) as any);
+function literalUnion(values: readonly [string, ...string[]]) {
+	return Type.Union(values.map((value) => Type.Literal(value)) as [TSchema, ...TSchema[]]);
+}
+
+const ModeSchema = literalUnion(SHOW_ME_MODES);
+const StatusSchema = literalUnion(SHOW_ME_STATUSES);
+const PresentationSchema = literalUnion(SHOW_ME_PRESENTATIONS);
 
 export const CreateDeckSchema = Type.Object({
 	title: Type.String({ description: "Deck/report title" }),
@@ -236,7 +240,15 @@ export const AddSectionSchema = Type.Object({
 export const AddBlockSchema = Type.Object({
 	deckId: Type.String(),
 	sectionId: Type.String(),
-	block: Type.Any({ description: "ShowMeBlock JSON object. Canonical keys: markdown.markdown, table.columns/rows, code.code/language, diff.diff, diagram.diagram/language for Mermaid source, callout.text, verdict.text/status, file-role-table.rows. Common aliases like content/body and headers are normalized." }),
+	block: Type.Object(
+		{
+			type: Type.String({ description: "Show Me block type" }),
+		},
+		{
+			additionalProperties: Type.Unknown(),
+			description: "ShowMeBlock JSON object. Canonical keys: markdown.markdown, table.columns/rows, code.code/language, diff.diff, diagram.diagram/language for Mermaid source, callout.text, verdict.text/status, file-role-table.rows. Common aliases like content/body and headers are normalized.",
+		},
+	),
 });
 
 export const RunCommandSchema = Type.Object({

@@ -187,7 +187,7 @@ export async function addBlock(deckId: string, sectionId: string, block: Omit<Sh
 	const { root, doc } = await readDeck(deckId);
 	const section = doc.sections.find((candidate) => candidate.id === sectionId);
 	if (!section) throw new Error(`Unknown section id ${sectionId} in deck ${deckId}`);
-	const normalized = normalizeBlock(block as any) as Omit<ShowMeBlock, "id"> & { id?: string };
+	const normalized = normalizeBlock(block as Record<string, unknown>) as Omit<ShowMeBlock, "id"> & { id?: string };
 	validateBlock(doc, normalized);
 	const blockId = normalized.id || `block-${section.blocks.length + 1}-${shortId()}`;
 	section.blocks.push({ ...normalized, id: blockId } as ShowMeBlock);
@@ -209,7 +209,7 @@ function stringRows(rows: unknown): string[][] {
 	return rows.map((row) => Array.isArray(row) ? row.map(stringValue) : Object.values(row as Record<string, unknown>).map(stringValue));
 }
 
-function normalizeBlock(block: Record<string, any>): Record<string, any> {
+function normalizeBlock(block: Record<string, unknown>): Record<string, unknown> {
 	switch (block.type) {
 		case "markdown":
 			return { ...block, markdown: stringValue(block.markdown ?? block.content ?? block.text) };

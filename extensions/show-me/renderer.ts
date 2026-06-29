@@ -110,15 +110,21 @@ function documentHasMermaid(doc: ShowMeDocument): boolean {
 	return doc.sections.some((section) => section.blocks.some(blockHasMermaid));
 }
 
+const SHOW_ME_HIGHLIGHT_CSS_SRI = "sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH";
+const SHOW_ME_HIGHLIGHT_JS_SRI = "sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp";
+const SHOW_ME_MARKED_JS_SRI = "sha384-ZD0fTOwPMHi7zM6WTVIWJR21I07lq0ccnqz3J6WMvQKG9thh4y7TA1QE6PJu0Af8";
+const SHOW_ME_DOMPURIFY_JS_SRI = "sha384-o44XUELLEnv/iSlA1NWxBweqbD4TSR0qgq2VzVsxtkHS989JJjGKSE9vkfo5MN4K";
+const SHOW_ME_MERMAID_JS_SRI = "sha384-T/0lMUdJpd2S1ZHtRiofG3htU3xPCrFVeAQ1UUE2TJwlEJSV5NUwn30kP28n238E";
+
 function showMeLibraryHead(): string {
-	return `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">`;
+	return `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" integrity="${SHOW_ME_HIGHLIGHT_CSS_SRI}" crossorigin="anonymous">`;
 }
 
 function showMeLibraryScripts(): string {
-	return `<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+	return `<script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js" integrity="${SHOW_ME_MARKED_JS_SRI}" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.11/dist/purify.min.js" integrity="${SHOW_ME_DOMPURIFY_JS_SRI}" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js" integrity="${SHOW_ME_MERMAID_JS_SRI}" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" integrity="${SHOW_ME_HIGHLIGHT_JS_SRI}" crossorigin="anonymous"></script>
 <script>
 (function () {
   function renderMarkdownBlocks() {

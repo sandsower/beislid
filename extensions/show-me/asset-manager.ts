@@ -105,7 +105,7 @@ export async function addAsset(input: AddAssetInput, defaultCwd: string): Promis
 	const type = input.type ?? inferType(originalPath);
 	assertSupportedAsset(type, originalPath);
 	const id = `asset-${Date.now()}-${shortId()}`;
-	const ext = extname(originalPath) || (type === "diagram" ? ".txt" : "");
+	const ext = extname(originalPath);
 	const filename = `${id}-${safeFilename(basename(originalPath, ext))}${ext}`;
 	const relPath = posix.join("assets", assetSubdir(type), filename);
 	const destPath = join(root, relPath);
