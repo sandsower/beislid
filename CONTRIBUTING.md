@@ -57,11 +57,12 @@ Behavioral testing is manual. See `docs/testing.md`.
 
 Some skills consume shared format-reference docs (probe semantics, workflow.md grammar, output templates). Masters live at `.beislid/<doc>.md` in this repo. Each consuming skill folder has a same-named symlink pointing at the master.
 
-Seven master files today:
+Eight master files today:
 
 - `.beislid/workflow-md-format.md` — workflow.md grammar (consumed by `setup`, `doctor`, `ready-for-review`, `kickoff`, `review-response`)
 - `.beislid/probe-semantics.md` — probe semantics for capability discovery (consumed by `setup`, `doctor`, `ready-for-review`, `kickoff`, `review-response`)
 - `.beislid/output-templates.md` — shared output primitives: 12-emoji palette, three-clause failure shape, char-budget shape, verbose-stamps layout, inline-note placement (consumed by `doctor`, `ready-for-review`, `kickoff`, `review-response`)
+- `.beislid/action-policy-protocol.md` — action-policy evaluation protocol: mode/class semantics, per-action overrides, sandbox baselines, secret-bearing heuristics, envelope shape (consumed by `kickoff`, `ready-for-review`, `review-response`, `babysit`, `implement`, `retro`)
 - `.beislid/doctor-templates.md` — doctor-specific copy: audit success/failure templates, cache schema, doctor's verbose stamps (consumed by `doctor`)
 - `.beislid/ready-for-review-templates.md` — ready-for-review-specific copy: orientation, per-phase one-liners, probe-failure prompt phrasings, PR success prose (consumed by `ready-for-review`)
 - `.beislid/kickoff-templates.md` — kickoff-specific copy: orientation, step one-liners, strict paste fallback, ticket-update prompts, domain-pair notes (consumed by `kickoff`)
@@ -81,7 +82,7 @@ skills/review-response/review-response-templates.md → ../../.beislid/review-re
 
 Editing the symlinked file in a skill folder transparently edits the master — that's the intended behavior. **Do not replace symlinks with regular files.** Some IDEs and `cp`/`mv` commands break symlinks silently; CI catches this in `validate.yml`, but a careful `git status` or `git ls-files -s` after edits is the surest local check (mode `120000` indicates a symlink, `100644` indicates a regular file).
 
-If you legitimately need to add a new shared format doc, add it under `.beislid/`, symlink it into each consuming skill folder, and extend the symlink integrity check in `.github/workflows/validate.yml` to cover it.
+If you legitimately need to add a new shared format doc, add it under `.beislid/`, symlink it into each consuming skill folder, and extend the symlink integrity check in `.github/workflows/validate.yml` to cover it. For guidance on writing your own skills that follow these conventions, see [Skill authoring guide](../docs/skill-authoring.md).
 
 ## Skill auxiliary protocol files
 

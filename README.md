@@ -155,7 +155,7 @@ Repo-level routing is configured separately with `beislid:visual_surfaces` in `.
 - **Deliver work:** `ready-for-review`, `review-response`, `babysit`, `pr-patrol`, `walk-the-diff`
 - **Manage config:** `setup`, `doctor`, `retro`
 
-See [Skills](./docs/skills.md) for the full catalog and [Workflows](./docs/workflows.md) for lifecycle diagrams.
+See [Skills](./docs/skills.md) for the full catalog and [Workflows](./docs/workflows.md) for lifecycle diagrams. For guidance on writing your own skills, see [Skill authoring](./docs/skill-authoring.md).
 
 ## Install
 
@@ -259,6 +259,8 @@ When installed as a Pi package, Beislið includes a Pi extension that registers 
 - [Workflows](./docs/workflows.md): lifecycle diagrams and routing rules.
 - [Skills](./docs/skills.md): full skill catalog.
 - [Configuration](./docs/configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, and probe cache.
+- [Workflow authoring](./docs/workflow-authoring.md): how to write and test `.beislid/workflow.md` for your team.
+- [Skill authoring](./docs/skill-authoring.md): how to write portable custom skills with hard gates, clear triggers, and host portability.
 - [Review workflows](./docs/review-workflows.md): review primitives and review/PR handoff/feedback flows.
 - [FAQ](./docs/faq.md): positioning, comparisons, autonomy, team use, and philosophy.
 - [Show Me](./docs/show-me.md): local HTML evidence and explanation decks.

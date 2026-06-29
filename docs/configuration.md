@@ -7,6 +7,8 @@ Beislið has two layers:
 
 Basic skills such as `spec`, `blueprint`, `debug`, `verify`, and `review` can work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` use `workflow.md` when they need ticket, PR, quality-gate, scope, or team-specific behavior.
 
+For a tutorial on writing your own workflow.md, see [Workflow authoring](./workflow-authoring.md). For guidance on writing custom skills, see [Skill authoring](./skill-authoring.md).
+
 ## Setup
 
 Use `setup` to create or update project config interactively.
