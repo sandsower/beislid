@@ -86,12 +86,26 @@ For `explore.mode: enhance`, failed skill context is non-blocking:
 
 ## lifecycle_actions failure
 
-When a configured `kickoff_start` lifecycle action fails:
+When a configured `kickoff_start` lifecycle action with `on_failure: prompt` (or omitted `on_failure`) fails:
 
 ```text
 ⚠️ Lifecycle action `<name>` failed: <reason>.
 This side effect did not complete, but no code changed.
 What now? (a) retry this action, (b) skip remaining lifecycle actions this session, (c) abort.
+```
+
+When `on_failure: continue`, warn and proceed without the three-way prompt:
+
+```text
+⚠️ Lifecycle action `<name>` failed: <reason>.
+Configured `on_failure: continue`; continuing without this side effect.
+```
+
+When `on_failure: abort`, stop immediately:
+
+```text
+🛑 Lifecycle action `<name>` failed: <reason>.
+Configured `on_failure: abort`; stopping before further workflow steps.
 ```
 
 ## ticket_update fallback

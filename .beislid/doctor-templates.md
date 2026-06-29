@@ -106,7 +106,7 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "artifact",
-      "value": "(prompted artifact at runtime)"
+      "value": "(prompted artifact at runtime; failure: prompt)"
     },
     "lifecycle_actions.spec_approved": {
       "status": "ok",
@@ -127,14 +127,14 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "artifact",
-      "value": "(prompted artifact at runtime)"
+      "value": "(prompted artifact at runtime; failure: prompt)"
     },
     "lifecycle_actions.implementation_plan_created": {
       "status": "ok",
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "artifact",
-      "value": "(auto artifact at runtime)"
+      "value": "(auto artifact at runtime; failure: continue)"
     },
     "lifecycle_actions.review_feedback_loaded": {
       "status": "ok",

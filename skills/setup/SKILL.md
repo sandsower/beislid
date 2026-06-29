@@ -574,7 +574,7 @@ For each selected event, ask whether to use the default path or customize it. De
 Ask each time, or auto-create when missing? (prompt / auto)
 ```
 
-Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. If `spec` is selected, also ask whether the approved spec body should be posted back to the tracker body through the existing `ticket_update` issue channel; when yes, add a `type: tracker` action under `spec_approved`.
+Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. Optionally collect `on_failure` (`prompt` / `continue` / `abort`, default `prompt`) when the team wants artifact/tracker failures to be best-effort or hard-aborting instead of using the normal prompt. If `spec` is selected, also ask whether the approved spec body should be posted back to the tracker body through the existing `ticket_update` issue channel; when yes, add a `type: tracker` action under `spec_approved`.
 
 If a `lifecycle_actions` block already exists, merge these events/actions into that block; never create a duplicate `beislid:lifecycle_actions` block. Preserve existing events/actions. If an artifact action already exists under `break_spec_approved`, `spec_approved`, or `blueprint_approved`, offer keep / replace / add another, default keep. Show the diff before writing.
 
@@ -613,7 +613,7 @@ P0 executable checkpoint events are `kickoff_context_ready` and `implementation_
 Ask each time, or auto-create when missing? (prompt / auto)
 ```
 
-Default to `prompt`. Explain that `auto` creates a missing checkpoint without another prompt, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. If a `lifecycle_actions` block already exists, merge checkpoint events into that block and preserve existing events/actions. Never create duplicate `beislid:lifecycle_actions` blocks.
+Default to `prompt`. Explain that `auto` creates a missing checkpoint without another prompt, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. Optionally collect `on_failure` (`prompt` / `continue` / `abort`, default `prompt`) when the team wants checkpoint write failures to be best-effort or hard-aborting instead of using the normal prompt. If a `lifecycle_actions` block already exists, merge checkpoint events into that block and preserve existing events/actions. Never create duplicate `beislid:lifecycle_actions` blocks.
 
 ```beislid:lifecycle_actions
 events:
@@ -641,7 +641,7 @@ Ask:
 Configure kickoff_start lifecycle actions? (cli / skip)
 ```
 
-For `cli`, collect one or more ordered actions. For each action ask: action name, command, and approval (`auto` / `prompt`). Commands may use `{ticket_id}`, `{id}`, `{branch}`, and `{event}` placeholders; explain that orchestrators argv-pass or shell-quote placeholder values before execution. Explain that `auto` runs once configured and prompts only on failure; `prompt` asks before running. If the command includes raw user-authored body/title placeholders, redirect the user to `ticket_update` or a future file-based lifecycle action instead.
+For `cli`, collect one or more ordered actions. For each action ask: action name, command, approval (`auto` / `prompt`), and optional failure policy (`prompt` / `continue` / `abort`, default `prompt`). Commands may use `{ticket_id}`, `{id}`, `{branch}`, and `{event}` placeholders; explain that orchestrators argv-pass or shell-quote placeholder values before execution. Explain that `auto` runs once configured and `prompt` asks before running. Explain failure policies: `prompt` keeps the current retry / skip-remaining-this-session / abort choice on command failure, `continue` warns and proceeds best-effort, and `abort` stops the workflow. If the command includes raw user-authored body/title placeholders, redirect the user to `ticket_update` or a future file-based lifecycle action instead.
 
 If a `lifecycle_actions` block already exists, merge kickoff actions into the existing block and preserve all existing events/actions, including planning and checkpoint artifact actions. Never create duplicate `beislid:lifecycle_actions` blocks.
 
@@ -653,6 +653,7 @@ events:
         type: cli
         command: 'gh issue edit {id} --add-assignee @me'
         approval: auto
+        on_failure: prompt
 ```
 
 ### PR review source / replies

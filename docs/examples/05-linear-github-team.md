@@ -95,6 +95,7 @@ events:
         type: cli
         command: 'gh issue edit {id} --add-assignee @me'
         approval: auto
+        on_failure: prompt
   blueprint_approved:
     actions:
       - name: write-design-artifact
