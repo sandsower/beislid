@@ -10,6 +10,8 @@ Use this guide when you want a repository to be Beislið-ready for a whole team,
 4. **Explain the human workflow.** Tell teammates which entry point to use (`kickoff`, `ready-for-review`, `review-response`, or `babysit`), what evidence gates run, and where the agent must stop for approval.
 5. **Layer in strictness gradually.** Add ticket updates, PR review replies, domain checks, and babysit closeout only after the lower layers are trusted.
 
+If you want a starter bundle instead of writing the policy from scratch, begin with [Setup templates](./setup-templates.md) and keep the first rollout small.
+
 ## Minimum viable `workflow.md`
 
 A minimal repo-aware config is intentionally plain Markdown with typed fenced blocks:

@@ -72,7 +72,7 @@ This repo uses [Beislið](https://github.com/sandsower/beislid) for orchestrator
    | PR review or QA feedback came back            | `review-response` |
    | An open PR needs babysitting through CI/review | `babysit` |
 
-Basic planning, debugging, verification, and review skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` need project setup when they must read tickets, run configured gates, or interact with PR review sources. Lifecycle artifact templates for specs, designs, plans, verification, review, ship summaries, and feedback logs live in [`.beislid/artifact-templates.md`](../.beislid/artifact-templates.md); local/chat records are the default, with terse ticket/PR summaries unless configured otherwise. `babysit` also requires `/goal`: Claude includes it; Pi users need the `pi-goal` package enabled.
+Basic planning, debugging, verification, and review skills work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` need project setup when they must read tickets, run configured gates, or interact with PR review sources. Lifecycle artifact templates for specs, designs, plans, verification, review, ship summaries, and feedback logs live in [`.beislid/artifact-templates.md`](../.beislid/artifact-templates.md); local/chat records are the default, with terse ticket/PR summaries unless configured otherwise. `babysit` also requires `/goal`: Claude includes it; Pi users need the `pi-goal` package enabled. For compact Work Contract examples and copyable setup templates, see [Work Contract examples](./work-contract-examples.md) and [Setup templates](./setup-templates.md).
 
 ## Invocation
 
