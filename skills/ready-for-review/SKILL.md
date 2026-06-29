@@ -58,7 +58,7 @@ Rules: never silently downgrade a configured capability to unconfigured behavior
 - Do not execute a phase from memory if its aux file cannot be read.
 - Do not write probe cache on abort or after workflow hash changed mid-run.
 - Status prose is not a prompt. After green preflights/gates, continue unless a listed hard gate, failure, ambiguity, or approval is reached.
-- At hard approval boundaries, ask the blocking approval question once; commentary may give context/drafts, not repeat it.
+- At hard approval boundaries, keep commentary context-only; ask the blocking approval question once in the final response.
 - No-ticket PR handoff must be explicit (`ticket_id = none`); never infer issues from open issue lists.
 - Never push/create a PR from the default/base branch; Phase 1 branches/commits approved paths first.
 - Do not commit, push, create a PR, or mark a draft ready without the existing user-approval gates.

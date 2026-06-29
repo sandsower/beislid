@@ -37,7 +37,7 @@ Stable action ids should be specific enough for summaries, e.g. `git.merge`, `gi
 - `ask`: stop at a visible approval boundary. Show action, classes, reason, sandbox status, and remediation. If approved, record the original envelope plus `human_outcome: approved`; if declined, record `human_outcome: declined` and stop or skip only that action when the protocol allows skipping.
 - `deny`: do not run the action. Stop with the evaluator reason and remediation unless the phase has a safe non-side-effect fallback such as printing a manual update.
 
-A prior blanket approval does not satisfy an `ask` decision. Ask once per policy boundary; do not duplicate the approval question in progress prose and final output.
+A prior blanket approval does not satisfy an `ask` decision. Ask once per policy boundary; do not duplicate the approval question in status/progress prose and final output.
 
 ## Recording
 

@@ -25,7 +25,7 @@ Every skill draws from this fixed palette. No other glyphs in default-mode outpu
 
 ## Three-clause failure shape
 
-When narrating a failure that needs a user decision, every Beislið skill follows the same three-clause shape:
+When narrating a failure that needs a user decision, every Beislið skill follows the same three-clause shape. At hard approval boundaries, the blocking approval question appears only once in the final user-facing response; progress/status prose may provide context or drafts, but never restate the question:
 
 1. **Name what's wrong.** Specific to the failure — capability, value, reason.
 2. **Name what's still working.** Acknowledges the rest of the configured surface that did resolve. Prevents the failure from feeling catastrophic when it isn't.

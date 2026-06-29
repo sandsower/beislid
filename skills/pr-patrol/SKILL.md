@@ -165,7 +165,7 @@ If the host/API requires a JSON payload, write JSON to a temp file and pass the 
 
 ## Phase 6: Approval gate and posting
 
-Present all drafts before posting:
+Present all drafts before posting as context, then ask the explicit approval question once in the final response:
 
 ```md
 ### Comment Drafts
@@ -174,7 +174,7 @@ Present all drafts before posting:
 ...
 ```
 
-Ask for explicit approval:
+Ask once in the final response:
 
 ```text
 Post these comments? yes/no/edit

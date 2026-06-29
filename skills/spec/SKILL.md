@@ -66,7 +66,7 @@ If the requirement is already obvious and only minor details were clarified, thi
 
 ## Step 5: Present the spec for approval
 
-Before writing an artifact, present the proposed spec in concise sections and ask for approval or corrections:
+Before writing an artifact, present the proposed spec in concise sections, keep the blocking question out of the draft, and ask for approval or corrections only once in the final response:
 - Problem statement
 - Current state
 - Desired state

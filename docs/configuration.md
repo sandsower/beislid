@@ -962,7 +962,7 @@ approval_gates:
 
 | Gate | Default | Effect when `auto` |
 | --- | --- | --- |
-| `pr_title_body` | `prompt` | Logs the PR title/body to transcript/ledger and continues without interactive approval. The user still sees the draft in progress output. |
+| `pr_title_body` | `prompt` | Logs the PR title/body to transcript/ledger and continues without interactive approval. The draft may appear in progress output, but any blocking approval question stays in the final user-facing response. |
 | `gate_failure` | `prompt` | Records the failure envelope, auto-accepts risk for non-critical failures, and continues. Environment failures and missing tools still block. |
 | `autofix_commit` | `prompt` | Policy-checks the autofix commit, records the diff, and commits without interactive approval unless action policy denies. |
 | `clean_eval_failure` | `prompt` | Records the failure and skips clean eval for this session. Patch regressions still block. |

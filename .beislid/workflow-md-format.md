@@ -346,7 +346,7 @@ approval_gates:
 ```
 ````
 
-`pr_title_body` controls the Phase 4 hard gate where the user must approve the PR title and body before push/creation. `auto` logs the title/body to the transcript and continues without prompting.
+`pr_title_body` controls the Phase 4 hard gate where the user must approve the PR title and body before push/creation. When a prompt is needed, the blocking approval question belongs only in the final user-facing response. `auto` logs the title/body to the transcript and continues without prompting.
 
 `gate_failure` controls Phase 2 prompts when a configured gate fails. `auto` records the failure envelope, auto-accepts risk for non-critical failures, and continues; environment failures and missing tools still block.
 
