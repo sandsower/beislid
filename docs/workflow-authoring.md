@@ -358,6 +358,8 @@ This returns the decision envelope without executing anything.
 
 ## Examples
 
+For complete, drop-in team workflow configurations, see [docs/examples/README.md](./examples/README.md). The examples there cover seven common team shapes and are intended to be copied into `.beislid/workflow.md`.
+
 ### Minimal workflow for a solo developer
 
 ```markdown
