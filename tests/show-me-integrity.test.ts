@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -21,6 +22,7 @@ async function withTempState<T>(fn: (stateDir: string) => Promise<T>): Promise<T
 async function makeDeckRoot(stateDir: string, deckId: string, repoName = "repo"): Promise<string> {
 	const root = join(showMeRoot(), repoName, deckId);
 	await mkdir(root, { recursive: true });
+	await writeFile(join(root, ".show-me-deck"), `${deckId}\n`, "utf-8");
 	const doc = {
 		id: deckId,
 		title: `Deck ${deckId}`,
@@ -37,14 +39,30 @@ async function makeDeckRoot(stateDir: string, deckId: string, repoName = "repo")
 	return root;
 }
 
+type ShowMeCommandCtx = {
+	cwd: string;
+	hasUI: boolean;
+	ui?: {
+		notify(message: string, level: string): void;
+		confirm(title: string, message: string): Promise<boolean>;
+	};
+};
+
+type ShowMeCommandRegistration = {
+	handler: (args: string, ctx: ShowMeCommandCtx) => Promise<void>;
+};
+
 interface ShowMeSandbox {
 	sandboxDir: string;
 	runCommandEvidence: typeof import("../extensions/show-me/command-runner.ts").runCommandEvidence;
 	readIndex: typeof import("../extensions/show-me/index-store.ts").readIndex;
 	showMeRoot: typeof import("../extensions/show-me/index-store.ts").showMeRoot;
 	upsertIndexEntry: typeof import("../extensions/show-me/index-store.ts").upsertIndexEntry;
+	renderShowMeDocument: typeof import("../extensions/show-me/renderer.ts").renderShowMeDocument;
 	redactShowMeDocument: typeof import("../extensions/show-me/redaction.ts").redactShowMeDocument;
 	redactText: typeof import("../extensions/show-me/redaction.ts").redactText;
+	findIndexEntry: typeof import("../extensions/show-me/index-store.ts").findIndexEntry;
+	showMeExtension: typeof import("../extensions/show-me/index.ts").default;
 }
 
 async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
@@ -53,16 +71,19 @@ async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
 	const copy = async (name: string) => {
 		await writeFile(join(sandboxDir, name), await readFile(join(sourceDir, name), "utf-8"), "utf-8");
 	};
-	for (const name of ["command-runner.ts", "index-store.ts", "redaction.ts", "renderer.ts", "store.ts"]) {
+	for (const name of ["asset-manager.ts", "capture-browser.ts", "command-runner.ts", "doctor.ts", "index-store.ts", "index.ts", "needs-capture.ts", "redaction.ts", "renderer.ts", "store.ts"]) {
 		await copy(name);
 	}
-	await writeFile(join(sandboxDir, "schema.js"), `export const SHOW_ME_MODES = [\n  'verification',\n  'review',\n  'code-walkthrough',\n  'ui-demo',\n  'cli-demo',\n  'docs',\n  'understanding',\n  'mixed',\n];\n\nexport const SHOW_ME_STATUSES = [\n  'PASS',\n  'FAIL',\n  'INCOMPLETE',\n  'NOT SHOWN',\n  'NEEDS CAPTURE',\n  'EXPLANATORY',\n  'CONFLICTING',\n  'LOW_CONFIDENCE',\n];\n\nexport const SHOW_ME_PRESENTATIONS = ['report', 'visual-deck', 'evidence-deck'];\n\nexport function isShowMeMode(value) {\n  return typeof value === 'string' && SHOW_ME_MODES.includes(value);\n}\n\nexport function isShowMeStatus(value) {\n  return typeof value === 'string' && SHOW_ME_STATUSES.includes(value);\n}\n`, "utf-8");
-	for (const name of ["redaction.js", "index-store.js", "renderer.js", "store.js", "command-runner.js"]) {
+	await writeFile(join(sandboxDir, "schema.js"), `const schema = (kind) => ({ kind });\n\nexport const SHOW_ME_MODES = [\n  'verification',\n  'review',\n  'code-walkthrough',\n  'ui-demo',\n  'cli-demo',\n  'docs',\n  'understanding',\n  'mixed',\n];\n\nexport const SHOW_ME_STATUSES = [\n  'PASS',\n  'FAIL',\n  'INCOMPLETE',\n  'NOT SHOWN',\n  'NEEDS CAPTURE',\n  'EXPLANATORY',\n  'CONFLICTING',\n  'LOW_CONFIDENCE',\n];\n\nexport const SHOW_ME_PRESENTATIONS = ['report', 'visual-deck', 'evidence-deck'];\n\nexport const CreateDeckSchema = schema('CreateDeckSchema');\nexport const DeckIdSchema = schema('DeckIdSchema');\nexport const AddSectionSchema = schema('AddSectionSchema');\nexport const AddBlockSchema = schema('AddBlockSchema');\nexport const RunCommandSchema = schema('RunCommandSchema');\nexport const AddAssetSchema = schema('AddAssetSchema');\nexport const AddNeedsCaptureSchema = schema('AddNeedsCaptureSchema');\nexport const CaptureBrowserScreenshotSchema = schema('CaptureBrowserScreenshotSchema');\n\nexport function isShowMeMode(value) {\n  return typeof value === 'string' && SHOW_ME_MODES.includes(value);\n}\n\nexport function isShowMeStatus(value) {\n  return typeof value === 'string' && SHOW_ME_STATUSES.includes(value);\n}\n`, "utf-8");
+	for (const name of ["asset-manager.js", "capture-browser.js", "command-runner.js", "doctor.js", "index-store.js", "needs-capture.js", "redaction.js", "renderer.js", "store.js"]) {
 		await writeFile(join(sandboxDir, name), `export * from './${name.replace(/\.js$/, '.ts')}';\n`, "utf-8");
 	}
 	const modules = {
+		showMeExtension: (await import(pathToFileURL(join(sandboxDir, "index.ts")).href)).default,
+		renderShowMeDocument: (await import(pathToFileURL(join(sandboxDir, "renderer.ts")).href)).renderShowMeDocument,
 		runCommandEvidence: (await import(pathToFileURL(join(sandboxDir, "command-runner.ts")).href)).runCommandEvidence,
 		readIndex: (await import(pathToFileURL(join(sandboxDir, "index-store.ts")).href)).readIndex,
+		findIndexEntry: (await import(pathToFileURL(join(sandboxDir, "index-store.ts")).href)).findIndexEntry,
 		showMeRoot: (await import(pathToFileURL(join(sandboxDir, "index-store.ts")).href)).showMeRoot,
 		upsertIndexEntry: (await import(pathToFileURL(join(sandboxDir, "index-store.ts")).href)).upsertIndexEntry,
 		redactShowMeDocument: (await import(pathToFileURL(join(sandboxDir, "redaction.ts")).href)).redactShowMeDocument,
@@ -72,7 +93,7 @@ async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
 }
 
 const sandbox = await prepareShowMeSandbox();
-const { runCommandEvidence, readIndex, showMeRoot, upsertIndexEntry, redactShowMeDocument, redactText } = sandbox;
+const { runCommandEvidence, readIndex, showMeRoot, upsertIndexEntry, renderShowMeDocument, findIndexEntry, showMeExtension, redactShowMeDocument, redactText } = sandbox;
 after(async () => {
 	await rm(sandbox.sandboxDir, { recursive: true, force: true });
 });
@@ -104,7 +125,7 @@ test("show-me redaction covers the verified secret formats and stays idempotent"
 	assert.match(redacted.text, /token: \"\[REDACTED\]\"/);
 	assert.equal(redacted.summary.total, 8);
 
-	const source = {
+	const source: Parameters<typeof redactShowMeDocument>[0] = {
 		id: "deck-1",
 		title: "Deck",
 		mode: "verification",
@@ -116,7 +137,7 @@ test("show-me redaction covers the verified secret formats and stays idempotent"
 		logs: [],
 		provenance: { cwd: "/tmp/show-me", redactions: { total: 5, byRule: { previous: 5 } } },
 	};
-	const first = redactShowMeDocument(structuredClone(source as any));
+	const first = redactShowMeDocument(structuredClone(source));
 	assert.equal(first.doc.provenance.redactions.total, 6);
 	assert.equal((first.doc.provenance.redactions as { byRule: Record<string, number> }).byRule.previous, 5);
 	const second = redactShowMeDocument(structuredClone(first.doc));
@@ -220,5 +241,107 @@ test("show-me index recovery tolerates a corrupt index and keeps concurrent upse
 		for (const deckId of [...roots, ...Array.from({ length: 12 }, (_value, index) => `deck-${index + 10}`)]) {
 			assert.ok(finalIndex.entries.some((entry) => entry.deckId === deckId), `missing ${deckId}`);
 		}
+	});
+});
+
+test("show-me deck lookup rejects ambiguous prefixes and keeps exact matches", async () => {
+	await withTempState(async (stateDir) => {
+		const exactRoot = await makeDeckRoot(stateDir, "deck-alpha-1");
+		const siblingRoot = await makeDeckRoot(stateDir, "deck-alpha-2");
+		await upsertIndexEntry({
+			deckId: "deck-alpha-1",
+			title: "Deck alpha 1",
+			mode: "verification",
+			status: "PASS",
+			root: exactRoot,
+			indexHtml: join(exactRoot, "index.html"),
+			createdAt: "2026-06-26T00:00:00.000Z",
+			updatedAt: "2026-06-26T00:00:00.000Z",
+		});
+		await upsertIndexEntry({
+			deckId: "deck-alpha-2",
+			title: "Deck alpha 2",
+			mode: "verification",
+			status: "PASS",
+			root: siblingRoot,
+			indexHtml: join(siblingRoot, "index.html"),
+			createdAt: "2026-06-26T00:00:01.000Z",
+			updatedAt: "2026-06-26T00:00:01.000Z",
+		});
+
+		await assert.rejects(() => findIndexEntry("deck-alpha"), /Ambiguous show-me deck id 'deck-alpha'/);
+		assert.equal((await findIndexEntry("deck-alpha-1"))?.deckId, "deck-alpha-1");
+	});
+});
+
+test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck roots", async () => {
+	const html = renderShowMeDocument({
+		id: "deck-render",
+		title: "Deck render",
+		mode: "verification",
+		status: "PASS",
+		createdAt: "2026-06-26T00:00:00.000Z",
+		updatedAt: "2026-06-26T00:00:00.000Z",
+		sections: [],
+		assets: [],
+		logs: [],
+		provenance: { cwd: "/tmp/show-me" },
+	});
+	assert.match(html, /marked@18\.0\.5\/lib\/marked\.umd\.js/);
+	assert.match(html, /dompurify@3\.4\.11\/dist\/purify\.min\.js/);
+	assert.match(html, /mermaid@11\.16\.0\/dist\/mermaid\.min\.js/);
+	assert.doesNotMatch(html, /cdn\.jsdelivr\.net\/npm\/marked\/marked\.min\.js/);
+
+	await withTempState(async (stateDir) => {
+		const commands = new Map<string, ShowMeCommandRegistration>();
+		showMeExtension({
+			registerTool: () => undefined,
+			registerCommand: (name: string, command: ShowMeCommandRegistration) => {
+				commands.set(name, command);
+			},
+			on: () => undefined,
+		} as never);
+		const command = commands.get("show-me");
+		assert.ok(command);
+
+		await command!.handler("doctor", { cwd: stateDir, hasUI: false });
+
+		const cleanRoot = await makeDeckRoot(stateDir, "deck-clean");
+		const corruptRoot = await makeDeckRoot(stateDir, "deck-corrupt");
+		await upsertIndexEntry({
+			deckId: "deck-clean",
+			title: "Deck clean",
+			mode: "verification",
+			status: "PASS",
+			root: cleanRoot,
+			indexHtml: join(cleanRoot, "index.html"),
+			createdAt: "2026-06-26T00:00:00.000Z",
+			updatedAt: "2026-06-26T00:00:00.000Z",
+		});
+		await upsertIndexEntry({
+			deckId: "deck-corrupt",
+			title: "Deck corrupt",
+			mode: "verification",
+			status: "PASS",
+			root: corruptRoot,
+			indexHtml: join(corruptRoot, "index.html"),
+			createdAt: "2026-06-26T00:00:01.000Z",
+			updatedAt: "2026-06-26T00:00:01.000Z",
+		});
+		await writeFile(join(corruptRoot, "show-me.json"), "{\n  \"id\": \"deck-corrupt\",\n", "utf-8");
+
+		const notifications: Array<{ message: string; level: string }> = [];
+		await command!.handler("clean all", {
+			cwd: stateDir,
+			hasUI: true,
+			ui: {
+				notify: (message, level) => notifications.push({ message, level }),
+				confirm: async () => true,
+			},
+		});
+
+		assert.equal(existsSync(cleanRoot), false);
+		assert.equal(existsSync(corruptRoot), false);
+		assert.match(notifications.at(-1)?.message ?? "", /Deleted 2 show-me deck directories\./);
 	});
 });

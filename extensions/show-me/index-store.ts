@@ -197,5 +197,13 @@ export async function latestIndexEntry(): Promise<ShowMeIndexEntry | undefined> 
 export async function findIndexEntry(deckIdOrLatest: string): Promise<ShowMeIndexEntry | undefined> {
 	if (!deckIdOrLatest || deckIdOrLatest === "latest") return latestIndexEntry();
 	const entries = await listIndexEntries();
-	return entries.find((entry) => entry.deckId === deckIdOrLatest || entry.deckId.startsWith(deckIdOrLatest));
+	const exact = entries.find((entry) => entry.deckId === deckIdOrLatest);
+	if (exact) return exact;
+	const matches = entries.filter((entry) => entry.deckId.startsWith(deckIdOrLatest));
+	if (matches.length === 1) return matches[0];
+	if (matches.length > 1) {
+		const matchedIds = matches.map((entry) => entry.deckId).sort().join(", ");
+		throw new Error(`Ambiguous show-me deck id '${deckIdOrLatest}'. Matches: ${matchedIds}`);
+	}
+	return undefined;
 }

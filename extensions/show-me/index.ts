@@ -2,12 +2,12 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { execFile } from "node:child_process";
 import { readFile, rm } from "node:fs/promises";
 import { AddAssetSchema, AddBlockSchema, AddNeedsCaptureSchema, AddSectionSchema, CaptureBrowserScreenshotSchema, CreateDeckSchema, DeckIdSchema, RunCommandSchema } from "./schema.js";
-import { addAsset } from "./asset-manager.js";
-import { captureBrowserScreenshot } from "./capture-browser.js";
-import { getShowMeDoctorReport, formatDoctorReport } from "./doctor.js";
-import { addNeedsCaptureBlock } from "./needs-capture.js";
-import { runCommandEvidence } from "./command-runner.js";
-import { addBlock, addSection, createDeck, pathExists, readDeck, renderDeck } from "./store.js";
+import { type AddAssetInput, addAsset } from "./asset-manager.js";
+import { type CaptureBrowserScreenshotInput, captureBrowserScreenshot } from "./capture-browser.js";
+import { formatDoctorReport, getShowMeDoctorReport } from "./doctor.js";
+import { type AddNeedsCaptureInput, addNeedsCaptureBlock } from "./needs-capture.js";
+import { type RunCommandInput, runCommandEvidence } from "./command-runner.js";
+import { type CreateDeckInput, addBlock, addSection, createDeck, pathExists, readDeck, renderDeck } from "./store.js";
 import { findIndexEntry, latestIndexEntry, listIndexEntries } from "./index-store.js";
 
 function textResult(text: string, details: Record<string, unknown> = {}) {
@@ -24,9 +24,16 @@ async function assertSafeToDeleteDeck(root: string, deckId: string): Promise<voi
 		throw new Error(`Refusing to delete ${root}: missing or mismatched .show-me-deck marker`);
 	}
 	const source = await readFile(`${root}/show-me.json`, "utf-8").catch(() => undefined);
-	if (!source) throw new Error(`Refusing to delete ${root}: missing show-me.json`);
-	const parsed = JSON.parse(source) as { id?: string };
-	if (parsed.id !== deckId) throw new Error(`Refusing to delete ${root}: show-me.json id does not match ${deckId}`);
+	if (!source) return;
+	try {
+		const parsed = JSON.parse(source) as { id?: string };
+		if (parsed.id !== undefined && parsed.id !== deckId) {
+			throw new Error(`Refusing to delete ${root}: show-me.json id does not match ${deckId}`);
+		}
+	} catch (error) {
+		if (error instanceof SyntaxError) return;
+		throw error;
+	}
 }
 
 async function deleteDeckRoot(root: string, deckId: string): Promise<void> {
@@ -56,7 +63,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Create a Show Me HTML portfolio/deck workspace and source JSON.",
 		parameters: CreateDeckSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await createDeck(params as any, ctx.cwd);
+			const result = await createDeck(params as CreateDeckInput, ctx.cwd);
 			return jsonResult(result);
 		},
 	});
@@ -78,7 +85,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Add a typed block to a Show Me section. Supports markdown, table, code, diff, command-log, image/video/gif/diagram, Mermaid diagram source, callout, verdict, and file-role-table blocks.",
 		parameters: AddBlockSchema,
 		async execute(_toolCallId, params) {
-			const result = await addBlock(params.deckId, params.sectionId, params.block as any);
+			const result = await addBlock(params.deckId, params.sectionId, params.block as Parameters<typeof addBlock>[2]);
 			return jsonResult({ deckId: result.doc.id, blockId: result.blockId, sectionId: params.sectionId });
 		},
 	});
@@ -89,7 +96,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Copy an existing image/video/GIF/diagram into a Show Me deck, record hash/provenance, and optionally add a media block to a section.",
 		parameters: AddAssetSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await addAsset(params as any, ctx.cwd);
+			const result = await addAsset(params as AddAssetInput, ctx.cwd);
 			return jsonResult(result);
 		},
 	});
@@ -100,7 +107,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Add a NEEDS_CAPTURE block when visual evidence could not be captured yet.",
 		parameters: AddNeedsCaptureSchema,
 		async execute(_toolCallId, params) {
-			const result = await addNeedsCaptureBlock(params as any);
+			const result = await addNeedsCaptureBlock(params as AddNeedsCaptureInput);
 			return jsonResult(result);
 		},
 	});
@@ -111,7 +118,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Capture a browser screenshot with Playwright when available, ingest it as an image asset, or add a NEEDS_CAPTURE block when unavailable/failing.",
 		parameters: CaptureBrowserScreenshotSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await captureBrowserScreenshot(params as any, ctx.cwd);
+			const result = await captureBrowserScreenshot(params as CaptureBrowserScreenshotInput, ctx.cwd);
 			return jsonResult(result);
 		},
 	});
@@ -122,7 +129,7 @@ export default function showMeExtension(pi: ExtensionAPI) {
 		description: "Run a command, store redacted stdout/stderr logs with metadata, and optionally add a command-log block to a section. Blocks risky commands unless allowRisky=true after explicit user approval.",
 		parameters: RunCommandSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await runCommandEvidence(params as any, ctx.cwd);
+			const result = await runCommandEvidence(params as RunCommandInput, ctx.cwd);
 			return jsonResult(result);
 		},
 	});
@@ -156,7 +163,9 @@ export default function showMeExtension(pi: ExtensionAPI) {
 			return values.filter((value) => value.startsWith(prefix)).map((value) => ({ value, label: value }));
 		},
 		handler: async (args, ctx) => {
+			if (!ctx.hasUI) return;
 			const [subcommand = "doctor", target = "latest"] = args.trim().split(/\s+/).filter(Boolean);
+			const notifyError = (error: unknown) => ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
 
 			if (subcommand === "doctor") {
 				ctx.ui.notify(await doctorText(ctx.cwd), "info");
@@ -178,7 +187,13 @@ export default function showMeExtension(pi: ExtensionAPI) {
 			}
 
 			if (subcommand === "open") {
-				const entry = await findIndexEntry(target);
+				let entry: Awaited<ReturnType<typeof findIndexEntry>>;
+				try {
+					entry = await findIndexEntry(target);
+				} catch (error) {
+					notifyError(error);
+					return;
+				}
 				if (!entry) {
 					ctx.ui.notify(`No show-me deck found for '${target}'.`, "error");
 					return;
@@ -193,10 +208,18 @@ export default function showMeExtension(pi: ExtensionAPI) {
 			}
 
 			if (subcommand === "clean") {
-				const entry = target === "all" ? undefined : await findIndexEntry(target);
-				if (target !== "all" && !entry) {
-					ctx.ui.notify(`No show-me deck found for '${target}'.`, "error");
-					return;
+				let entry: Awaited<ReturnType<typeof findIndexEntry>>;
+				if (target !== "all") {
+					try {
+						entry = await findIndexEntry(target);
+					} catch (error) {
+						notifyError(error);
+						return;
+					}
+					if (!entry) {
+						ctx.ui.notify(`No show-me deck found for '${target}'.`, "error");
+						return;
+					}
 				}
 				const message = target === "all" ? "Delete all indexed show-me deck directories?" : `Delete show-me deck '${entry!.title}' at ${entry!.root}?`;
 				const ok = await ctx.ui.confirm("show-me clean", message);
@@ -204,14 +227,27 @@ export default function showMeExtension(pi: ExtensionAPI) {
 				if (target === "all") {
 					const entries = await listIndexEntries();
 					let deleted = 0;
+					const failures: Array<{ deckId: string; root: string; error: string }> = [];
 					for (const current of entries) {
-						await deleteDeckRoot(current.root, current.deckId);
-						deleted += 1;
+						try {
+							await deleteDeckRoot(current.root, current.deckId);
+							deleted += 1;
+						} catch (error) {
+							failures.push({ deckId: current.deckId, root: current.root, error: error instanceof Error ? error.message : String(error) });
+						}
 					}
-					ctx.ui.notify(`Deleted ${deleted} show-me deck directories.`, "success");
+					if (failures.length === 0) {
+						ctx.ui.notify(`Deleted ${deleted} show-me deck directories.`, "success");
+					} else {
+						ctx.ui.notify(`Deleted ${deleted} show-me deck directories.\nSkipped ${failures.length} deck(s):\n${failures.map((failure) => `- ${failure.deckId} (${failure.root}): ${failure.error}`).join("\n")}`, "warning");
+					}
 				} else {
-					await deleteDeckRoot(entry!.root, entry!.deckId);
-					ctx.ui.notify(`Deleted ${entry!.root}`, "success");
+					try {
+						await deleteDeckRoot(entry!.root, entry!.deckId);
+						ctx.ui.notify(`Deleted ${entry!.root}`, "success");
+					} catch (error) {
+						notifyError(error);
+					}
 				}
 				return;
 			}
