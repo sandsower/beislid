@@ -315,7 +315,9 @@ If the user chooses rich metadata, collect only fields they can answer confident
 
 For `gate_sets`, collect named sets first (set name, optional cwd, gates), then ordered selectors (selector name, path globs, optional exclude globs, referenced set names). Explain that multiple matching selectors union gate sets deterministically and orchestrators should report selected/skipped reasons.
 
-Warn that P0 `ready-for-review` and `review-response` run legacy/pre-pr command gates. Other stages are valid metadata for Rondo/future orchestrators and should not be presented as active blockers in today's PR handoff flows.
+For legacy `scopes`, also ask whether the scope needs an optional `setup` command that runs once before any gates in that scope. Explain that `setup` is for generated code, installs, and other prerequisites, not proof; it runs in the scope cwd and blocks the scope gates if it fails.
+
+Warn that P0 `ready-for-review` and `review-response` run legacy/pre-pr command gates. Scope-level `setup` runs before those gates and is a prerequisite, not a gate. Other stages are valid metadata for Rondo/future orchestrators and should not be presented as active blockers in today's PR handoff flows.
 
 Example rich gate:
 

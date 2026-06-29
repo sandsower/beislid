@@ -101,7 +101,7 @@ Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-m
 
 ## Scopes and quality gates
 
-Scopes let Beislið run the gates that match the files touched by a branch. For newer workflows that need reusable named gate groups and explicit selected/skipped explanations, prefer `gate_sets`.
+Scopes let Beislið run the gates that match the files touched by a branch. For newer workflows that need reusable named gate groups and explicit selected/skipped explanations, prefer `gate_sets`. Legacy scopes can also declare an optional `setup` command that runs once before any gates in that scope for generated code, installs, or other prerequisites; `setup` is a prerequisite, not proof.
 
 Example shape:
 
@@ -120,6 +120,7 @@ Example shape:
   paths:
     - "api/**"
   cwd: api
+  setup: 'cd .. && make gen-api && make gen-proto'
   gates:
     - name: test
       command: pytest

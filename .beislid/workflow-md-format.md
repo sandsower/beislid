@@ -86,7 +86,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `pr_review_update` — fields: `type` (`cli` / `manual`); for `type: cli`, `reply_command` is required and `rerequest_command` is optional. Commands receive a temp JSON payload via `{json_file}`. Placeholders: `{owner}`, `{repo}`, `{number}`, `{json_file}`. MCP PR review providers are intentionally deferred.
 
 **Scopes and gates:**
-- `scopes` — list of scope objects, each with `name`, `paths` (glob list), `cwd`, `gates` (list of gate objects; see **Gate object shape** below)
+- `scopes` — list of scope objects, each with `name`, `paths` (glob list), optional `cwd`, optional `setup` (string command that runs once before any gates in the scope), and `gates` (list of gate objects; see **Gate object shape** below). `setup` is a prerequisite, not a quality gate: if it fails, the scope gates do not run.
 - `split_policy` — single string; `exclusive` is the only recognized value
 - `gates` (top-level) — single gate list when `scopes` is not configured; same gate object shape as a scope's gates
 - `gate_sets` — changed-file-aware gate selection. Fields: `sets` (map of set name → object with `gates`, optional `cwd`, optional `stage`) and `selectors` (ordered list with `name`, `paths`, `gate_sets`, optional `exclude`). See **Gate-set selection shape** below.
@@ -685,6 +685,7 @@ Frontend (Next.js) and backend (Hono) get different gates.
 - name: backend
   paths: ['apps/api/**']
   cwd: apps/api
+  setup: 'cd .. && make gen-api && make gen-proto'
   gates:
     - { name: lint, command: 'bun run lint' }
 ​```

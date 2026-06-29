@@ -119,7 +119,7 @@ This is good because each gate does exactly one thing (`lint`, `test`, `typechec
   mutates: true
 ```
 
-Mutating gates (`mutates: true`) should be rare and deliberate. Dependency installs are prerequisites, not quality proof.
+Mutating gates (`mutates: true`) should be rare and deliberate. Dependency installs are prerequisites, not quality proof. Legacy scopes can also use a scope-level `setup` command for codegen, installs, or other prereqs that must run once before any gates in that scope.
 
 #### Gate metadata
 

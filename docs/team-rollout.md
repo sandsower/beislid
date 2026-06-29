@@ -73,7 +73,7 @@ Add these layers in order. Each layer should be committed, audited with `/doctor
 | Domain or triggered checks | Work needs repository-specific expertise beyond generic code search | `domain_expert`, `translation_sync`, `browser_compat` |
 | Babysit closeout | The team trusts the loop to keep PRs green and, by policy, merge or run retros | `babysit`, `action_policy` |
 
-Keep gates as proof, not setup. Dependency installs, codegen, or cache warmups are prerequisites; do not hide them inside a gate that claims readiness.
+Keep gates as proof, not setup. Put dependency installs, codegen, or cache warmups in a scope-level `setup` command (or an equivalent prereq step), not inside a gate that claims readiness.
 
 ## `AGENTS.md` block
 
