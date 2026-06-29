@@ -124,6 +124,20 @@ You are taking over the <slice> slice of this work in a separate session/worktre
 
 Scale the payload to the work. Small handoffs can be short, but keep the section headings so the receiver can scan quickly.
 
+### Implementation handoff payload
+
+When the receiving agent is implementing a slice, use the same canonical headings as `implement`:
+- Goal
+- Parent workspace state
+- Assigned scope
+- Explicit decisions so far
+- Constraints / do not touch
+- Required proof and command gates
+- Expected deliverable
+- Stop condition and open questions
+
+Keep these headings stable so the parent can reconcile returned diffs and evidence quickly.
+
 ### 5. Preview and copy
 
 Always show the payload in the chat before or alongside copying.

@@ -61,7 +61,11 @@ If no requirements are available, say so and review against general production r
 
 ### 3. Use fresh eyes when available
 
-If the host supports subagents/delegation, dispatch one reviewer with a compact review packet. Do not pass session history. Pass only:
+If the host supports subagents/delegation, dispatch the smallest reviewer set that will add signal. Prefer one reviewer for narrow diffs; for broader diffs, split into role-specific passes:
+- spec compliance — checks requirements fit, scope, edge cases, and acceptance behavior
+- code quality — checks correctness, tests, maintainability, and regressions
+
+Do not pass session history. Pass only:
 - What was implemented
 - Requirements/plan/context
 - Diff/range
@@ -69,6 +73,8 @@ If the host supports subagents/delegation, dispatch one reviewer with a compact 
 - Optional focus areas from the caller
 
 If no subagent mechanism is available, review in the main agent and disclose that no independent reviewer was available.
+
+When multiple reviewer passes are used, reconcile them into one review contract before the checklist/output step: dedupe overlapping findings, preserve which pass found each issue, and mark disagreements or incomplete evidence as needs-investigation rather than silently collapsing them.
 
 ### 4. Review checklist
 

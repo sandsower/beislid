@@ -70,7 +70,7 @@ Invoke `review` with:
 - Verification already run
 - User-approved focus areas, if any
 
-If the host supports subagents or external model orchestration, optional additional reviewers may be called here, but they must use the same review contract. External reviewers must not edit files or post comments.
+If the host supports subagents or external model orchestration, optional additional reviewers may be called here as spec-compliance and code-quality passes when that materially reduces risk. Collect those outputs into one reconciled findings set before any fix: dedupe overlaps, preserve the source pass for each finding, and surface disagreements or partial evidence as needs-investigation. External reviewers must not edit files or post comments.
 
 For security-sensitive PRs — auth, permissions, token handling, crypto, secrets, privacy, or data export — offer multi-reviewer mode if available. For routine PRs, local review is enough.
 

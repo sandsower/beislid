@@ -15,16 +15,16 @@ Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.m
 
 ## Execute
 
-- `implement`: TDD-first file-level implementation plan; may consume an approved `execution-envelope-v0` autonomy boundary for an agent or external runner and write a configured pre-code checkpoint.
+- `implement`: TDD-first file-level implementation plan; can coordinate controlled subagents for independent slices, may consume an approved `execution-envelope-v0` autonomy boundary for an agent or external runner, and may write a configured pre-code checkpoint.
 - `debug`: no fix without root cause.
 - `handoff`: paste-ready context packet for another agent/session/worktree.
 
 ## Check
 
 - `verify`: no success claims without evidence.
-- `review`: side-effect-free local/supplied diff review with a readiness verdict.
+- `review`: side-effect-free local/supplied diff review with a readiness verdict; can split into spec-compliance and code-quality passes when that adds signal.
 - `fresh-eyes`: side-effect-free final whole-diff pass for consistency and drift.
-- `rinse`: review/fix/verify loop around the `review` contract.
+- `rinse`: review/fix/verify loop around the `review` contract, including delegated-review reconciliation when the host supports it.
 - `pr-patrol`: inbound PR review with approved-only comment posting.
 - `show-me`: manually create a polished local HTML evidence/explanation deck.
 

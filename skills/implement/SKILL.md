@@ -50,6 +50,34 @@ Break work into bite-sized tasks (2-5 minutes each). Each task specifies:
 
 If a task is non-TDD, explicitly note why. If a run ledger is active, record the final approved plan or task list path as a ledger checkpoint before starting code changes.
 
+### Controlled delegation
+
+Use subagents only when a slice is truly independent and the parent can define the slice, proof target, and stop condition without relying on hidden session context.
+
+Delegate only when:
+- the slice has explicit file/path boundaries and does not need the parent to coordinate live edits
+- the slice can be verified with the same repo gates or a narrower command/test subset
+- unresolved design choices, approvals, or security-sensitive steps are already settled
+
+Do not delegate:
+- work that depends on cross-slice ordering or parent-owned negotiation
+- unclear requirements or open design decisions
+- tasks that cannot be reconciled from a diff plus evidence
+
+### Implementer handoff payload
+
+When handing a slice to another agent, use the same canonical headings as `handoff`:
+- Goal
+- Parent workspace state
+- Assigned scope
+- Explicit decisions so far
+- Constraints / do not touch
+- Required proof and command gates
+- Expected deliverable
+- Stop condition and open questions
+
+Treat this payload as the contract for both subagent work and same-session handoff notes.
+
 ### Batch Independent Tasks
 
 Group tasks that have no dependencies on each other into batches. Within a batch, tasks can be dispatched to parallel subagents.
@@ -99,7 +127,7 @@ Create an item for every task in the host agent's todo/task mechanism. If the ho
 Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group before starting the next task or handing off; if policy allows, do it immediately after verification. If policy asks or denies, stop at the commit boundary before advancing.
 
 ### Parallel batches
-When a batch has 3+ independent tasks, dispatch subagents:
+When a batch has 3+ independent tasks and the controlled-delegation criteria still hold, dispatch subagents:
 - Each subagent gets: focused scope, full context for their task, specific success criteria
 - After all return: review diffs, verify no conflicts, run full test suite
 - Don't dispatch parallel agents for fewer than 3 tasks — the overhead isn't worth it
@@ -109,6 +137,10 @@ When a batch has 3+ independent tasks, dispatch subagents:
 - If a task fails 3 times, stop. Question the approach, not the implementation
 - If blocked on a dependency, surface to the user immediately
 - If the plan needs to change, update the plan AND the todo list before continuing
+
+### Reconciliation
+
+After delegated work returns, inspect the diff, run the smallest relevant configured gates, record evidence, and only then decide whether to continue inside `implement` or route unresolved issues through `review` or `rinse`. Do not widen the delegated slice to absorb review feedback; treat that as new work or a separate review loop.
 
 ## Phase 4: Verify
 
