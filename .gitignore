@@ -21,5 +21,7 @@ docs/*
 !docs/assets/**
 !docs/plans/
 !docs/plans/**/*.md
+!docs/examples/
+!docs/examples/**/*.md
 !docs/show-me-example/
 !docs/show-me-example/**
