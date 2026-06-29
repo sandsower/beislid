@@ -349,7 +349,7 @@ test_cli_dispatch() {
 }
 
 test_cli_dispatch_requires_python3() {
-  local path_dir err
+  local path_dir err status
   path_dir="$TMP/no-python"
   mkdir -p "$path_dir"
   ln -s "$(command -v bash)" "$path_dir/bash"
@@ -359,7 +359,10 @@ test_cli_dispatch_requires_python3() {
   if PATH="$path_dir" BEISLID_HOME="$REPO_DIR" "$CLI" action-policy evaluate --mode supervised-auto --action git.push >"$TMP/out.txt" 2>"$err"; then
     note_fail "expected action-policy dispatch to fail without python3"
     return 1
+  else
+    status=$?
   fi
+  [[ "$status" == "1" ]] || { note_fail "expected exit status 1, got $status"; return 1; }
   grep -qF 'error: beislid action-policy requires python3' "$err" || { note_fail "expected python3 guard error"; return 1; }
 }
 

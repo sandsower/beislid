@@ -72,8 +72,14 @@ test_accepts_quoted_name_with_comment_and_block_description() {
   assert_ok
 }
 
+test_preserves_indented_frontmatter_delimiter_inside_block_scalar() {
+  write_skill foo $'---\nname: foo\ndescription: >\n  keep this line\n    ---\n  and this line too\n---\n'
+  assert_ok
+}
+
 run_test "frontmatter without terminal newline" test_accepts_frontmatter_without_terminal_newline
 run_test "quoted name comment and block description" test_accepts_quoted_name_with_comment_and_block_description
+run_test "indented block scalar delimiter preserved" test_preserves_indented_frontmatter_delimiter_inside_block_scalar
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 if (( fail > 0 )); then

@@ -63,7 +63,7 @@ def parse_frontmatter(text: str) -> dict[str, str] | None:
             i += 1
             while i < len(lines):
                 next_line = lines[i]
-                if next_line.strip() == "---":
+                if next_line == "---":
                     break
                 if not next_line.strip():
                     block_lines.append("")
