@@ -52,10 +52,15 @@ def verify(run_dir: Path) -> list[str]:
     expected_head = str(metadata.get("expected_head", "")) or None
 
     gh_text = gh_log.read_text(encoding="utf-8", errors="replace") if gh_log.exists() else ""
-    if "gh pr view --json url,number,baseRefName,headRefName" not in gh_text:
+    identity_cmd = "gh pr view --json url,number,baseRefName,headRefName"
+    gh_commands = [line.rsplit("\t", 1)[-1] for line in gh_text.splitlines()]
+    if identity_cmd not in gh_commands:
         fail(errors, "product", "mock gh did not record identity-only PR detection")
     if gh_text and f"cwd={repo}" not in gh_text:
         fail(errors, "artifact", "mock gh did not run from fixture repo cwd")
+    for command in gh_commands:
+        if command.startswith("gh pr view") and command != identity_cmd:
+            fail(errors, "product", f"non-identity gh pr view command ran despite missing pr_review_source: {command}")
     for label, pattern in FORBIDDEN_GH_PATTERNS:
         if re.search(pattern, gh_text):
             fail(errors, "product", f"forbidden review-source/update command ran despite missing pr_review_source: {label}")
@@ -126,6 +131,16 @@ def self_test() -> int:
         forbidden_errors = verify(run_dir)
         if not any("forbidden" in error for error in forbidden_errors):
             print("self-test failed: forbidden gh api should fail", file=sys.stderr)
+            return 1
+
+        write(
+            run_dir / "gh.log",
+            f"2026-01-01T00:00:00Z\tcwd={repo}\tgh pr view --json url,number,baseRefName,headRefName\n"
+            f"2026-01-01T00:00:01Z\tcwd={repo}\tgh pr view --json body\n",
+        )
+        non_identity_errors = verify(run_dir)
+        if not any("non-identity gh pr view" in error for error in non_identity_errors):
+            print("self-test failed: gh pr view --json body should fail", file=sys.stderr)
             return 1
         print("ok: review-response no-source verify self-test passed")
         return 0
