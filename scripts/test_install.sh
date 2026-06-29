@@ -904,7 +904,6 @@ required = [
     'tier: standard',
     'stage: ready-for-review',
     'phase: gates',
-    'tier: light',
     'phase: review',
     'step: fresh-eyes',
     'tier: heavy',
@@ -912,6 +911,9 @@ required = [
 missing = [needle for needle in required if needle not in text]
 if missing:
     raise SystemExit(f'missing step_hints config: {missing}')
+ready_block = text.split('      - stage: ready-for-review\n', 1)[1].split('      - stage: review-response\n', 1)[0]
+if 'tier: light' not in ready_block and 'tier: standard' not in ready_block:
+    raise SystemExit('ready-for-review gate execution must stay on light or standard')
 validator = profile.parent / 'scripts' / 'check_model_routing_step_hints_consistency.py'
 subprocess.run(['python3', str(validator), str(profile)], check=True)
 with tempfile.TemporaryDirectory(prefix='beislid-step-hints-') as tmp:
