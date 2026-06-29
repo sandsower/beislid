@@ -110,6 +110,17 @@ Basic skills work after install. Repo-aware orchestrators such as `kickoff`, `re
 
 See [How to use](./docs/how-to-use.md) for more information.
 
+### Bootstrap a repo
+
+Fresh sessions should read `.beislid/workflow.md` first, then choose the first Beislið skill from the repo state:
+
+- Existing ticket or branch → `kickoff`
+- Clear requirements, implementation still undecided → `blueprint`
+- Work is done but not yet proven → `verify`
+- Branch is ready for PR → `ready-for-review`
+
+This repo includes a matching `AGENTS.md` bootstrap block you can copy into project repos.
+
 ## Repo-local workflow
 
 Beislið keeps project policy in the repo:

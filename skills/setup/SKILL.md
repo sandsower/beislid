@@ -7,7 +7,7 @@ description: Configure Beislið project config (`.beislid/workflow.md`) interact
 
 Initialize or update Beislið's per-project config at `<repo>/.beislid/workflow.md`, or run the Beislið distribution updater when invoked as `setup update` / `/setup update`. Setup is the canonical config interface — direct file editing still works as an escape hatch but isn't surfaced in user-facing prose.
 
-**First run** (no workflow.md): run a minimal-required interview (ticket source, branch pattern, default PR base, probe cache), write the file, insert a `## Agent skills` block in `AGENTS.md`, then offer the same menu shown on re-run for adding optional sections.
+**First run** (no workflow.md): run a minimal-required interview (ticket source, branch pattern, default PR base, probe cache), write the file, insert the repo bootstrap `## Agent skills` block in `AGENTS.md`, then offer the same menu shown on re-run for adding optional sections.
 
 **Re-run** (workflow.md exists): show a menu — add a section, change a configured section, remove a configured section, reset and regenerate, or cancel. Never silently overwrites; every destructive write shows a diff and asks for confirmation.
 
@@ -721,6 +721,14 @@ The block content is fixed:
 ## Agent skills
 
 This repo uses [Beislið](https://github.com/sandsower/beislid) for orchestrator skills.
+
+- Read `.beislid/workflow.md` first.
+- Existing ticket or branch → `kickoff`
+- Clear requirements, implementation still undecided → `blueprint`
+- Work is done but not yet proven → `verify`
+- Branch is ready for PR → `ready-for-review`
+- Use direct skill invocation when the right entry point is already obvious.
+- Run `/setup` when the repo workflow config is missing or needs updating.
 
 - Project config: `.beislid/workflow.md`
 - Audit setup: `/doctor`
