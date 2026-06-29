@@ -11,6 +11,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS_DIR = ROOT / "tests" / "agent-smoke"
@@ -92,6 +93,55 @@ class AgentSmokeHarnessTests(unittest.TestCase):
             self.assertEqual(status["state"], "cleanup-complete")
             self.assertEqual(status["exited_at"], exited_at)
 
+    def test_verify_marks_run_verified_on_success(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="beislid-agent-smoke-verify-") as tmp:
+            run_dir = Path(tmp)
+            scenario_dir = run_dir / "scenario"
+            scenario_dir.mkdir()
+            (scenario_dir / "scenario.json").write_text(json.dumps({"verify": "verify.py"}) + "\n", encoding="utf-8")
+            (scenario_dir / "verify.py").write_text("#!/usr/bin/env python3\nprint('ok')\n", encoding="utf-8")
+            (run_dir / "agent-smoke.json").write_text(json.dumps({"scenario_dir": str(scenario_dir)}) + "\n", encoding="utf-8")
+            run.set_status(run_dir, "running")
+
+            with patch.object(run.subprocess, "call", return_value=0):
+                rc = run.verify(argparse.Namespace(run_dir=str(run_dir)))
+
+            self.assertEqual(rc, 0)
+            status = json.loads((run_dir / "status.json").read_text(encoding="utf-8"))
+            self.assertEqual(status["state"], "verified")
+            self.assertEqual(status["exit_code"], 0)
+
+    def test_run_host_marks_verified_when_verify_passes_after_timeout(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="beislid-agent-smoke-run-host-") as tmp:
+            run_dir = Path(tmp)
+            repo = run_dir / "repo"
+            repo.mkdir()
+            metadata = {"repo": str(repo)}
+            host = type("Host", (), {"name": "codex"})()
+
+            def fake_create_run(scenario: str, host_name: str) -> tuple[Path, dict, str]:
+                self.assertEqual(scenario, "ready-for-review")
+                self.assertEqual(host_name, "codex")
+                return run_dir, metadata, "prompt"
+
+            with (
+                patch.object(run, "create_run", side_effect=fake_create_run),
+                patch.object(run, "get_host", return_value=host),
+                patch.object(run, "host_exec_argv", return_value=["codex", "exec", "prompt"]),
+                patch.object(run, "activate"),
+                patch.object(run, "cleanup_links"),
+                patch.object(run, "smoke_env", return_value={}),
+                patch.object(run, "print_run_kv"),
+                patch.object(run, "verify", return_value=0),
+                patch.object(run.subprocess, "run", side_effect=run.subprocess.TimeoutExpired(cmd=["codex"], timeout=5)),
+            ):
+                rc = run.run_host(argparse.Namespace(scenario="ready-for-review", host="codex", timeout=5, no_verify=False, no_cleanup=False))
+
+            self.assertEqual(rc, 124)
+            status = json.loads((run_dir / "status.json").read_text(encoding="utf-8"))
+            self.assertEqual(status["state"], "verified")
+            self.assertEqual(status["exit_code"], 124)
+
     def test_lock_blocks_second_run(self) -> None:
         with tempfile.TemporaryDirectory(prefix="beislid-agent-smoke-lock-") as tmp:
             tmp_path = Path(tmp)
@@ -169,7 +219,30 @@ class AgentSmokeHarnessTests(unittest.TestCase):
             if second_error:
                 self.assertIsInstance(second_error[0], SystemExit)
             lock_data = json.loads(_lock_path(skills_dir).read_text(encoding="utf-8"))
-            self.assertIn(lock_data["run_dir"], {str(run_dir_1), str(run_dir_2)})
+            self.assertIn(lock_data["run_dir"], {str(run_dir_1.resolve()), str(run_dir_2.resolve())})
+
+    def test_release_lock_cleans_up_legacy_canonicalized_run_dir(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="beislid-agent-smoke-lock-release-") as tmp:
+            root = Path(tmp)
+            resolved_run_dir = root / "private" / "var" / "run"
+            resolved_run_dir.mkdir(parents=True)
+            legacy_run_dir = root / "var" / "run"
+            (root / "var").symlink_to(root / "private" / "var")
+            skills_dir = root / "skills"
+            skills_dir.mkdir()
+            _lock_path(skills_dir).write_text(
+                json.dumps({"host": "codex", "run_dir": str(legacy_run_dir), "worktree": str(root)}) + "\n",
+                encoding="utf-8",
+            )
+
+            warnings: list[str] = []
+            links._release_lock(skills_dir, resolved_run_dir, warnings)
+
+            self.assertFalse(_lock_path(skills_dir).exists())
+            self.assertEqual(warnings, [])
+
+            # Clean up the symlinked directory before the temporary directory is removed.
+            (root / "var").unlink()
 
 
 if __name__ == "__main__":

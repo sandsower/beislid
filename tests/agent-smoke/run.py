@@ -236,7 +236,10 @@ def verify(args: argparse.Namespace) -> int:
     scenario_path = Path(meta["scenario_dir"])
     config = read_json(scenario_path / "scenario.json")
     verifier = scenario_path / config.get("verify", "verify.py")
-    return subprocess.call([sys.executable, str(verifier), str(run_dir)])
+    rc = subprocess.call([sys.executable, str(verifier), str(run_dir)])
+    if rc == 0:
+        set_status(run_dir, "verified", 0)
+    return rc
 
 
 def cleanup_cmd(args: argparse.Namespace) -> int:
@@ -313,15 +316,16 @@ def run_host(args: argparse.Namespace) -> int:
         if not args.no_cleanup:
             cleanup_links(run_dir)
 
-    if not args.no_verify:
+    did_verify = not args.no_verify
+    if did_verify:
         verify_rc = verify(argparse.Namespace(run_dir=str(run_dir)))
     else:
         verify_rc = 0
 
-    if host_rc == 0 and verify_rc == 0:
-        set_status(run_dir, "verified", 0)
+    if verify_rc == 0 and (host_rc == 0 or did_verify):
+        set_status(run_dir, "verified", host_rc if host_rc else 0)
         print_run_kv(run_dir, host.name, "passed")
-        return 0
+        return 0 if host_rc == 0 else host_rc
     set_status(run_dir, "failed", host_rc if host_rc else verify_rc)
     print_run_kv(run_dir, host.name, "failed", f"host_rc={host_rc} verify_rc={verify_rc}")
     return host_rc if host_rc else verify_rc
