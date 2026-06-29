@@ -8,7 +8,7 @@ Printed once near the top of every ready-for-review run, after reading workflow.
 
 ```
 📋 Preparing `<branch>` against `<base>` for review. Reading `.beislid/workflow.md` (<N>
-capabilities configured). Probing lazily as needed. Cache: <fresh|stale|cold>.
+capabilities configured; workflow policy: <advisory|standard|strict|regulated>). Probing lazily as needed. Cache: <fresh|stale|cold>.
 ```
 
 `<fresh>` — cache file present and `workflow_hash` matches.

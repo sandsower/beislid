@@ -264,6 +264,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Visual surfaces** — *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
 - **Workflow signals** — *Configure optional local workflow-state signals, starting with tmux-glance tab markers for semantically instrumented skills.*
 - **Babysit** — *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
+- **Workflow policy levels** — *Choose advisory/standard/strict/regulated posture for how firmly workflows treat ambiguity and accepted risk.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** — *Write approved structure/spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*

@@ -8,7 +8,7 @@ description: Use when starting work on a ticket after checking out the feature b
 Turn a checked-out feature branch into an implementation plan. For mutations, see [worktree isolation](../../docs/worktree-isolation.md). Kickoff is the front door: ticket → context → spec/blueprint/breakdown → update → `implement`
 **Don't use this for:** creating PRs, handling review/QA feedback, or PR handoff for completed work. Use `ready-for-review` or `review-response` for those.
 
-Project config: `<repo>/.beislid/workflow.md` (see `workflow-md-format.md`). Probe lazily; policy-check side effects per `action-policy-protocol.md`. Output follows templates.
+Project config: `<repo>/.beislid/workflow.md`. Probe lazily; policy-check side effects via `action-policy-protocol.md`. workflow_policy surfaces in outputs. Output follows.
 
 ---
 

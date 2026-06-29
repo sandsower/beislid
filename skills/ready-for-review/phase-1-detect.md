@@ -8,7 +8,7 @@ Print Phase 1 entry/exit one-liners; emit workflow-signal `working` on entry. In
 
 ## Phase outputs
 
-Populate run context: ticket/branch/base/PR, diff files/stats, gate model (`gate_sets`/scopes/repo-root) with selected/skipped reasons, optional triggers, freshness/merge state, clean-eval, fast-path, warnings/risks.
+Populate run context: ticket/branch/base/PR, diff stats, gate model (`gate_sets`/scopes/repo-root) with selected/skipped reasons, optional triggers, freshness/merge state, clean-eval, policy, fast-path, warnings/risks.
 
 Expose `existing_pr_fast_path` early enough for orientation output to append the fast-path clause.
 

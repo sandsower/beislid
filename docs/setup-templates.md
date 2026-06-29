@@ -25,12 +25,14 @@ Use this when the repo is new and you only want the minimum shared workflow:
 - branch pattern, if tickets are branch-embedded
 - probe cache
 - `AGENTS.md` bootstrap block
+- optional workflow policy level (omit it for the default standard posture)
 
 Starter intent:
 
 - `kickoff` should find the ticket and create the first planning record.
 - `doctor` should validate the config before anyone relies on it.
 - nothing should assume PR automation yet.
+- workflow policy stays at the default standard posture unless the team chooses a stricter level deliberately.
 
 ## Linear + GitHub team
 
@@ -65,11 +67,12 @@ Starter intent:
 
 ## Strict review loop
 
-Use this when the team wants the workflow to keep a PR green with minimal drift:
+Use this when the team wants the workflow to keep a PR green with minimal drift. This strict review loop keeps the posture explicit:
 
 - `pr_review_source` and `pr_review_update`
 - `clean_eval` for review handoff
 - `babysit` with gates before push
+- `workflow_policy: strict` or `regulated` when the team wants the posture explicit
 - optional `memento` / `retro` closeout policy
 
 Starter intent:
@@ -77,6 +80,7 @@ Starter intent:
 - review feedback gets handled through the configured update path.
 - branch readiness is checked before push boundaries.
 - merge, memento, and retro remain policy decisions, not defaults.
+- the workflow posture is visible in doctor, kickoff, verify, and ready-for-review output.
 
 ## Guardrails
 

@@ -26,6 +26,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Lifecycle hooks`
 - `Pi handoff`
 - `Action policy`
+- `Workflow policy`
 - `Translation sync`
 - `Browser compat`
 - `Domain capture`
@@ -102,6 +103,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 
 **Action policy:**
 - `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`.
+
+**Workflow policy:**
+- `workflow_policy` — optional repo-level workflow posture. Fields: `level` (`advisory` / `standard` / `strict` / `regulated`, default `standard` when present). This names the active workflow strictness without changing `action_policy`. `advisory` keeps gap signals as warnings, `standard` matches current behavior, `strict` makes unclear requirements and skipped proof harder to ignore, and `regulated` requires explicit, recorded risk acceptance for any override. Skills surface the level in doctor/kickoff/verify/ready-for-review and must not silently soften evidence or approval requirements.
 
 **Visual surfaces:**
 - `visual_surfaces` — optional visual-surface routing config. Fields: `provider` (`lavish-axi` in v1), `mode` (`off | suggest | prompt | auto`, default `suggest`), optional `command` (string override for the provider command), optional `artifact_root` (repo-relative path, default `.lavish`), optional `artifact_retention` (`local | discard | preserve-repo`, default `local`), and optional `workflows` map for per-workflow mode overrides. Workflow override keys are Beislið workflow/skill names such as `spec`, `blueprint`, `poke-holes`, `show-me`, `review`, `ready-for-review`, `walk-the-diff`, and `handoff`; override values use the same mode enum. Proactive routing requires repo `visual_surfaces` config; user-level plugin enablement alone is not enough.

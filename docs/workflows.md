@@ -38,11 +38,12 @@ Routing rules:
 - Use `poke-holes` after `spec` when the spec is still broad, unfocused, or needs pressure before implementation design.
 - Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question; an approved Work Contract counts as that requirements input.
 - Use Work Contract `scope_classification` for routing: `atomic`/`single_pr` go to `blueprint`, `multi_slice` goes to `break-spec`, and `project` starts with spec refinement before slice planning.
+- Surface `workflow_policy.level` wherever the workflow already explains its own posture: `kickoff`, `verify`, `ready-for-review`, and `doctor` should all report it when configured.
 - Use `implement` after the design is approved. It creates the file-level execution plan and task list.
 - When configured, `break-spec`, `spec`, and `blueprint` run approved-planning lifecycle actions after approval; artifact actions write default `plans/` paths for downstream skills, CLI actions run configured side effects inside action-policy boundaries, and `spec` can post the approved spec body back into the ticket body through the configured tracker action.
-- Use `verify` before any done/fixed/passing claim.
+- Use `verify` before any done/fixed/passing claim. It keeps the evidence bar unchanged while surfacing the active workflow policy level when configured.
 - Use `rinse` when you want an approved review/fix/verify loop before PR handoff.
-- Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, ship-time planning-artifact narration, push, and PR creation. See [worktree isolation](./worktree-isolation.md) for isolated agent work and cleanup expectations.
+- Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, ship-time planning-artifact narration, push, and PR creation. It also surfaces the active workflow policy level in the handoff summary. See [worktree isolation](./worktree-isolation.md) for isolated agent work and cleanup expectations.
 
 ## Ticket flow
 

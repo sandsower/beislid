@@ -41,7 +41,7 @@ setup
 - guided walkthrough thresholds
 - probe cache settings
 
-Setup shows diffs before destructive writes. It should not silently overwrite project config. After it writes config, it reports the next steps: run `doctor`, verify configured gates, commit `.beislid/workflow.md` with `AGENTS.md`, and choose the next strictness layer deliberately.
+Setup shows diffs before destructive writes. It should not silently overwrite project config. After it writes config, it reports the next steps: run `doctor`, verify configured gates, commit `.beislid/workflow.md` with `AGENTS.md`, and choose the next strictness layer deliberately, including explicit workflow policy levels.
 
 ### Updating Beislið
 
@@ -293,6 +293,23 @@ Doctor validates `beislid:action_policy` as config, not as an external probe. It
 Policy decisions recorded in run summaries or the durable ledger should preserve the evaluator envelope shape: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When an `ask` decision is accepted or declined, summaries should record the human outcome separately from the original evaluator decision. Denied actions should include the remediation hint and stop point.
 
 In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, `review-response`, and `babysit`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
+
+## Workflow policy levels
+
+`workflow_policy` names the repo's explicit workflow posture. It is separate from `action_policy`: action policy governs side-effect risk, while workflow policy governs how firmly Beislið treats ambiguity, proof gaps, and accepted risk in the workflow itself.
+
+```beislid:workflow_policy
+level: strict
+```
+
+Supported levels:
+
+- `advisory`: keep workflow gaps and weak evidence as warnings; still require any evidence that a claim needs.
+- `standard`: match the current default behavior when no workflow policy is declared.
+- `strict`: make unclear requirements, missing proof, and skipped gates harder to ignore; continue only with explicit recorded risk acceptance.
+- `regulated`: require explicit, recorded risk acceptance for any override and never soften a hard proof or review stop silently.
+
+Doctor validates the level only. Kickoff, verify, ready-for-review, and doctor should surface the active level in their prose so the workflow posture is visible wherever the repo already explains its own gating.
 
 ## Work Contract v1
 
@@ -1162,12 +1179,13 @@ Future sink types are reserved. They should consume the same normalized signal w
 
 These skills read `workflow.md`:
 
-- `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
-- `ready-for-review`: PR target, clean-eval policy, ship-time planning-artifact policy, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
+- `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, workflow policy level, scopes, triggered checks, and model-routing disclosure for downstream skills.
+- `ready-for-review`: PR target, clean-eval policy, ship-time planning-artifact policy, workflow policy level, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.
 - `spec` / `blueprint`: approved-planning lifecycle actions for their own approval events plus model-routing status from the host.
-- `doctor`: all configured capabilities.
+- `verify`: proof requirements and workflow policy level when present.
+- `doctor`: all configured capabilities, including workflow policy level.
 - `retro`: current workflow config plus available run/session evidence, producing recommendations only; accepted config changes route through `setup`.
 - `setup`: writes and updates config.
 

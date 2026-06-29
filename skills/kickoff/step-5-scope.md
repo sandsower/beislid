@@ -10,7 +10,7 @@ Classify work with the Work Contract `scope_classification` vocabulary and route
 
 Print the Step 5 entry one-liner from `kickoff-templates.md`.
 
-Produce or confirm the canonical classifier:
+Produce or confirm the canonical classifier. If `workflow_policy.level` is configured, preserve it in the rationale so downstream phases keep the same posture:
 
 ```yaml
 scope_classification:
@@ -43,7 +43,7 @@ For `multi_slice` or `project` with AFK-suitable slices (clear boundaries, machi
 
 ## Exit
 
-Print the Step 5 exit one-liner. Required outputs: `scope_classification`, derived route summary, rationale, spec/Work Contract lifecycle status/artifact path if present, and selected phase if breakdown is invoked and a phase is chosen.
+Print the Step 5 exit one-liner. Required outputs: `scope_classification`, derived route summary, rationale, workflow policy level when configured, spec/Work Contract lifecycle status/artifact path if present, and selected phase if breakdown is invoked and a phase is chosen.
 
 ## Tripwires
 

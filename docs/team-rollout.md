@@ -69,6 +69,7 @@ Add these layers in order. Each layer should be committed, audited with `/doctor
 | --- | --- | --- |
 | Ticket source + branch pattern | Agents need ticket context without pasting every run | `ticket_source`, `branch_pattern` |
 | Quality gates | Commands pass locally and are stable on clean checkouts | `gates`, `gate_sets`, or `scopes` |
+| Workflow policy levels | The team wants the workflow posture explicit (`advisory` / `standard` / `strict` / `regulated`) | `workflow_policy` |
 | PR review reading | `review-response` should categorize existing PR feedback | `pr_review_source` |
 | Ticket updates | Kickoff plans and QA replies should be recorded in the tracker | `ticket_update` |
 | PR review replies | Agents may post clear-fix replies after addressing feedback | `pr_review_update` plus action policy |

@@ -9,7 +9,7 @@ When every probe resolves cleanly, doctor narrates in this shape (≤500 chars):
 ```
 🩺 **Workflow check on `<project_name>`.**
 
-Configured: <one or two sentences listing what's set up — issue tracker, scopes/setup, which optional skills are wired>. <Translation sync / browser compat / domain capture, etc.> are off in this project.
+Configured: <one or two sentences listing what's set up — issue tracker, scopes/setup, workflow policy level, which optional skills are wired>. <Translation sync / browser compat / domain capture, etc.> are off in this project.
 
 Just probed all of them — ✓ everything resolves. Cache refreshed, valid for the
 next <ttl_hours>h.
@@ -155,6 +155,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_kind": "validation",
       "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 11"
     },
+    "workflow_policy": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "validation",
+      "value": "level: strict"
+    },
     "clean_eval": {
       "status": "ok",
       "probe_supported": true,
@@ -240,6 +247,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
 ✓ lifecycle_hooks validation                                ok (phases: spec..review_response; trigger types: paths/scopes/branch_pattern)
 ✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 11)
+✓ workflow_policy validation                                ok (level: strict)
 ✓ clean_eval validation                                     ok (mode: require; surface: auto; artifact_root: .beislid/clean-eval)
 ✓ ship_time_artifacts validation                            ok (mode: remind; planning-artifact summary only)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)

@@ -10,7 +10,7 @@ Take a branch through gates, review, and PR creation. See [worktree isolation](.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 
-Project config: `<repo>/.beislid/workflow.md`. Use `action-policy-protocol.md` before side effects. Output follows `output-templates.md` and `ready-for-review-templates.md`.
+Project config: `<repo>/.beislid/workflow.md`. Use `action-policy-protocol.md` before side effects. workflow_policy surfaces in handoff. Output follows.
 
 Honor `../lifecycle-hooks.md` before and after this phase.
 

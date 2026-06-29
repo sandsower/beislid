@@ -343,9 +343,12 @@ Hook actions use the same safety model as lifecycle actions: approval governs pr
 
 ### Other sections
 
+Workflow policy levels are a lightweight way to make the repo's strictness posture explicit without rewriting action policy.
+
 | Section | Purpose |
 |---|---|
 | `beislid:model_routing` | Declare preferred models per skill tier |
+| `beislid:workflow_policy` | Declare advisory/standard/strict/regulated workflow posture |
 | `beislid:pi_handoff` | Configure Pi auto-handoff from checkpoint pointers |
 | `beislid:visual_surfaces` | Route to optional Lavish visual surfaces |
 | `beislid:workflow_signals` | Local tmux-glance tab markers |
@@ -372,7 +375,7 @@ Doctor checks:
 - Fenced block syntax
 - Whether configured commands and tools are reachable
 - Probe cache freshness
-- Action policy, model routing, and visual surface validity
+- Action policy, workflow policy, model routing, and visual surface validity
 
 ### Run configured gates manually
 

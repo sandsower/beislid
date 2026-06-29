@@ -7,13 +7,13 @@ Kickoff-specific copy: orientation, step one-liners, paste fallback prompts, tic
 ≤240 chars:
 
 ```
-📋 Starting `<ticket-id>` on `<branch>`. Reading `.beislid/workflow.md`; ticket, domain, and update capabilities will be probed only when needed. Cache: <fresh|stale|cold>.
+📋 Starting `<ticket-id>` on `<branch>`. Reading `.beislid/workflow.md`; ticket, domain, update, and workflow policy levels will be probed only when needed. Policy: <advisory|standard|strict|regulated>. Cache: <fresh|stale|cold>.
 ```
 
 If the ticket ID is not known yet:
 
 ```
-📋 Starting work on `<branch>`. Reading `.beislid/workflow.md`; I’ll ask for the ticket ID if the branch doesn't provide it. Cache: <fresh|stale|cold>.
+📋 Starting work on `<branch>`. Reading `.beislid/workflow.md`; I’ll ask for the ticket ID if the branch doesn't provide it. Workflow policy: <advisory|standard|strict|regulated>. Cache: <fresh|stale|cold>.
 ```
 
 ## Step one-liners

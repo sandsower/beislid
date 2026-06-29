@@ -39,6 +39,8 @@ For every positive claim about work state:
 
 When a Work Contract includes `proof_requirements`, match verification evidence to that vocabulary before claiming done. A command log can satisfy `command_gate`, review output can satisfy `review` or `fresh_eyes`, CI status can satisfy `ci_check`, and a deck/screenshot can satisfy `screenshot_show_me`. Missing required proof means stop and report the missing proof or human interrupt; do not downgrade it to advisory in chat.
 
+If `workflow_policy` is configured, surface the active level in the verification report header. `advisory` / `standard` / `strict` / `regulated` may change how loudly you describe risk, but they do not replace proof.
+
 ## Red Flags
 
 These words in your response without preceding evidence mean you're guessing:
