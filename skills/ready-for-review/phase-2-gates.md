@@ -26,12 +26,12 @@ Run applicable checks in order and fail fast; fast-path may parallelize safe gat
 
 Selection:
 
-- `gate_sets`: run Phase 1 selected gates. Apply set defaults before normalization; gate fields win.
-- `scopes`: run touched scopes only (`pushd <scope.cwd>`, executable pre-pr gates, `popd`).
-- top-level `gates`: run executable pre-pr gates from repo root.
-- none: print `no gates configured — skipping`.
+- `gate_sets`: run Phase 1 selected gates with set defaults.
+- `scopes`: run touched scopes only (`pushd <cwd>`, pre-pr gates, `popd`).
+- top-level `gates`: run pre-pr gates from repo root.
+- none: `no gates configured — skipping`.
 
-Flat `name`+`command` means pre-pr computational sensor. P0 ready-for-review executes legacy gates plus rich gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` exists, and `execution` is absent/`computational`. Record other stages as `skipped-by-stage`; record pre-pr non-computational/non-sensor as `skipped-by-execution`. Treat rich `output`/`failure` as prompt context.
+Flat `name`+`command` = pre-pr sensor. Execute legacy + rich gates where stage is absent/`pre-pr`, kind is absent/`sensor`, command exists, execution is absent/`computational`. Other stages → `skipped-by-stage`; non-computational/non-sensor pre-pr → `skipped-by-execution`. Rich `output`/`failure` as prompt context.
 
 Probe each selected gate once (`probe(gate_sets.sets.<set>.gates[<gate>].command)`, scope, or top-level equivalent), plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
 
@@ -40,9 +40,9 @@ Execution:
 1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
 3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md`. Store raw logs by path when possible, else a safe summary.
-4. Autofix only when `fail` and not environment failure: policy-check `gate.autofix`, show summary/diff, ask before commit.
-5. For `status: error`, `environment_failure: true`, or no `autofix`, emit workflow-signal `waiting`, then prompt from the envelope plus failure/output context. Wait for siblings and surface all failure envelopes together.
-6. After a fix, re-run the applicable gate before advancing. If the user explicitly proceeds without a passing gate, record that decision/risk.
+4. Autofix when `fail` and not environment: if `approval_gates.autofix_commit` is `auto`, policy-check `gate.autofix`, record diff to transcript/ledger, commit without prompt (unless action policy denies). Else policy-check `gate.autofix`, show diff, ask.
+5. For `error`, environment failure, or no autofix: emit `waiting`. If `approval_gates.gate_failure` is `auto` and not environment: record failure envelope to transcript/ledger with `auto-accept-risk`, continue. Else prompt from envelope + context. Surface all failure envelopes together.
+6. Re-run applicable gate after fixes. User proceed-without-passing (or auto accept-risk) → record.
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state. Plain git checks are not probe-cache entries.
 
@@ -68,7 +68,7 @@ Otherwise probe `browser_compat.skill` and invoke the configured skill with the 
 
 If `clean_eval` is absent or `mode: off`, print the clean-evaluator skip line from `ready-for-review-templates.md` and continue.
 
-If `clean_eval.mode: require`, honor `clean_eval.surface` (`auto`/`worktree`/`container`) when picking or creating the clean surface; reuse a matching surface when available; otherwise create the configured surface from the branch and base, apply the patch, run the configured pre-PR gates there with the same selection and log capture rules, store artifacts/logs under `clean_eval.artifact_root` or the run-ledger tree, and classify failures as `patch-regression` or `environment_failure`. On failure, emit `blocked` for patch regressions or `waiting`/`blocked` for environment failures, then stop unless the user explicitly accepts a supported retry/skip path.
+If `clean_eval.mode: require`, honor `surface` (auto/worktree/container): reuse matching surface, or create from branch+base, apply patch, run selected pre-pr gates, store artifacts under `artifact_root` or run-ledger tree, classify failures as `patch-regression` or `environment_failure`. On failure: `blocked` for patch regressions, `waiting`/`blocked` for environment. If `approval_gates.clean_eval_failure` is `auto`, record to transcript/ledger with `auto-skip`, continue (patch regressions still block). Else stop unless user accepts retry/skip.
 
 ## Phase 2b: Guided walkthrough
 

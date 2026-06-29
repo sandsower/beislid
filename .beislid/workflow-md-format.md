@@ -116,6 +116,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `browser_compat.skill`, `browser_compat.trigger_paths`
 - `pr_description.formatter_skill`, `pr_description.formatter_args` (optional map)
 
+**Ready-for-review approval gates:**
+- `ready_for_review` — optional approval gate friction policy. Fields: `approval_gates.pr_title_body` (`prompt` / `auto`, default `prompt`), `approval_gates.gate_failure` (`prompt` / `auto`, default `prompt`), `approval_gates.autofix_commit` (`prompt` / `auto`, default `prompt`), `approval_gates.clean_eval_failure` (`prompt` / `auto`, default `prompt`), `approval_gates.reduced_review_coverage` (`prompt` / `auto`, default `prompt`). `auto` records the decision in transcripts/ledgers and continues without an interactive prompt while still blocking on real-risk stops: critical review findings, merge conflicts, missing credentials, destructive actions, and policy denials.
+
 **Ready-for-review clean evaluation:**
 - `clean_eval` — optional clean worktree/container policy for pre-PR evaluation. Fields: `mode` (`off` / `require`, default `off`); optional `surface` (`auto` / `worktree` / `container`, default `auto`); optional `artifact_root` (repo-relative path, default `.beislid/clean-eval`). `mode: require` means ready-for-review must stage the candidate patch in a clean surface and run configured pre-PR gates there before handing off; `mode: off` keeps the normal working-tree gate path. Failures are classified as patch-regression versus environment/harness failure, and logs/artifacts live under the configured root or run-ledger artifacts.
 
@@ -318,6 +321,35 @@ reason: 'Final review is enforced by an external required check.'
 ````
 
 The command is probed like a CLI capability by checking its first binary. It should exit nonzero for blocking findings; ambiguous output is treated as blocking until the user provides evidence or accepts risk.
+
+## Ready-for-review approval gates shape
+
+`ready_for_review` lets a repo configure which ready-for-review approval gates prompt interactively versus auto-approve after recording the decision. When a gate is `auto`, the skill logs the decision and metadata to the transcript and run ledger, then continues without an interactive prompt. Real-risk stops — critical review findings, merge conflicts, missing credentials, destructive actions, and policy denials — are never downgraded by this config.
+
+All gates default to `prompt` (safe, backward-compatible). Set individual gates to `auto` only when the repo trusts the agent's generated metadata enough to skip the prompt:
+
+````markdown
+## Ready-for-review
+
+```beislid:ready_for_review
+approval_gates:
+  pr_title_body: prompt
+  gate_failure: prompt
+  autofix_commit: prompt
+  clean_eval_failure: prompt
+  reduced_review_coverage: prompt
+```
+````
+
+`pr_title_body` controls the Phase 4 hard gate where the user must approve the PR title and body before push/creation. `auto` logs the title/body to the transcript and continues without prompting.
+
+`gate_failure` controls Phase 2 prompts when a configured gate fails. `auto` records the failure envelope, auto-accepts risk for non-critical failures, and continues; environment failures and missing tools still block.
+
+`autofix_commit` controls whether autofix diffs are committed without interactive approval. `auto` policy-checks the commit, records the diff, and commits without prompting unless action policy denies.
+
+`clean_eval_failure` controls the clean evaluator failure prompt. `auto` records the failure and skips clean eval for this session; patch regressions still block.
+
+`reduced_review_coverage` controls the explicit reduced-coverage acceptance prompt when review is cancelled or incomplete. `auto` records the reduced-coverage status and continues without prompting.
 
 ## Action policy shape
 

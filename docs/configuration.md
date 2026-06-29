@@ -866,6 +866,58 @@ When a repo does not declare `tiers`, Beislið resolves through these shipped de
 | `heavy` | `[anthropic:claude-opus-4.8, openai:gpt-5.1-codex, google:gemini-2.5-pro]` |
 | `frontier` | `[anthropic:claude-opus-4.8, google:gemini-2.5-pro, openai:gpt-5.1-codex]` |
 
+## Ready-for-review approval gates
+
+`ready-for-review` has built-in hard approval gates that prompt interactively at key boundaries. Configure `ready_for_review` when you want to reduce friction in trusted repos by auto-approving known-safe gates after recording decisions to the transcript and run ledger.
+
+Real-risk stops — critical review findings, merge conflicts, missing credentials, destructive actions, and policy denials — are never downgraded by this config.
+
+Use the default safe, backward-compatible explicit-approval mode:
+
+````markdown
+## Ready-for-review
+
+```beislid:ready_for_review
+approval_gates:
+  pr_title_body: prompt
+  gate_failure: prompt
+  autofix_commit: prompt
+  clean_eval_failure: prompt
+  reduced_review_coverage: prompt
+```
+````
+
+Opt into auto-approval for specific gates:
+
+````markdown
+## Ready-for-review
+
+```beislid:ready_for_review
+approval_gates:
+  pr_title_body: auto
+  gate_failure: prompt
+  autofix_commit: prompt
+  clean_eval_failure: auto
+  reduced_review_coverage: auto
+```
+````
+
+### Gate reference
+
+| Gate | Default | Effect when `auto` |
+| --- | --- | --- |
+| `pr_title_body` | `prompt` | Logs the PR title/body to transcript/ledger and continues without interactive approval. The user still sees the draft in progress output. |
+| `gate_failure` | `prompt` | Records the failure envelope, auto-accepts risk for non-critical failures, and continues. Environment failures and missing tools still block. |
+| `autofix_commit` | `prompt` | Policy-checks the autofix commit, records the diff, and commits without interactive approval unless action policy denies. |
+| `clean_eval_failure` | `prompt` | Records the failure and skips clean eval for this session. Patch regressions still block. |
+| `reduced_review_coverage` | `prompt` | Records the reduced-coverage status and continues when review is cancelled or incomplete. |
+
+All gates default to `prompt` (safe, backward-compatible). Set individual gates to `auto` only when the repo trusts the agent's generated metadata enough to skip the interactive prompt. Auto-approved decisions are recorded in the run transcript and run ledger for auditability.
+
+### Interaction with action policy
+
+Auto-approval defers to action policy at every side-effect boundary. If action policy denies a push, PR create, or commit, that block still fires before the auto-approved gate can proceed. Auto-approval records the decision but does not override a `deny` from the deterministic policy evaluator.
+
 ## Ready-for-review clean evaluation
 
 `ready-for-review` can run pre-PR gates in a clean worktree/container before handoff. Configure `clean_eval` when you want that clean-surface path to be required by workflow policy; leave it off when the normal working-tree gate path is enough.

@@ -18,7 +18,7 @@ Apply this policy to `review`, enabled final checks, and fast-path combined revi
 - Never silently skip review coverage; fast-path combined review must be explicit.
 - Cancellation is not a pass.
 
-If the user chooses cancel-and-salvage, stop waiting and extract any available partial output from the subagent/tool. Carry usable findings forward by severity; mark unsupported or half-written observations as incomplete. If no partial output is available, say so. Before Phase 4, require explicit reduced-coverage acceptance; record it in transcript, exit summary, memory brief, and PR notes.
+If cancel-and-salvage: extract partial output. Carry usable findings by severity; mark incomplete observations. If `approval_gates.reduced_review_coverage` is `auto`, record `auto-accepted` in transcript/ledger, continue. Else require explicit reduced-coverage acceptance; record in transcript, exit summary, memory brief, PR notes.
 
 ## 3a. Normal review loop
 
@@ -52,7 +52,7 @@ Otherwise, after normal review converges, run the selected final check unless di
 
 ## Exit / outputs
 
-Phase 3 may exit only when review plus enabled final check, fast-path combined review, or explicit `fresh_eyes.enabled: false` policy has no blocking findings; remaining Important items are accepted risks; or incomplete/cancelled coverage has explicit reduced-coverage acceptance.
+Phase 3 exits when: no blocking findings remain; remaining Important items are accepted risks; or cancelled/incomplete coverage has explicit reduced-coverage acceptance (or `approval_gates.reduced_review_coverage` is `auto` and recorded).
 
 Print the Phase 3 exit one-liner from `ready-for-review-templates.md`, filling `<N>` with findings addressed across review/final-check or combined review. In verbose mode, append the Phase 3 exit check and transcript boundary.
 
