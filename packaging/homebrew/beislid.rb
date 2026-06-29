@@ -1,7 +1,6 @@
-# Draft Homebrew formula for Beislið.
+# Homebrew formula for Beislið.
 #
-# This file is packaging guidance, not the published install path yet.
-# Full Homebrew support is tracked separately in the Homebrew packaging work.
+# This file is the source of truth for Homebrew packaging.
 
 class Beislid < Formula
   desc "Opinionated workflow skills and CLI for coding agents"
@@ -16,6 +15,7 @@ class Beislid < Formula
     libexec.install "README.md"
     libexec.install "LICENSE"
     libexec.install "NOTICE.md"
+    libexec.install ".beislid"
 
     libexec.install "bin"
     libexec.install "skills"
@@ -32,16 +32,16 @@ class Beislid < Formula
 
   def caveats
     <<~EOS
-      This is a draft formula kept in the Beislið repo for packaging validation.
-      Full Homebrew support, including publishing and upgrade policy, is tracked separately.
+      Homebrew installs Beislið's runtime files under libexec and exposes `beislid` on PATH.
+      Use `brew upgrade beislid` for Homebrew-managed updates. `beislid update` is for source-checkout installs.
 
-      The formula installs Beislið's runtime files under libexec and exposes `beislid` on PATH.
       If you move or manually copy the runtime, set BEISLID_HOME to the runtime root.
     EOS
   end
 
   test do
     assert_match "Beislið CLI", shell_output("#{bin}/beislid help")
-    assert_match "beislid status", shell_output("#{bin}/beislid --status 2>&1", 2)
+    assert_match "beislid status", shell_output("#{bin}/beislid status")
+    assert_match "Version stamp", (libexec/".beislid/workflow-md-format.md").read
   end
 end

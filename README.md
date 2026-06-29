@@ -236,9 +236,17 @@ Flags:
 
 Machine state for user installs lives at `${BEISLID_STATE_DIR:-~/.local/state/beislid}/install.json` and records the CLI path when the CLI link is installed or already correct. Durable run-ledger state lives under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/` and can be managed with `beislid run-ledger ...` for Rondo-style runs, gate logs, interruptions, and final reports. Project install state lives at `<project>/.beislid/project-install.json`. Re-running is safe: dangling symlinks are auto-repaired; symlinks pointing at another live target are left alone unless you pass `--force`. Regular files are never clobbered. Update never touches project-owned `.beislid/workflow.md` files.
 
-### Homebrew packaging draft
+### Homebrew packaging
 
-This repo includes a draft formula at `packaging/homebrew/beislid.rb`. It is for packaging validation and future tap work, not the published install path yet. Full Homebrew support, including publishing and upgrade policy, is tracked separately in the Homebrew packaging work.
+This repo includes the Homebrew formula at `packaging/homebrew/beislid.rb`. It packages the runtime subset under `libexec`, including `.beislid/`, and exposes `beislid` on PATH. Homebrew users update with `brew upgrade beislid`; source-checkout installs update with `beislid update` / `install.sh --update`.
+
+The formula is maintained in this repo as the release source of truth.
+
+Release/update process:
+1. Update `packaging/homebrew/beislid.rb` in the same change as any runtime-layout or CLI packaging change.
+2. Run the install integration suite and a local formula sanity check before release.
+3. Publish the tap/release that carries the updated formula.
+4. Users upgrade with `brew upgrade beislid` after the new tap/release lands.
 
 The CLI is package-layout friendly: it resolves its runtime from the real `bin/beislid` path, or from `BEISLID_HOME` when a packaged wrapper points at a separate runtime root. If the runtime subset is incomplete, it prints a layout error instead of failing with a shell source error.
 

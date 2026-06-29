@@ -29,7 +29,7 @@ Beislið is repo-local. It installs portable skills, but the skills are only the
    /setup update
    ```
 
-   Or run `beislid update` / `~/Projects/beislid/install.sh --update` from a shell. Update fast-forwards the Beislið checkout, aborts on local changes, preserves prior install targets and opt-ins, and relinks skills.
+   Or run `beislid update` / `~/Projects/beislid/install.sh --update` from a shell. Use `brew upgrade beislid` instead if you installed via Homebrew; `beislid update` is for source-checkout installs and fast-forwards the checkout, aborts on local changes, preserves prior install targets and opt-ins, and relinks skills.
 
 4. **Audit the setup** before relying on it:
 
@@ -91,7 +91,7 @@ beislid help
 
 `install.sh --project [path]` is compatibility sugar for `beislid install project [path]`; add `--copy` there too for copied project skills. Project install creates `.agents/skills`, `.claude/skills`, and `.codex/skills` under the target project. Symlink mode is the default. Copy mode writes `.beislid-owner.json` markers inside copied skill dirs and records copy ownership in `.beislid/project-install.json`, so reruns refresh only Beislið-owned copies. Project installs print a suggested managed `.gitignore` block by default; add `--write-gitignore` to create or replace it. It warns if `.beislid/workflow.md` is missing but does not create it; use `setup` for project workflow config.
 
-A draft Homebrew formula lives at `packaging/homebrew/beislid.rb` for packaging validation. It is not the published install path yet; full Homebrew support is tracked separately in the Homebrew packaging work. Packaged layouts should include the Beislið runtime subset and can set `BEISLID_HOME` if `bin/beislid` is separated from that runtime root.
+A Homebrew formula lives at `packaging/homebrew/beislid.rb` for Homebrew installs. It packages the runtime subset under `libexec`, including `.beislid/`, and exposes `beislid` on PATH. Use `brew upgrade beislid` to update a Homebrew install; use `beislid update` / `install.sh --update` for a source checkout. Maintainers update the formula here and publish the tap/release so `brew upgrade` picks up the new runtime.
 
 ### Optional Lavish visual surfaces
 

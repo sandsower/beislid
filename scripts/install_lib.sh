@@ -1689,6 +1689,7 @@ beislid_migrate_v0_2() {
 beislid_update_repo() {
   if ! git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "error: --update must be run from a git checkout of Beislið" >&2
+    echo "       If this is a Homebrew install, use 'brew upgrade beislid' instead." >&2
     exit 1
   fi
 
