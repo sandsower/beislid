@@ -210,7 +210,7 @@ Project install defaults to symlink mode. Use `beislid install project [path] --
 - `<project>/.claude/skills`
 - `<project>/.codex/skills`
 
-It writes `<project>/.beislid/project-install.json` and warns softly when `<project>/.beislid/workflow.md` is missing. Copy mode also writes `.beislid-owner.json` inside each copied skill dir so reruns can refresh only Beislið-owned copies. Unmarked project files or skill dirs are never clobbered, even with `--force`. Project installs print a suggested `.gitignore` block by default; pass `--write-gitignore` to create or replace the managed block idempotently. It does not create workflow config; run the `setup` skill when repo-aware workflows need it.
+It writes `<project>/.beislid/project-install.json` and warns softly when `<project>/.beislid/workflow.md` is missing. Copy mode also writes `.beislid-owner.json` inside each copied skill dir so reruns can refresh only Beislið-owned copies. Unmarked project files or skill dirs are never clobbered, even with `--force`. `beislid status project [path]` now reports missing skills per host and exits non-zero when any supported host is missing a skill. Project installs print a suggested `.gitignore` block by default; pass `--write-gitignore` to create or replace the managed block idempotently. It does not create workflow config; run the `setup` skill when repo-aware workflows need it.
 
 Update an existing install from an agent host:
 
