@@ -40,11 +40,7 @@ Compose the proposed PR:
 
 - Title: `<TICKET-ID>: <ticket title>` only when a real ticket id is confirmed; otherwise a concise no-ticket title. Never render `none` as a prefix; `none: <title>` is invalid.
 - Base: Phase 1 base.
-<<<<<<< HEAD
-- Body: Ship summary shape from `artifact-templates.md`: terse changes, why, proof, reviewer notes/warnings, artifacts/follow-ups, ship-time note, deferred-review evidence (e.g. CodeRabbit `Review skipped` / `Review limit reached` / `rate limited` / `draft detected`), accepted risks, and reduced-coverage acceptance if any.
-=======
-- Body: terse record summary of changes, why, proof, reviewer warnings, ship-time note, deferred-review evidence (e.g. CodeRabbit `Review skipped` / `Review limit reached` / `rate limited` / `draft detected`), accepted risks, and reduced-coverage acceptance if any.
->>>>>>> 524693a (fix: trim ready-for-review phase size budget)
+- Body: Ship summary shape from `artifact-templates.md`: changes, why, proof, warnings, artifacts/follow-ups, ship-time note, deferred-review evidence, accepted risks/reduced coverage.
 - Include carried warnings such as AI-generated translation notices.
 - Labels/reviewers only when configured or requested.
 
