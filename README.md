@@ -271,6 +271,7 @@ When installed as a Pi package, Beislið includes a Pi extension that registers 
 - [Skills](./docs/skills.md): full skill catalog.
 - [Configuration](./docs/configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, and probe cache.
 - [Workflow authoring](./docs/workflow-authoring.md): how to write and test `.beislid/workflow.md` for your team.
+- [Team rollout](./docs/team-rollout.md): minimum viable repo config, strictness layers, and the `AGENTS.md` block for Beislið-ready repos.
 - [Example team workflow configurations](./docs/examples/README.md): seven complete drop-in configs for common team shapes.
 - [Skill authoring](./docs/skill-authoring.md): how to write portable custom skills with hard gates, clear triggers, and host portability.
 - [Review workflows](./docs/review-workflows.md): review primitives and review/PR handoff/feedback flows.

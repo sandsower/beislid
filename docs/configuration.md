@@ -7,7 +7,7 @@ Beislið has two layers:
 
 Basic skills such as `spec`, `blueprint`, `debug`, `verify`, and `review` can work after install. Repo-aware orchestrators such as `kickoff`, `ready-for-review`, `review-response`, and `babysit` use `workflow.md` when they need ticket, PR, quality-gate, scope, or team-specific behavior.
 
-For a tutorial on writing your own workflow.md, see [Workflow authoring](./workflow-authoring.md). For guidance on writing custom skills, see [Skill authoring](./skill-authoring.md).
+For a tutorial on writing your own workflow.md, see [Workflow authoring](./workflow-authoring.md). For a team adoption checklist, see [Team rollout](./team-rollout.md). For guidance on writing custom skills, see [Skill authoring](./skill-authoring.md).
 
 ## Setup
 
@@ -41,7 +41,7 @@ setup
 - guided walkthrough thresholds
 - probe cache settings
 
-Setup shows diffs before destructive writes. It should not silently overwrite project config.
+Setup shows diffs before destructive writes. It should not silently overwrite project config. After it writes config, it reports the next steps: run `doctor`, verify configured gates, commit `.beislid/workflow.md` with `AGENTS.md`, and choose the next strictness layer deliberately.
 
 ### Updating Beislið
 
