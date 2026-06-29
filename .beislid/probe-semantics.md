@@ -10,12 +10,12 @@ Capability fenced blocks declare a `type` field that selects the probe kind. Thi
 
 Capability declares one MCP tool name (e.g. `tool: mcp__plugin_linear_linear__get_issue`) or a logical set of related MCP tools (e.g. `ticket_update.comment_tool` + optional `issue_tool`).
 
-**Probe:** ask the host agent for its tool registry and check whether every configured tool for the logical capability is registered in this session.
+**Probe:** ask the host agent for its tool registry and check whether every configured tool for the logical capability is registered in this session. A host-adapter alias for an equivalent tool may satisfy the configured route when the registry can prove the mapping; record whether the hit was exact or alias-satisfied in the captured value/prose.
 
 | Status | Condition |
 |---|---|
-| `ok` | Every configured tool is registered and callable. `probe_supported: true`. |
-| `missing` | One or more configured tools are not registered in the session. `probe_supported: true`. Reason names the missing tools, e.g. `"tools 'mcp__x__comment', 'mcp__x__issue' not registered in this session"`. |
+| `ok` | Every configured tool is available, either by exact registration or by a host-adapter alias for an equivalent tool. `probe_supported: true`. |
+| `missing` | One or more configured tools are not registered in the session and no host alias resolves them. `probe_supported: true`. Reason names the missing tools, e.g. `"tools 'mcp__x__comment', 'mcp__x__issue' not registered in this session"`. |
 | `failed` | Tool registry lookup raised. `probe_supported: true`. Reason captures the error. |
 
 If the host has no MCP tool registry mechanism at all, status is `failed` with `probe_supported: false` and reason `"host has no MCP tool registry"`.

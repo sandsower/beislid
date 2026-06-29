@@ -95,6 +95,8 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 ```
 ````
 
+Equivalent host-adapter aliases are fine for MCP-backed sources: the probe should say whether the configured route matched exactly or through an alias for the same integration.
+
 Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-md-format.md).
 
 ## Scopes and quality gates
@@ -689,7 +691,7 @@ CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. O
 
 Every lifecycle action may set `on_failure: prompt | continue | abort`; omitted `on_failure` defaults to `prompt` for compatibility. `prompt` preserves the existing retry / skip-remaining-this-session / abort flow when an action fails. `continue` records a warning and proceeds without blocking the workflow, which is useful for explicitly best-effort side effects such as optional labels or local notes. `abort` stops the owning workflow immediately and should be reserved for side effects that are required before later steps are safe, such as a mandatory tracker transition in teams that rely on it.
 
-P0 also supports ordered lifecycle actions for approved structures, specs, and designs. Use `type: artifact` to write local planning files, `type: cli` to run a configured side effect after approval, and `type: tracker` under `spec_approved` to post the approved spec body back into the current tracker ticket body through the configured `ticket_update` issue channel:
+P0 also supports ordered lifecycle actions for approved structures, specs, and designs. Use `type: artifact` to write local planning files, `type: cli` to run a configured side effect after approval, and `type: tracker` under `spec_approved` to post the approved spec body back into the current tracker ticket body through the configured `ticket_update` issue channel. For MCP-backed ticket updates, host-adapter aliases are acceptable when they represent the same integration; probes should distinguish exact and alias-satisfied routes:
 
 ````markdown
 ## Lifecycle actions
