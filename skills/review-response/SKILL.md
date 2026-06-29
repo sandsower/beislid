@@ -5,7 +5,7 @@ description: Use when the user says "review-response", "respond to review", "rev
 
 # Review Response
 
-Address post-submission feedback: PR review threads, PR comments, QA ticket comments, and pasted feedback. Categorize feedback, fix what belongs in scope, draft/print or post replies, run needed gates, and push.
+Address post-submission feedback: PR review threads, PR comments, QA ticket comments, and pasted feedback. When fixes belong in an isolated worktree, preserve that worktree context in the response and cleanup notes. See [worktree isolation](../../docs/worktree-isolation.md). Categorize feedback, fix what belongs in scope, draft/print or post replies, run needed gates, and push.
 
 **Don't use this for:** starting new ticket work, creating PRs, or reviewing someone else's PR. Use `kickoff`, `ready-for-review`, or `pr-patrol` instead.
 

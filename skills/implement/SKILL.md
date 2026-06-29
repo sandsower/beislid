@@ -5,7 +5,7 @@ description: "Use when you have an approved design or requirements for a multi-s
 
 # Implementation Plan
 
-Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm.
+Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm. If the slice should be isolated, use [worktree isolation](../../docs/worktree-isolation.md) to keep the active checkout clean before code changes.
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
