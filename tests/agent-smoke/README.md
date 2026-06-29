@@ -10,8 +10,10 @@ For local PR handoff gates, run hosts AFK with broad fixture permissions. This i
 
 ```bash
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900
+python3 tests/agent-smoke/run.py gate review-response-no-source --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate walk-the-diff --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate walk-the-diff-wrap --hosts codex --timeout 900
+python3 tests/agent-smoke/run.py gate --suite review-response-suite --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate --suite walk-the-diff-suite --hosts codex --timeout 900
 ```
 
@@ -34,6 +36,7 @@ python3 tests/agent-smoke/run.py run ready-for-review --host codex --timeout 900
 Related scenarios can run under one gate with `--suite`.
 
 ```bash
+python3 tests/agent-smoke/run.py gate --suite review-response-suite --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate --suite walk-the-diff-suite --hosts codex --timeout 900
 ```
 

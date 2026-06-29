@@ -35,6 +35,8 @@ gh pr view --json url,number,baseRefName,headRefName 2>/dev/null
 
 This detection is best-effort and does not replace configured PR review sources. `gh pr view` is only a convenience for GitHub-shaped repos; a configured `pr_review_source` still makes PR-review mode available when `gh` is absent, irrelevant, or returns nothing.
 
+**Hard boundary:** PR detection only resolves identity (`owner`, `repo`, `number`, `url`, refs). It is not permission to retrieve PR feedback. Do not run `gh api`, `gh pr view --comments`, `gh pr view --json comments,reviews`, GraphQL review queries, or any other review-fetch command unless that exact read path comes from configured `pr_review_source`.
+
 If PR mode is chosen and owner/repo/number/url cannot be resolved from detection, ask for the missing values before running `pr_review_source`. Hard-abort only if the configured source requires those placeholders and the user cannot provide them. If the source command has no PR placeholders, run it as configured.
 
 ## 1d. Choose mode
@@ -49,9 +51,9 @@ Use hybrid detect + confirm:
 
 Run only if mode includes PR review.
 
-If `pr_review_source` is absent, ask for pasted PR review feedback and note that PR review source is not configured.
+If `pr_review_source` is absent, stop PR review retrieval and ask for pasted PR review feedback using the strict prompt in `review-response-templates.md`; note that PR review source is not configured. Do not run `gh api`, `gh pr view --comments`, `gh pr view --json comments,reviews`, GraphQL review queries, or any other ad-hoc review-fetch command.
 
-If `pr_review_source.type: paste`, ask for pasted PR review feedback using the strict prompt in `review-response-templates.md`.
+If `pr_review_source.type: paste`, ask for pasted PR review feedback using the strict prompt in `review-response-templates.md`. Do not run ad-hoc review-fetch commands.
 
 If `type: cli`:
 

@@ -95,7 +95,7 @@ Read and follow `phase-3-push.md`. Print the entry/exit one-liners from `review-
 
 ## Common mistakes
 
-- **Using hidden GitHub writes.** PR review reads/writes come from `pr_review_source` and `pr_review_update`; otherwise paste/print manually. Evaluate action policy before covered writes.
+- **Using hidden GitHub reads/writes.** `gh pr view` is allowed only for PR identity detection. PR feedback reads come from `pr_review_source`; PR feedback writes/re-requests come from `pr_review_update`. Otherwise paste/print manually. Evaluate action policy before covered writes.
 - **Continuing without feedback context.** Source failure `(b)` means strict paste now, not blind skip.
 - **Offering fast path for judgment calls.** Fast path is only for obviously clear fetched feedback with non-manual update paths.
 - **Interpolating reply bodies into shell commands.** Use JSON temp files for PR review updates and body/title temp files for ticket updates.

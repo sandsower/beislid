@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+log=${GH_MOCK_LOG:-}
+if [[ -z "$log" ]]; then
+  echo "GH_MOCK_LOG is not set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$log")"
+printf '%s\tcwd=%s\tgh' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PWD" >> "$log"
+for arg in "$@"; do printf ' %q' "$arg" >> "$log"; done
+printf '\n' >> "$log"
+
+if [[ "${1:-} ${2:-}" == "pr view" ]]; then
+  case " $* " in
+    *" --json url,number,baseRefName,headRefName "*)
+      cat <<'JSON'
+{"url":"https://example.invalid/sandsower/review-response-no-source/pull/9","number":9,"baseRefName":"main","headRefName":"123-review-response-no-source"}
+JSON
+      exit 0
+      ;;
+  esac
+fi
+
+if [[ "${1:-} ${2:-}" == "auth status" ]]; then
+  echo "github.com mock auth ok"
+  exit 0
+fi
+
+echo "mock gh: unsupported command: $*" >&2
+exit 45
