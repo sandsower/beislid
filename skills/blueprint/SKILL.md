@@ -21,6 +21,8 @@ Do not use this when:
 Do NOT write any implementation code, scaffold, or take implementation actions until you have presented an implementation design and the user has approved it. This is non-negotiable.
 </HARD-GATE>
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after blueprint.
+
 ## Process
 
 1. **Load context** — if the handoff includes an explicit Work Contract, spec/PRD, or phase artifact path, read it as your primary input. Otherwise, if a handoff artifact exists in `plans/` (Work Contract, spec, PRD, phase structure), read it as your primary input. Otherwise, check relevant files, docs, recent commits. Optional visual routing: only when repo-level `beislid:visual_surfaces` config exists and the effective `blueprint` mode is active, load `visual-surface-protocol.md`; it mirrors canonical `.beislid/visual-surface-protocol.md` for copied installs.

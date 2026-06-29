@@ -254,7 +254,7 @@ closeout:
 
 ### Lifecycle actions
 
-Lifecycle actions run side effects at named workflow events. They are not quality gates — gates verify branch readiness; lifecycle actions update external systems or write planning artifacts.
+Lifecycle actions run side effects at named workflow events. They are not quality gates — gates verify branch readiness; lifecycle actions update external systems or write planning artifacts. For before/after phase hooks, use `lifecycle_hooks`.
 
 ````markdown
 ## Lifecycle actions
@@ -298,6 +298,39 @@ events:
 mode: remind
 ```
 
+### Lifecycle hooks
+
+Lifecycle hooks run around phase boundaries instead of named approval events. Use them for repo-owned checks or integrations before and after `spec`, `blueprint`, `implement`, `verify`, `review`, `fresh_eyes`, `ready_for_review`, or `review_response`.
+
+````markdown
+## Lifecycle hooks
+
+```beislid:lifecycle_hooks
+phases:
+  implement:
+    before:
+      actions:
+        - name: repo-health-check
+          type: cli
+          command: 'python3 scripts/check_workflow_signals_consistency.py'
+          approval: auto
+          when:
+            paths: ['skills/**', '.beislid/**']
+  ready_for_review:
+    after:
+      actions:
+        - name: release-notes-check
+          type: cli
+          command: 'python3 scripts/check_model_routing_step_hints_consistency.py'
+          approval: prompt
+          when:
+            paths: ['WORKFLOW.md', '.beislid/**']
+            branch_pattern: '^feature/'
+```
+````
+
+Hook actions use the same safety model as lifecycle actions: approval governs prompts, action policy governs side effects, and trigger rules can narrow execution to relevant files, scopes, or a `branch_pattern`. Hooks do not replace gates.
+
 ### Other sections
 
 | Section | Purpose |
@@ -306,6 +339,7 @@ mode: remind
 | `beislid:pi_handoff` | Configure Pi auto-handoff from checkpoint pointers |
 | `beislid:visual_surfaces` | Route to optional Lavish visual surfaces |
 | `beislid:workflow_signals` | Local tmux-glance tab markers |
+| `beislid:lifecycle_hooks` | Custom phase-boundary hooks |
 | `beislid:explore` | Custom explore skills for kickoff |
 | `beislid:probe_cache` | Capability probe cache TTL |
 | `beislid:guided_walkthrough` | Diff walkthrough thresholds |

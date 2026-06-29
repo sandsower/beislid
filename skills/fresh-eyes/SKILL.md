@@ -15,6 +15,8 @@ Use this for:
 - Checking a supplied patch for cross-file consistency and drift
 - Catching baseline issues that hunk-by-hunk review missed
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after fresh-eyes.
+
 Do not use this for:
 - The first local diff review — use `review`
 - Interactive walkthroughs — use `walk-the-diff`

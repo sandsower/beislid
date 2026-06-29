@@ -22,6 +22,8 @@ Do not use this for:
 Do NOT design implementation details, invoke `implement`, write code, or scaffold until the product behavior and scope are approved or the user explicitly routes to `blueprint`.
 </HARD-GATE>
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after spec.
+
 You may skip steps if the current conversation or `kickoff` already supplied enough context.
 
 ## Step 1: Load context

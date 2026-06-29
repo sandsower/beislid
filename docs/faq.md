@@ -104,7 +104,7 @@ The gates exist to make those failures harder.
 
 ## What if my team's workflow is different?
 
-Beislið was built with this in mind, what it gives you is structure. Repo-aware flows read `.beislid/workflow.md` so the project can define branch patterns, ticket sources, quality gates, lifecycle actions, scopes, PR review sources, and update paths.
+Beislið was built with this in mind, what it gives you is structure. Repo-aware flows read `.beislid/workflow.md` so the project can define branch patterns, ticket sources, quality gates, lifecycle actions, lifecycle hooks, scopes, PR review sources, and update paths.
 
 Future work is tracking more explicit workflow packs, broader lifecycle-action events, and policy levels. For team adoption today, use the [team rollout guide](./team-rollout.md), run `setup`, edit `workflow.md`, and run `doctor` to audit what the repo declares.
 

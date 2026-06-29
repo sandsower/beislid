@@ -15,6 +15,8 @@ If the user is resuming with phrases such as `continue this ticket`, `continue i
 
 Action-risk decisions follow `action-policy-protocol.md`; read it before checkpoint writes, workspace edits, dependency installs, local git operations, or configured side-effect hooks. For durable run evidence, best-effort `beislid run-ledger init --skill implement --flow implement` when the CLI is available and ticket/branch context is known. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add `beislid run-ledger checkpoint --run-id <run_id> --flow implement --name implementation_plan_created --resume-hint <resume_hint>` so the resume hint stays attached to the run. Ledger failures warn but never replace task tracking, verification, or checkpoint artifact behavior.
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after implementation.
+
 ## Phase 1: Write the Plan
 
 ### Header

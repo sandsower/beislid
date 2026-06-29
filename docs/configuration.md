@@ -661,7 +661,7 @@ Existing gate metadata maps naturally to `command_gate` proof requirements: `nam
 
 ## Lifecycle actions
 
-Lifecycle actions are configured side effects at named Beislið workflow events. They are distinct from quality gates: gates verify branch readiness; lifecycle actions update external systems or create user-approved records.
+Lifecycle actions are configured side effects at named Beislið workflow events. They are distinct from quality gates: gates verify branch readiness; lifecycle actions update external systems or create user-approved records. For before/after phase hooks, use `lifecycle_hooks`.
 
 P0 supports ordered CLI actions for `kickoff_start`, which runs after kickoff successfully fetches ticket context:
 
@@ -779,6 +779,39 @@ Example pointer shape:
 ```
 
 The pointer is replaceable convenience state only: no run ID, no event history, no gate logs, and no resume state machine. The `latest` pointer schema keeps one entry per event key; skills should verify the entry's branch and ticket metadata before rediscovering context. If metadata is missing or does not match the current context, ask the user to confirm or provide a checkpoint path.
+
+## Lifecycle hooks
+
+Lifecycle hooks are configured side effects at phase boundaries, not at approval milestones. They let a project run repo-owned checks or integrations before and after the major phases: `spec`, `blueprint`, `implement`, `verify`, `review`, `fresh_eyes`, `ready_for_review`, and `review_response`.
+
+````markdown
+## Lifecycle hooks
+
+```beislid:lifecycle_hooks
+phases:
+  spec:
+    before:
+      actions:
+        - name: spec-consistency-check
+          type: cli
+          command: 'python3 scripts/check_break_spec_artifact_consistency.py'
+          approval: auto
+          when:
+            paths: ['docs/**', 'skills/**']
+  ready_for_review:
+    after:
+      actions:
+        - name: workflow-signal-check
+          type: cli
+          command: 'python3 scripts/check_workflow_signals_consistency.py'
+          approval: prompt
+          when:
+            paths: ['.beislid/**', 'skills/**']
+            branch_pattern: '^feature/'
+```
+````
+
+Hook actions use the same approval and safety posture as other lifecycle side effects. `when` is optional; when present, it can filter by changed files, scopes, and branch patterns. Hooks obey action policy and do not replace the normal gates for a phase.
 
 ## Durable run ledger
 

@@ -11,6 +11,8 @@ No completion claims without fresh verification evidence. Period.
 Before ANY claim that work is done, tests pass, a bug is fixed, or code is working — you MUST run the verification command, read the output, and confirm it matches the claim.
 </HARD-GATE>
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after verify.
+
 ## The Gate
 
 When reporting durable evidence, use the terse Verification report shape from `artifact-templates.md`.
