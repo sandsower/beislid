@@ -38,6 +38,7 @@ _validate_runtime_layout() {
   local root="$1"
   local missing=()
   [[ -f "$root/scripts/install_lib.sh" ]] || missing+=("scripts/install_lib.sh")
+  [[ -d "$root/.beislid" ]] || missing+=(".beislid/")
   [[ -d "$root/skills" ]] || missing+=("skills/")
   [[ -f "$root/install.sh" ]] || missing+=("install.sh")
   [[ -f "$root/scripts/run_ledger.py" ]] || missing+=("scripts/run_ledger.py")

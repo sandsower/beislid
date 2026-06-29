@@ -1042,7 +1042,10 @@ test_packaged_cli_reports_invalid_beislid_home_as_layout_error() {
 test_packaged_cli_supports_homebrew_symlink_layout() {
   local cellar="$TMP/homebrew-cellar"
   local libexec="$cellar/libexec"
-  mkdir -p "$cellar/bin" "$libexec/bin" "$libexec/scripts" "$libexec/skills"
+  local project="$TMP/homebrew-project"
+  mkdir -p "$cellar/bin" "$libexec/bin" "$libexec/scripts" "$libexec/skills" "$libexec/.beislid" "$project"
+  cp -R "$REPO_DIR/.beislid/." "$libexec/.beislid/"
+  cp -R "$REPO_DIR/skills/." "$libexec/skills/"
   cp "$REPO_DIR/bin/beislid" "$libexec/bin/beislid"
   cp "$REPO_DIR/scripts/install_lib.sh" "$libexec/scripts/install_lib.sh"
   cp "$REPO_DIR/scripts/run_ledger.py" "$libexec/scripts/run_ledger.py"
@@ -1056,11 +1059,26 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   run_packaged_cli "$cellar/bin/beislid" "" help
   assert_stdout_contains "beislid install user"
   assert_stdout_contains "beislid install project"
+  assert_file_contains "$libexec/skills/kickoff/workflow-md-format.md" "Version stamp"
+
+  local expected_skill_target
+  expected_skill_target="$(python3 - <<'PY' "$libexec/skills/verify"
+import os, sys
+print(os.path.realpath(sys.argv[1]))
+PY
+)"
+
+  run_packaged_cli "$cellar/bin/beislid" "" install user
+  assert_symlink_to "$CLAUDE_SKILLS/verify" "$expected_skill_target"
+
+  run_packaged_cli "$cellar/bin/beislid" "" install project "$project"
+  assert_symlink_to "$project/.claude/skills/verify" "$expected_skill_target"
 }
 
-test_homebrew_formula_draft_installs_runtime_subset() {
+test_homebrew_formula_installs_runtime_subset() {
   local formula="$REPO_DIR/packaging/homebrew/beislid.rb"
   assert_file_contains "$formula" "class Beislid < Formula"
+  assert_file_contains "$formula" ".beislid"
   assert_file_contains "$formula" "bin/beislid"
   assert_file_contains "$formula" "skills"
   assert_file_contains "$formula" "scripts/install_lib.sh"
@@ -1069,7 +1087,7 @@ test_homebrew_formula_draft_installs_runtime_subset() {
   assert_file_contains "$formula" "scripts/validate_export.py"
   assert_file_contains "$formula" "scripts/visual_feedback.py"
   assert_file_contains "$formula" "install.sh"
-  assert_file_contains "$formula" "Full Homebrew support"
+  assert_file_contains "$formula" "brew upgrade beislid"
 }
 
 test_cli_install_user() {
@@ -1922,7 +1940,7 @@ run_test "packaged CLI falls back when run ledger missing"       test_packaged_c
 run_test "packaged CLI reports incomplete runtime layout"       test_packaged_cli_reports_incomplete_layout
 run_test "packaged CLI reports invalid BEISLID_HOME clearly"     test_packaged_cli_reports_invalid_beislid_home_as_layout_error
 run_test "packaged CLI supports Homebrew symlink layout"         test_packaged_cli_supports_homebrew_symlink_layout
-run_test "Homebrew formula draft installs runtime subset"       test_homebrew_formula_draft_installs_runtime_subset
+run_test "Homebrew formula installs runtime subset"          test_homebrew_formula_installs_runtime_subset
 run_test "CLI install user delegates to user install"          test_cli_install_user
 run_test "CLI ignores ambient option flags"                    test_cli_ignores_ambient_option_flags
 run_test "CLI status delegates to status"                      test_cli_status

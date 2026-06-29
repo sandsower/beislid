@@ -1184,9 +1184,15 @@ Pass `--write-gitignore` to create `.gitignore` if needed, insert the block if a
 
 ## Package-manager compatibility
 
-`packaging/homebrew/beislid.rb` is a draft Homebrew formula for packaging validation. It installs the Beislið runtime subset under Homebrew `libexec` and exposes `bin/beislid` on PATH. This is not published Homebrew support yet; full Homebrew install/upgrade policy is tracked separately in the Homebrew packaging work.
+`packaging/homebrew/beislid.rb` is the Homebrew formula for Beislið. It installs the runtime subset under Homebrew `libexec`, including `.beislid/`, and exposes `bin/beislid` on PATH. Homebrew-managed installs update with `brew upgrade beislid`; `beislid update` is for source-checkout installs that can fast-forward the repo in place.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+Release process:
+1. Update the formula in the same change as any runtime-layout or CLI packaging change.
+2. Run the install integration suite and a local formula sanity check before release.
+3. Publish the tap/release that serves the updated formula.
+4. Users then update with `brew upgrade beislid`.
+
+The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 
