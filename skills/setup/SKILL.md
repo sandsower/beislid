@@ -189,7 +189,7 @@ No commented-out templates. Only sections the user filled in.
 
 ## 8. Show preview
 
-Print the composed workflow.md to the user. Wait for explicit approval:
+Print the composed workflow.md to the user as context, then ask the explicit approval question once in the final response:
 
 ```
 📋 Preview of `.beislid/workflow.md`:

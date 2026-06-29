@@ -12,7 +12,7 @@ Print entry; emit `working`. Verbose appends transcript events, exit checks.
 
 Read `approval_gates.pr_title_body` from workflow config. If absent or `prompt`, use explicit-approval path. If `auto`: log title/body to transcript/ledger, record `pr_title_body_approval: auto` with text, emit `working`, proceed to 4c.
 
-**Explicit-approval (default):** Emit `waiting` before PR approval prompt. User must explicitly approve title/body before push/PR. Draft PR creation also needs this. Ask once in user-visible output: show title/body as context, then single approval question in final/blocking response. Draft-ready after bot fixes needs second explicit approval. Never treat silence, ambiguity, or prior Phase 3 approval as PR approval.
+**Explicit-approval (default):** Emit `waiting` before PR approval prompt. User must explicitly approve title/body before push/PR. Draft PR creation also needs this. Show title/body as context in progress prose, then ask the single approval question only once in the final/blocking response. Draft-ready after bot fixes needs second explicit approval. Never treat silence, ambiguity, or prior Phase 3 approval as PR approval.
 
 ## 4-pre. Paired-set front-load
 
@@ -46,7 +46,7 @@ Compose the proposed PR:
 
 If `pr_description.formatter_skill` configured, probe on first need; on failure use Phase 4b prompt + raw draft. No formatter → raw-draft note.
 
-Show final title/body. If `approval_gates.pr_title_body` is `auto`, log to transcript/ledger with `auto` and proceed to 4c without interactive approval. Else wait for explicit approval. Never ask twice.
+Show final title/body. If `approval_gates.pr_title_body` is `auto`, log to transcript/ledger with `auto` and proceed to 4c without interactive approval. Else wait for explicit approval, and keep the approval question out of progress prose. Never ask twice.
 
 If draft PRs + provider bot review supported, after approval offer draft-bot-review. On yes: create draft, handle bot findings like Phase 3 review, rerun applicable gates after functional fixes, commit/push fixes, ask explicit approval before marking ready (auto path does not apply to draft-ready).
 

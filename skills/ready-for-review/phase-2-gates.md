@@ -40,8 +40,8 @@ Execution:
 1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
 2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
 3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md`. Store raw logs by path when possible, else a safe summary.
-4. Autofix when `fail` and not environment: if `approval_gates.autofix_commit` is `auto`, policy-check `gate.autofix`, record diff to transcript/ledger, commit without prompt (unless action policy denies). Else policy-check `gate.autofix`, show diff, ask.
-5. For `error`, environment failure, or no autofix: emit `waiting`. If `approval_gates.gate_failure` is `auto` and not environment: record failure envelope to transcript/ledger with `auto-accept-risk`, continue. Else prompt from envelope + context. Surface all failure envelopes together.
+4. Autofix when `fail` and not environment: if `approval_gates.autofix_commit` is `auto`, policy-check `gate.autofix`, record diff to transcript/ledger, commit without prompt (unless action policy denies). Else policy-check `gate.autofix`, show diff as context, and ask the approval question once in the final blocking response.
+5. For `error`, environment failure, or no autofix: emit `waiting`. If `approval_gates.gate_failure` is `auto` and not environment: record failure envelope to transcript/ledger with `auto-accept-risk`, continue. Else prompt from envelope + context in the final blocking response. Surface all failure envelopes together.
 6. Re-run applicable gate after fixes. User proceed-without-passing (or auto accept-risk) → record.
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state. Plain git checks are not probe-cache entries.

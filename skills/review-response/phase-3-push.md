@@ -58,7 +58,7 @@ For PR review items:
 - If `pr_review_update.type: cli`, `probe(pr_review_update)` and policy-check `pr.review.reply`.
 - Write temp JSON payloads and substitute `{json_file}` into configured commands. Never shell-interpolate comment bodies.
 - Clear-fix replies may be `Fixed in <short-sha>` after commit/push when fast path or item-level approval authorized them.
-- Pushback and clarification replies always require per-item approval before posting.
+- Pushback and clarification replies require per-item approval before posting; keep draft/context prose question-free.
 - If update is absent, `type: manual`, or skipped, print reply instructions only. Do not use ad-hoc `gh api`, `gh pr review`, `gh pr comment`, GraphQL, or host API fallbacks.
 
 Reply payload:

@@ -61,7 +61,7 @@ For out-of-scope QA/ticket items:
 4. If absent/manual/skipped, print the child-ticket draft.
 5. Draft a reply: `Tracked in <new-ticket-id>` or manual equivalent.
 
-For clarification-needed items, draft a question and ask approval before posting or printing.
+For clarification-needed items, draft a question as context only and ask approval once in the final response before posting or printing.
 
 ## Outputs to Phase 3
 
