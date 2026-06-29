@@ -251,7 +251,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Babysit** — *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
 - **Fresh-eyes final review** — *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** — *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
-- **Planning artifacts** — *Write approved spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
+- **Planning artifacts** — *Write approved structure/spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
 - **Lifecycle actions** — *Run configured side effects at Beislið workflow events, such as assigning or moving a ticket when kickoff starts.*
 - **PR review source / replies** — *Let review-response read PR review comments and either post clear-fix replies or print manual reply instructions.*
 - **PR host override** — *Override owner/repo/remote only when git remote derivation is wrong, such as forks or non-origin upstreams.*
@@ -543,26 +543,34 @@ issue_command: '... {title_file} ... {body_file} ...'
 
 ### Planning artifacts
 
-Configure approved spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key. Also mention that checkpoint artifacts use the same `lifecycle_actions` block but are configured separately for different workflow events such as `kickoff_context_ready` and `implementation_plan_created`.
+Configure approved structure/spec/design files as `type: artifact` actions inside the canonical `lifecycle_actions` block. This is a preset over lifecycle actions, not a separate fenced key. Also mention that checkpoint artifacts use the same `lifecycle_actions` block but are configured separately for different workflow events such as `kickoff_context_ready` and `implementation_plan_created`.
 
 Ask:
 
 ```text
-Configure user-approved planning artifacts? (spec / blueprint / both / skip)
+Configure user-approved planning artifacts? (structure / spec / blueprint / any combination / skip)
 ```
 
-For each selected event, ask whether to use the default path or customize it. Defaults are `plans/{feature}-spec.md` for `spec_approved` and `plans/{feature}-design.md` for `blueprint_approved`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{feature}`, `{kind}`, and `{ticket_id}`. Then ask:
+Use `structure` for `break_spec_approved`.
+
+For each selected event, ask whether to use the default path or customize it. Defaults are `plans/{feature}-structure.md` for `break_spec_approved`, `plans/{feature}-spec.md` for `spec_approved`, and `plans/{feature}-design.md` for `blueprint_approved`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{feature}`, `{kind}`, and `{ticket_id}`. Then ask:
 
 ```text
 Ask each time, or auto-create when missing? (prompt / auto)
 ```
 
-Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after spec/design approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip.
+Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip.
 
-If a `lifecycle_actions` block already exists, merge these events/actions into that block; never create a duplicate `beislid:lifecycle_actions` block. Preserve existing events/actions. If an artifact action already exists under `spec_approved` or `blueprint_approved`, offer keep / replace / add another, default keep. Show the diff before writing.
+If a `lifecycle_actions` block already exists, merge these events/actions into that block; never create a duplicate `beislid:lifecycle_actions` block. Preserve existing events/actions. If an artifact action already exists under `break_spec_approved`, `spec_approved`, or `blueprint_approved`, offer keep / replace / add another, default keep. Show the diff before writing.
 
 ```beislid:lifecycle_actions
 events:
+  break_spec_approved:
+    actions:
+      - name: write-structure-artifact
+        type: artifact
+        approval: prompt
+        path: 'plans/{feature}-structure.md'
   spec_approved:
     actions:
       - name: write-spec-artifact
@@ -607,7 +615,7 @@ events:
 
 ### Lifecycle actions
 
-Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, artifact actions for `spec_approved` and `blueprint_approved` through the Planning artifacts preset, and checkpoint artifact actions through the Checkpoint artifacts preset. This interview configures kickoff CLI actions; use the presets for planning/checkpoint artifacts.
+Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, artifact actions for `break_spec_approved`, `spec_approved`, and `blueprint_approved` through the Planning artifacts preset, and checkpoint artifact actions through the Checkpoint artifacts preset. This interview configures kickoff CLI actions; use the presets for planning/checkpoint artifacts.
 
 Ask:
 

@@ -134,17 +134,17 @@ The repo's checked-in `WORKFLOW.md` Rondo profile may also carry `step_hints` un
 
 ### type=artifact lifecycle actions
 
-Artifact actions under `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:
+Artifact actions under `lifecycle_actions.break_spec_approved`, `lifecycle_actions.spec_approved`, `lifecycle_actions.blueprint_approved`, `lifecycle_actions.kickoff_context_ready`, and `lifecycle_actions.implementation_plan_created` have no external dependency to probe. Doctor records one logical capability per event when at least one supported artifact action is configured:
 
 ```json
-"lifecycle_actions.spec_approved": {
+"lifecycle_actions.break_spec_approved": {
   "status": "ok",
   "probe_supported": true,
   "value": "(prompted artifact at runtime)"
 }
 ```
 
-Use `"(auto/prompt artifact at runtime)"` or similarly concise value text when the event mixes `approval: auto` and prompted actions. Doctor validates shape instead of probing: action `name` is required; `approval` may be `prompt`, `auto`, or omitted; `path` may be omitted; configured paths must be relative `.md` file templates, must not contain `..` segments or be absolute, and may only use placeholders documented for that event. Planning artifact events allow `{feature}`, `{kind}`, and `{ticket_id}`. Checkpoint artifact events allow `{event}`, `{feature}`, `{kind}`, and `{ticket_id}`. Omitted `approval` means `prompt`. Omitted `path` means the event default path. Invalid artifact action shape records the event capability as `failed` with `probe_supported: true` and a concise reason.
+Use `"(auto/prompt artifact at runtime)"` or similarly concise value text when the event mixes `approval: auto` and prompted actions. Doctor validates shape instead of probing: action `name` is required; `approval` may be `prompt`, `auto`, or omitted; `path` may be omitted; configured paths must be relative `.md` file templates, must not contain `..` segments or be absolute, and may only use placeholders documented for that event. Planning artifact events allow `{feature}`, `{kind}`, and `{ticket_id}` where `{kind}` can be `structure`, `spec`, or `design` depending on the event. Checkpoint artifact events allow `{event}`, `{feature}`, `{kind}`, and `{ticket_id}`. Omitted `approval` means `prompt`. Omitted `path` means the event default path. Invalid artifact action shape records the event capability as `failed` with `probe_supported: true` and a concise reason.
 
 Artifact actions under reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` are valid workflow intent but are not executed by P0 skills; doctor should report them as reserved rather than failed. Artifact actions on other unsupported events, and non-artifact actions under planning/checkpoint artifact events, are reserved. Skills skip reserved actions.
 

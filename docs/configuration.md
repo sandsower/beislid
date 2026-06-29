@@ -27,7 +27,7 @@ setup
 - ticket update path
 - PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
-- planning artifacts written after approved specs/designs
+- planning artifacts written after approved structures/specs/designs
 - quality gates
 - scopes
 - action policy overrides
@@ -291,7 +291,7 @@ In v1, repo-aware orchestrators enforce action policy at their owned side-effect
 
 ## Work Contract v1
 
-`work-contract-v1` is the shared planning contract that lets Beislið carry requirements across `spec`, `kickoff`, and `blueprint` without turning planning artifacts into execution state. Current spec artifacts remain human-readable specs; a Work Contract is the hardened section or artifact shape used when downstream automation needs stable fields.
+`work-contract-v1` is the shared planning contract that lets Beislið carry requirements across `spec`, `break-spec`, `kickoff`, and `blueprint` without turning planning artifacts into execution state. Current spec artifacts remain human-readable specs; a Work Contract is the hardened section or artifact shape used when downstream automation needs stable fields.
 
 A Work Contract is Markdown with stable fields and headings:
 
@@ -396,7 +396,7 @@ children: []
 Beislið owns work-contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
 ````
 
-Work Contract artifacts use existing lifecycle artifact actions. `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
+Work Contract artifacts use existing lifecycle artifact actions. `break_spec_approved` may write an approved structure for multi-slice planning, `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract and structure artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
 
 ## Execution Envelope v0
 
@@ -683,13 +683,19 @@ events:
 
 CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. Orchestrators must pass placeholder values through argv construction when available or shell-quote them before execution. `approval: auto` runs once configured and prompts only on failure; `approval: prompt` asks before running.
 
-P0 also supports local planning artifacts for approved specs and designs through `type: artifact` actions:
+P0 also supports local planning artifacts for approved structures, specs, and designs through `type: artifact` actions:
 
 ````markdown
 ## Lifecycle actions
 
 ```beislid:lifecycle_actions
 events:
+  break_spec_approved:
+    actions:
+      - name: write-structure-artifact
+        type: artifact
+        approval: prompt
+        path: 'plans/{feature}-structure.md'
   spec_approved:
     actions:
       - name: write-spec-artifact
@@ -705,11 +711,11 @@ events:
 ```
 ````
 
-`spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `approval: prompt` asks before writing; `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted paths use `plans/{feature}-spec.md` and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
+`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `approval: prompt` asks before writing; `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
 
 Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
 
-Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work. Planning artifacts are also checkpoint-compatible state seeds: a fresh context may use an approved spec/design artifact as its primary input when it captures enough context for the next skill.
+Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work. Planning artifacts are also checkpoint-compatible state seeds: a fresh context may use an approved structure/spec/design artifact as its primary input when it captures enough context for the next skill.
 
 P0 also supports boundary checkpoint artifact events as a thin workflow-configured slice of the future durable run ledger. These events are useful when a workflow wants operational resume metadata around a boundary, not just the approved planning deliverable. Current executable events are `kickoff_context_ready` and `implementation_plan_created`; reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be documented in config but are not executed by P0 skills yet.
 

@@ -101,6 +101,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_kind": "manual",
       "value": "(manual at runtime)"
     },
+    "lifecycle_actions.break_spec_approved": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(prompted artifact at runtime)"
+    },
     "lifecycle_actions.kickoff_context_ready": {
       "status": "ok",
       "probe_supported": true,

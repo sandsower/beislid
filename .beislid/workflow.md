@@ -45,7 +45,7 @@ rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewe
 
 ## Quality gates
 
-The repo has no scope separation (single markdown distribution). Top-level gates run skill size budgets and the skill frontmatter validator from the repo root.
+The repo has no scope separation (single markdown distribution). Top-level gates run skill size budgets, the skill frontmatter validator, and the break-spec artifact lifecycle consistency check from the repo root.
 
 ```beislid:gates
 - name: diff-whitespace
@@ -65,6 +65,11 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   cost: cheap
 - name: validate-skills
   command: 'python3 scripts/validate_skills.py'
+  parallel_safe: true
+  mutates: false
+  cost: cheap
+- name: break-spec-artifact-consistency
+  command: 'python3 scripts/check_break_spec_artifact_consistency.py'
   parallel_safe: true
   mutates: false
   cost: cheap

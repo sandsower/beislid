@@ -9,7 +9,7 @@ Takes an approved spec/PRD or Work Contract and produces a phased implementation
 
 ## Step 1: Load the spec
 
-If the handoff includes an explicit Work Contract or spec artifact path, read it as the primary input. Otherwise, check for artifacts in order: `plans/*work-contract*.md`, `plans/*-spec.md`, `plans/*-prd.md`, a tracker document/issue linked in conversation, or spec content in the current session. For each `plans/` glob, use the file if exactly one match exists; if multiple matches exist, ask the user which file to use before falling back to the next source. If nothing is found, ask the user where it is.
+If the handoff includes an explicit Work Contract or spec artifact path, read it as the primary input. Otherwise, check for artifacts in order: `plans/*work-contract*.md`, `plans/*-spec*.md`, `plans/*-prd*.md`, a tracker document/issue linked in conversation, or spec content in the current session. For each `plans/` glob, use the file if exactly one match exists; if multiple matches exist, ask the user which file to use before falling back to the next source. If nothing is found, ask the user where it is.
 
 ## Step 2: Check scope classification
 
@@ -47,26 +47,36 @@ For each phase, note:
 - **HITL** (human-in-the-loop): needs user decisions, design review, or manual testing
 - **AFK** (away-from-keyboard): can run autonomously with clear acceptance criteria
 
-## Step 6: Write the structure
+## Step 6: Run `break_spec_approved` artifact actions
 
-Output to `plans/<feature-name>-structure.md`. Keep it under 2 pages.
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.break_spec_approved.actions[]` entries after the structure is approved. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-structure.md` after explicit approval. If a workflow exists but no `break_spec_approved` artifact action is configured, do not write a structure file automatically; workflow config controls artifacts.
 
+Supported P0 action shape:
+
+```yaml
+- name: write-structure-artifact
+  type: artifact
+  approval: prompt # optional; prompt when omitted, auto creates missing target
+  path: 'plans/{feature}-structure.md' # optional default
 ```
-# [Feature] — Implementation Structure
 
-## Durable Decisions
-- [decision]: [resolution and rationale]
+Execute only `type: artifact` under `break_spec_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block routing.
 
-## Phase 1: [Walking skeleton] (HITL/AFK)
-Cuts through: [layers]
-Delivers: [what's testable]
-Validates: [what assumption this proves]
+Default path: `plans/{feature}-structure.md`. Supported placeholders are `{feature}`, `{kind}` (`structure`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved structure title, then the approved spec/Work Contract title, then the ticket title, then the branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-## Phase 2: [Next slice] (HITL/AFK)
-...
+Artifact content must be the approved structure as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related artifact status. Do not alter approved decisions. Treat written structure artifacts as checkpoint-compatible state seeds for fresh-context handoff into `blueprint`.
 
-## Phase N: [Final slice] (HITL/AFK)
-...
-```
+Record artifact results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths when available.
+
+## Step 7: Output and route
+
+Print the approved structure summary, artifact status/path list, and routing recommendation.
+
+Then route by `scope_classification` when present:
+- `multi_slice`: hand off to `blueprint` with the approved structure and any artifact path written in this session. Use the selected phase if one was chosen.
+- `project`: recommend `spec_refinement` until project boundaries are approved, then return to `break-spec`/slice planning; do not scaffold by default.
+- `atomic` or `single_pr`: push back and ask why this needs decomposition unless explicit approval was obtained.
+- `unknown`: keep refining; do not hand off as approved.
+- If invoked by `kickoff`, return the approved structure, artifact status/path, and routing recommendation to `kickoff`.
 
 This structure is the handoff to `blueprint` for the selected phase. Only hand directly to `implement` when the user explicitly says the implementation design is already approved.
