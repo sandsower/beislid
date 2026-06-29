@@ -126,11 +126,11 @@ Population rules:
 
 Examples: typo-level doc fix with no branching → `atomic`; one coherent skill behavior update → `single_pr`; multiple shippable workflow slices → `multi_slice`; broad new-product or cross-system initiative needing milestones/boundaries → `project`.
 
-## Step 7: Run `spec_approved` artifact actions
+## Step 7: Run `spec_approved` artifact and tracker actions
 
-If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.spec_approved.actions[]` entries. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-spec.md` after explicit approval. If a workflow exists but no `spec_approved` artifact action is configured, do not ask for ad-hoc tracker/local destinations; workflow config controls artifacts.
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.spec_approved.actions[]` entries. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-spec.md` after explicit approval. If a workflow exists but no `spec_approved` action is configured, do not ask for ad-hoc tracker/local destinations; workflow config controls artifacts.
 
-Supported P0 action shape:
+Supported P0 action shapes:
 
 ```yaml
 - name: write-spec-artifact
@@ -139,13 +139,19 @@ Supported P0 action shape:
   path: 'plans/{feature}-spec.md' # optional default
 ```
 
-Execute only `type: artifact` under `spec_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block routing.
+```yaml
+- name: post-spec-body-to-tracker
+  type: tracker
+  approval: prompt # optional; posts the approved spec body into the ticket body through ticket_update.issue_tool / issue_command
+```
+
+Execute `type: artifact` actions first to write the approved spec. Execute `type: tracker` actions after that to post the approved spec body into the tracker ticket body through the configured `ticket_update` issue channel; tracker actions must evaluate `ticket.update` policy before posting. Skip other providers as reserved. Multiple actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path or tracker target, and parent directory creation when applicable. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block routing.
 
 Default path: `plans/{feature}-spec.md`. Supported placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-Artifact content must be the approved spec as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related artifact status. Do not alter approved decisions. Treat written spec artifacts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`.
+Artifact content must be the approved spec as primary content. Tracker actions must use the approved spec body, including the canonical `## Validation/Test Plan` section, as the tracker update body; they may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related artifact status when writing files. Do not alter approved decisions. Treat written spec artifacts and tracker posts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`.
 
-Record artifact results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths when available.
+Record action results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths or tracker targets when available.
 
 ## Step 8: Output and route
 

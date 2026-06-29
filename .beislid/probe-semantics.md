@@ -148,6 +148,10 @@ Use `"(auto/prompt artifact at runtime)"` or similarly concise value text when t
 
 Artifact actions under reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` are valid workflow intent but are not executed by P0 skills; doctor should report them as reserved rather than failed. Artifact actions on other unsupported events, and non-artifact actions under planning/checkpoint artifact events, are reserved. Skills skip reserved actions.
 
+### type=tracker lifecycle actions
+
+Tracker actions under `lifecycle_actions.spec_approved` post the approved spec body into the current ticket body through the configured `ticket_update` issue channel. Probe `ticket_update` as a logical capability first; if the issue channel is missing, the tracker action is reserved and skipped. Doctor validates shape instead of sending the update: `name` is required; `approval` may be `prompt`, `auto`, or omitted; no filesystem path is involved. Record a concise value such as `(tracker body post via ticket_update issue channel)` when the tracker action is configured.
+
 ### type=file (file glob)
 
 The capability declares a glob (e.g. `file_glob: '.scratch/<feature>/*.md'`). Probe via `ls <glob>` succeeds with at least one match.

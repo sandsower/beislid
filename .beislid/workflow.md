@@ -10,7 +10,7 @@ Linear issues in the personal `teotl` workspace, team `beislid`, accessed via Li
 
 ```beislid:ticket_source
 type: mcp
-tool: mcp__personal-linear-server__get_issue
+tool: mcp__linear__get_issue
 id_pattern: '^BEI-\d+$'
 link_template: 'https://linear.app/teotl/issue/{id}'
 ```
@@ -23,8 +23,35 @@ Linear-created branches use lowercase issue keys such as `vic/bei-56-...`; the b
 
 ```beislid:ticket_update
 type: mcp
-comment_tool: mcp__personal-linear-server__save_comment
-issue_tool: mcp__personal-linear-server__save_issue
+comment_tool: mcp__linear__save_comment
+issue_tool: mcp__linear__save_issue
+```
+
+## Lifecycle actions
+
+```beislid:lifecycle_actions
+events:
+  break_spec_approved:
+    actions:
+      - name: write-structure-artifact
+        type: artifact
+        approval: prompt
+        path: 'plans/{feature}-structure.md'
+  spec_approved:
+    actions:
+      - name: write-spec-artifact
+        type: artifact
+        approval: prompt
+        path: 'plans/{feature}-spec.md'
+      - name: post-spec-body-to-tracker
+        type: tracker
+        approval: prompt
+  blueprint_approved:
+    actions:
+      - name: write-design-artifact
+        type: artifact
+        approval: auto
+        path: 'plans/{feature}-design.md'
 ```
 
 ## PR reviews

@@ -559,7 +559,7 @@ For each selected event, ask whether to use the default path or customize it. De
 Ask each time, or auto-create when missing? (prompt / auto)
 ```
 
-Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip.
+Default to `prompt`. Explain that `auto` creates a missing artifact without another prompt after approval, but never overwrites an existing file; existing targets still ask overwrite / choose another path / skip. If `spec` is selected, also ask whether the approved spec body should be posted back to the tracker body through the existing `ticket_update` issue channel; when yes, add a `type: tracker` action under `spec_approved`.
 
 If a `lifecycle_actions` block already exists, merge these events/actions into that block; never create a duplicate `beislid:lifecycle_actions` block. Preserve existing events/actions. If an artifact action already exists under `break_spec_approved`, `spec_approved`, or `blueprint_approved`, offer keep / replace / add another, default keep. Show the diff before writing.
 
@@ -577,6 +577,9 @@ events:
         type: artifact
         approval: prompt
         path: 'plans/{feature}-spec.md'
+      - name: post-spec-body-to-tracker
+        type: tracker
+        approval: prompt
   blueprint_approved:
     actions:
       - name: write-design-artifact
@@ -615,7 +618,7 @@ events:
 
 ### Lifecycle actions
 
-Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, artifact actions for `break_spec_approved`, `spec_approved`, and `blueprint_approved` through the Planning artifacts preset, and checkpoint artifact actions through the Checkpoint artifacts preset. This interview configures kickoff CLI actions; use the presets for planning/checkpoint artifacts.
+Configure the canonical `lifecycle_actions` block. Explain that lifecycle actions are side effects at workflow events, not quality gates. P0 setup supports ordered CLI actions for `kickoff_start`, artifact actions for `break_spec_approved`, `spec_approved`, and `blueprint_approved` through the Planning artifacts preset, spec tracker-post actions through the same planning preset, and checkpoint artifact actions through the Checkpoint artifacts preset. This interview configures kickoff CLI actions; use the presets for planning/checkpoint artifacts.
 
 Ask:
 

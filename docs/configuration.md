@@ -685,7 +685,7 @@ events:
 
 CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. Orchestrators must pass placeholder values through argv construction when available or shell-quote them before execution. `approval: auto` runs once configured and prompts only on failure; `approval: prompt` asks before running.
 
-P0 also supports local planning artifacts for approved structures, specs, and designs through `type: artifact` actions:
+P0 also supports local planning artifacts for approved structures, specs, and designs through `type: artifact` actions, and `spec_approved` can also post the approved spec body back into the current tracker ticket body through a `type: tracker` action that reuses the configured `ticket_update` issue channel:
 
 ````markdown
 ## Lifecycle actions
@@ -704,6 +704,9 @@ events:
         type: artifact
         approval: prompt
         path: 'plans/{feature}-spec.md'
+      - name: post-spec-body-to-tracker
+        type: tracker
+        approval: prompt
   blueprint_approved:
     actions:
       - name: write-design-artifact
@@ -713,7 +716,7 @@ events:
 ```
 ````
 
-`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `approval: prompt` asks before writing; `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
+`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `tracker` actions on `spec_approved` post the approved spec body into the ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy. `approval: prompt` asks before writing; `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
 
 Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
 
