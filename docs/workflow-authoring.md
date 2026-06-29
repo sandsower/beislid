@@ -267,6 +267,7 @@ events:
         type: cli
         command: 'gh issue edit {id} --add-assignee @me'
         approval: auto
+        on_failure: prompt
   spec_approved:
     actions:
       - name: write-spec-artifact
@@ -289,6 +290,7 @@ events:
 - `type: artifact` actions write a local Markdown file after approval.
 - `type: tracker` actions post the approved spec body into the current ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy.
 - `approval: auto` runs without prompting; `approval: prompt` asks first.
+- `on_failure` is optional and defaults to `prompt`, preserving the retry / skip-this-session / abort flow. Use `continue` for best-effort side effects that should only warn, or `abort` for mandatory side effects that must stop the workflow on failure.
 
 ### Other sections
 

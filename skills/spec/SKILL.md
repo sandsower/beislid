@@ -136,16 +136,18 @@ Supported P0 action shapes:
 - name: write-spec-artifact
   type: artifact
   approval: prompt # optional; prompt when omitted, auto creates missing target
+  on_failure: prompt # optional; prompt when omitted, or continue | abort
   path: 'plans/{feature}-spec.md' # optional default
 ```
 
 ```yaml
 - name: post-spec-body-to-tracker
   type: tracker
-  approval: prompt # optional; posts the approved spec body into the ticket body through ticket_update.issue_tool / issue_command
+  approval: prompt # optional; posts approved spec body through ticket_update.issue_tool / issue_command
+  on_failure: prompt # optional; prompt when omitted, or continue | abort
 ```
 
-Execute `type: artifact` actions first to write the approved spec. Execute `type: tracker` actions after that to post the approved spec body into the tracker ticket body through the configured `ticket_update` issue channel; tracker actions must evaluate `ticket.update` policy before posting. Skip other providers as reserved. Multiple actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path or tracker target, and parent directory creation when applicable. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block routing.
+Execute `type: artifact` actions first to write the approved spec. Execute `type: tracker` actions after that to post the approved spec body into the tracker ticket body through the configured `ticket_update` issue channel; tracker actions must evaluate `ticket.update` policy before posting. Skip other providers as reserved. Multiple actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path or tracker target, and parent directory creation when applicable. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip and reserved actions do not block routing. `on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed actions, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and routes onward without that side effect, and `abort` stops downstream routing.
 
 Default path: `plans/{feature}-spec.md`. Supported placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 

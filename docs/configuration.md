@@ -676,14 +676,18 @@ events:
         type: cli
         command: 'gh issue edit {id} --add-assignee @me'
         approval: auto
+        on_failure: prompt
       - name: move-in-progress
         type: cli
         command: 'example-tracker transition {ticket_id} in-progress --branch {branch}'
         approval: auto
+        on_failure: abort
 ```
 ````
 
-CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. Orchestrators must pass placeholder values through argv construction when available or shell-quote them before execution. `approval: auto` runs once configured and prompts only on failure; `approval: prompt` asks before running.
+CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. Orchestrators must pass placeholder values through argv construction when available or shell-quote them before execution. `approval: auto` runs once configured; `approval: prompt` asks before running.
+
+Every lifecycle action may set `on_failure: prompt | continue | abort`; omitted `on_failure` defaults to `prompt` for compatibility. `prompt` preserves the existing retry / skip-remaining-this-session / abort flow when an action fails. `continue` records a warning and proceeds without blocking the workflow, which is useful for explicitly best-effort side effects such as optional labels or local notes. `abort` stops the owning workflow immediately and should be reserved for side effects that are required before later steps are safe, such as a mandatory tracker transition in teams that rely on it.
 
 P0 also supports local planning artifacts for approved structures, specs, and designs through `type: artifact` actions, and `spec_approved` can also post the approved spec body back into the current tracker ticket body through a `type: tracker` action that reuses the configured `ticket_update` issue channel:
 
@@ -716,7 +720,7 @@ events:
 ```
 ````
 
-`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `tracker` actions on `spec_approved` post the approved spec body into the ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy. `approval: prompt` asks before writing; `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
+`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `tracker` actions on `spec_approved` post the approved spec body into the ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy. `approval: prompt` asks before writing/posting; `approval: auto` creates a missing file via auto-write but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted `on_failure` defaults to `prompt`: failed actions ask for retry / skip or override / abort. `on_failure: continue` warns and routes onward without that side effect; `on_failure: abort` stops downstream routing. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
 
 Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
 
@@ -734,17 +738,19 @@ events:
       - name: write-kickoff-context-checkpoint
         type: artifact
         approval: prompt
+        on_failure: prompt
         path: 'checkpoints/{event}-{ticket_id}.md'
   implementation_plan_created:
     actions:
       - name: write-implementation-plan-checkpoint
         type: artifact
         approval: auto
+        on_failure: continue
         path: 'checkpoints/{event}-{ticket_id}.md'
 ```
 ````
 
-Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated checkpoint artifacts are written to `checkpoints/` by default, while `.beislid/checkpoints/latest.json` stores the lightweight pointer index; both `checkpoints/` and `.beislid/checkpoints/` are local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the executing skill updates `.beislid/checkpoints/latest.json` so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
+Checkpoint event artifact paths follow the same safety rules as planning artifacts and additionally support `{event}`. Omitted `on_failure` defaults to `prompt`; `continue` treats the checkpoint as best-effort and `abort` stops before the downstream boundary. Omitted paths use `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Generated checkpoint artifacts are written to `checkpoints/` by default, while `.beislid/checkpoints/latest.json` stores the lightweight pointer index; both `checkpoints/` and `.beislid/checkpoints/` are local by default and ignored by Beislið's own repo. After a checkpoint event artifact is written, the executing skill updates `.beislid/checkpoints/latest.json` so a fresh context can say “continue this ticket” or “continue from checkpoint” without pasting a path. Planning artifacts do not need to update this pointer to be valid checkpoint inputs; downstream skills already discover default `plans/` paths and same-session handoffs carry custom paths.
 
 Example pointer shape:
 

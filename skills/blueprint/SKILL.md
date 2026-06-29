@@ -62,10 +62,11 @@ Supported P0 action shape:
 - name: write-design-artifact
   type: artifact
   approval: prompt # optional; prompt when omitted, auto creates missing target
+  on_failure: prompt # optional; prompt when omitted, or continue | abort
   path: 'plans/{feature}-design.md' # optional default
 ```
 
-Execute only `type: artifact` under `blueprint_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip, failed writes, and reserved actions do not block the transition to `implement` or back to `kickoff`.
+Execute only `type: artifact` under `blueprint_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip and reserved actions do not block the transition to `implement` or back to `kickoff`. `on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed writes, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and transitions without the artifact, and `abort` stops the transition.
 
 Default path: `plans/{feature}-design.md`. Supported placeholders are `{feature}`, `{kind}` (`design`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved design title, then spec artifact title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 

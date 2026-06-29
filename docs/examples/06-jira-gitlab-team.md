@@ -110,10 +110,12 @@ events:
         type: cli
         command: 'jira issue assign {id} $(jira me)'
         approval: auto
+        on_failure: continue
       - name: transition-in-progress
         type: cli
         command: 'jira issue move {id} "In Progress"'
         approval: auto
+        on_failure: abort
 ```
 
 ## Action policy
