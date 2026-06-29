@@ -1873,6 +1873,53 @@ test_cli_project_status_missing_manifest() {
   assert_stdout_contains "installed_skills: 0"
 }
 
+test_cli_repair_user_restores_dangling_links() {
+  run_installer --with-security-hooks
+  rm "$CLAUDE_SKILLS/verify" "$HOOKS/credential_guard.py" "$BIN_DIR/beislid"
+  ln -s /nonexistent/old/path/skills/verify "$CLAUDE_SKILLS/verify"
+  ln -s /nonexistent/old/path/hooks/credential_guard.py "$HOOKS/credential_guard.py"
+  ln -s /nonexistent/old/path/bin/beislid "$BIN_DIR/beislid"
+
+  run_cli repair user
+
+  assert_symlink_to "$CLAUDE_SKILLS/verify" "$REPO_DIR/skills/verify"
+  assert_symlink_to "$HOOKS/credential_guard.py" "$REPO_DIR/hooks/credential_guard.py"
+  assert_symlink_to "$BIN_DIR/beislid" "$REPO_DIR/bin/beislid"
+  assert_stdout_contains "Repair:"
+  assert_stdout_contains "fix:  verify (claude) (repaired dangling link; was pointing at"
+  assert_stdout_contains "fix:  hook credential_guard.py (repaired dangling link; was pointing at"
+  assert_stdout_contains "fix:  beislid CLI (repaired dangling link; was pointing at"
+}
+
+test_cli_repair_project_refreshes_owned_copies() {
+  local project="$TMP/project-repair-copy"
+  mkdir -p "$project"
+
+  run_cli install project "$project" --copy
+  printf 'stale copy\n' >"$project/.claude/skills/verify/SKILL.md"
+
+  run_cli repair project "$project"
+
+  assert_file_contains "$project/.claude/skills/verify/SKILL.md" "# Check Done"
+  assert_stdout_contains "Repair:"
+  assert_stdout_contains "refresh: verify (claude)"
+}
+
+test_cli_repair_project_skips_foreign_symlink_without_force() {
+  local project="$TMP/project-repair-foreign"
+  local other="$TMP/other-beislid/skills/verify"
+  mkdir -p "$project/.agents/skills" "$other"
+
+  run_cli install project "$project"
+  rm "$project/.agents/skills/verify"
+  ln -s "$other" "$project/.agents/skills/verify"
+
+  run_cli repair project "$project"
+
+  assert_symlink_to "$project/.agents/skills/verify" "$other"
+  assert_stderr_contains "verify (agents) symlinked elsewhere"
+}
+
 test_security_hooks_off_by_default() {
   run_installer
   if [[ -e "$HOOKS/credential_guard.py" ]]; then
@@ -2064,6 +2111,9 @@ run_test "repo ignores project manifest path"                  test_repo_ignores
 run_test "CLI project status reports manifest and counts"      test_cli_project_status_reports_manifest_and_counts
 run_test "CLI project status reports missing skill"           test_cli_project_status_reports_missing_skill
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
+run_test "CLI repair user restores dangling links"            test_cli_repair_user_restores_dangling_links
+run_test "CLI repair project refreshes owned copies"          test_cli_repair_project_refreshes_owned_copies
+run_test "CLI repair project skips foreign symlink"          test_cli_repair_project_skips_foreign_symlink_without_force
 run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
 run_test "pi babysit runtime has core requirements"           test_pi_babysit_runtime_has_core_requirements

@@ -191,6 +191,8 @@ CLI commands available now:
 ```bash
 beislid install user [--strict]
 beislid install project [path] [--copy] [--strict]
+beislid repair user [--force] [--strict]
+beislid repair project [path] [--force] [--strict]
 beislid status
 beislid status project [path]
 beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
@@ -210,7 +212,7 @@ Project install defaults to symlink mode. Use `beislid install project [path] --
 - `<project>/.claude/skills`
 - `<project>/.codex/skills`
 
-It writes `<project>/.beislid/project-install.json` and warns softly when `<project>/.beislid/workflow.md` is missing. Copy mode also writes `.beislid-owner.json` inside each copied skill dir so reruns can refresh only Beislið-owned copies. Unmarked project files or skill dirs are never clobbered, even with `--force`. `beislid status project [path]` now reports missing skills per host and exits non-zero when any supported host is missing a skill. Project installs print a suggested `.gitignore` block by default; pass `--write-gitignore` to create or replace the managed block idempotently. It does not create workflow config; run the `setup` skill when repo-aware workflows need it.
+It writes `<project>/.beislid/project-install.json` and warns softly when `<project>/.beislid/workflow.md` is missing. Copy mode also writes `.beislid-owner.json` inside each copied skill dir so reruns can refresh only Beislið-owned copies. Unmarked project files or skill dirs are never clobbered, even with `--force`. `beislid repair project [path]` restores an existing project install without guessing a mode or rewriting `.gitignore`; use `install project` when you are bootstrapping or intentionally changing install options. `beislid status project [path]` reports missing skills per host and exits non-zero when any supported host is missing a skill. Project installs print a suggested `.gitignore` block by default; pass `--write-gitignore` to create or replace the managed block idempotently. It does not create workflow config; run the `setup` skill when repo-aware workflows need it.
 
 Update an existing install from an agent host:
 
@@ -240,6 +242,8 @@ Flags:
 
 - `--with-security-hooks`: enable `credential_guard` for Claude Code
 - `--strict`: exit nonzero when expected artifacts are skipped or conflicted during install
+- `repair user`: restore the user install from the current checkout and preserved manifest targets
+- `repair project [path]`: restore an existing project install in symlink or copy mode
 - `--update`: fast-forward the Beislið checkout and re-run install
 - `--migrate-v0.2`: one-time migration from pre-v0.2 installs after cloning the clean v0.2 history
 - `--status`: print installed commit and symlink status
