@@ -985,6 +985,21 @@ reason: 'Final review is enforced by a required external check.'
 
 Absent config keeps the built-in `fresh-eyes` behavior.
 
+## Ready-for-review ship-time planning artifacts
+
+`ship_time_artifacts` controls how `ready-for-review` narrates generated planning artifacts during PR handoff. It consults the planning-artifact lifecycle actions already configured under `lifecycle_actions` (`break_spec_approved`, `spec_approved`, `blueprint_approved`) and only changes the ship-time summary / PR-body framing. It does not auto-commit or auto-delete files in v1.
+
+Use `remind` when you want a concise heads-up that generated planning artifacts are present in the branch.
+Use `include` when approved planning artifacts should be called out as intentional PR contents.
+Use `skip` when you don't want extra ship-time commentary.
+Use `clean` when local-only planning artifacts should be described as excluded from the shipped handoff surface; the files still stay on disk until you clean them yourself or through another workflow step.
+
+```beislid:ship_time_artifacts
+mode: remind
+```
+
+Omit the block entirely to leave P0 unchanged.
+
 ## Kickoff explore skills
 
 Kickoff can use a project skill during Step 2 exploration. Skill probes search repo-local `.beislid/skills/<name>` first, then `$BEISLID_SKILLS_DIRS`, then global host skill directories (`~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`). Put the block under a recognized Kickoff/Skill-specific overrides section:
@@ -1100,7 +1115,7 @@ Future sink types are reserved. They should consume the same normalized signal w
 These skills read `workflow.md`:
 
 - `kickoff`: ticket source, branch pattern, kickoff-start lifecycle actions, custom explore skill, ticket update path, scopes, triggered checks, and model-routing disclosure for downstream skills.
-- `ready-for-review`: PR target, clean-eval policy, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
+- `ready-for-review`: PR target, clean-eval policy, ship-time planning-artifact policy, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.
 - `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.

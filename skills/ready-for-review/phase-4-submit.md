@@ -40,7 +40,7 @@ Compose the proposed PR:
 
 - Title: `<TICKET-ID>: <ticket title>` only when a real ticket id is confirmed; otherwise a concise no-ticket title. Never render `none` as a prefix; `none: <title>` is invalid.
 - Base: Phase 1 base.
-- Body: Ship summary shape from `artifact-templates.md`: terse changes, why, proof, reviewer notes/warnings, artifacts/follow-ups, and any deferred-review evidence (for example CodeRabbit `Review skipped` / `Review limit reached` / `rate limited` / `draft detected`), accepted risks, and explicit reduced-coverage acceptance if any.
+- Body: Ship summary shape from `artifact-templates.md`: changes, why, proof, warnings, artifacts/follow-ups, ship-time note, deferred-review evidence, accepted risks/reduced coverage.
 - Include carried warnings such as AI-generated translation notices.
 - Labels/reviewers only when configured or requested.
 
@@ -49,6 +49,17 @@ If `pr_description.formatter_skill` configured, probe on first need; on failure 
 Show final title/body. If `approval_gates.pr_title_body` is `auto`, log to transcript/ledger with `auto` and proceed to 4c without interactive approval. Else wait for explicit approval. Never ask twice.
 
 If draft PRs + provider bot review supported, after approval offer draft-bot-review. On yes: create draft, handle bot findings like Phase 3 review, rerun applicable gates after functional fixes, commit/push fixes, ask explicit approval before marking ready (auto path does not apply to draft-ready).
+
+## 4b1. Ship-time planning-artifact summary
+
+If configured, note matching paths from `break_spec_approved`, `spec_approved`, and `blueprint_approved`.
+
+- `remind`: note generated artifacts are present and stay normal repo files.
+- `include`: same note plus PR handoff framing.
+- `skip`: no extra commentary.
+- `clean`: note local-only artifacts are excluded from the shipped handoff surface.
+
+Narration only; no auto-commit/delete/rewrite. Skip when no planning-artifact lifecycle actions exist.
 
 ## 4c. Push and create PR
 

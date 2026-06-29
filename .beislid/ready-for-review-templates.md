@@ -177,6 +177,12 @@ Printed inline at the relevant phase boundary when a capability is intentionally
 
 These notes are advisory, not failures. They never block the run and never trigger a prompt.
 
+**Ship-time planning-artifact note:**
+
+```text
+💭 Phase 4b: ship-time planning-artifact policy is <mode>; <summary>.
+```
+
 ## Cache write warning
 
 Printed at run end when the probe-cache write fails after an otherwise completed run:

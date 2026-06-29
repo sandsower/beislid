@@ -101,6 +101,10 @@ The capability intentionally has no automated write path. Doctor records `status
 
 This is explicit ready-for-review project policy, not a probe. Doctor records `fresh_eyes` as `status: ok`, `probe_supported: true`, with `value: "(built-in fresh-eyes disabled by workflow)"`.
 
+### ship_time_artifacts validation
+
+`beislid:ship_time_artifacts` is validated as a ready-for-review ship-time narration policy for generated planning artifacts. Doctor checks shape only: optional `mode` must be `remind`, `include`, `skip`, or `clean`; absent mode defaults to `remind` when the block is present. It should record `probe_kind: validation` and summarize the mode and whether planning-artifact lifecycle actions are configured. Missing `ship_time_artifacts` is valid and means no extra ship-time narration is configured.
+
 ### action_policy validation
 
 `beislid:action_policy` is validated, not probed as an external dependency. Doctor should use `beislid action-policy validate` or the same deterministic evaluator contract to validate overrides and derive the effective policy summary.
