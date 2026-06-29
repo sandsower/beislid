@@ -33,7 +33,7 @@ Collect any supplied context:
 - Ticket title/body/comments
 - Codebase findings from `kickoff`, if provided
 - Existing plans/specs in `plans/`
-- Relevant docs or recent commits
+- Relevant docs or recent commits, plus the matching `spec_approved` latest pointer entry when the ticket uses custom artifact locations
 
 If working inside a repo, do light codebase exploration before asking detailed questions. Search for existing patterns, data models, API boundaries, and test coverage that affect the product decision. Record facts, not opinions.
 
@@ -156,7 +156,7 @@ Execute `type: artifact`, `type: tracker`, and `type: cli` under `spec_approved`
 
 For artifact actions, `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Default path: `plans/{feature}-spec.md`. Supported artifact placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-Artifact content must be the approved spec as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related lifecycle status. Do not alter approved decisions. Treat written spec artifacts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`.
+Artifact content must be the approved spec as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related lifecycle status. Do not alter approved decisions. Treat written spec artifacts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`. After the artifact is written, update `.beislid/checkpoints/latest.json` with a `latest.spec_approved` entry containing `event`, `path`, `ticket`, `branch`, `source_skill`, and `written_at` when available; pointer write failures are non-blocking and should be reported.
 
 For tracker actions, `approval: prompt` asks post/skip and shows action name plus tracker target. `approval: auto` posts once configured after policy allows it. Tracker actions must use the approved spec body, including the canonical `## Validation/Test Plan` section, as the tracker update body through the configured `ticket_update` issue channel. Treat tracker posts as same-session lifecycle results, not local checkpoint artifacts.
 

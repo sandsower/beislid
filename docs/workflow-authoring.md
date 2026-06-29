@@ -296,13 +296,13 @@ events:
 ````
 
 - `type: cli` actions run a command with safe placeholders. Kickoff supports `{ticket_id}`, `{id}`, `{branch}`, and `{event}`; planning approval events also support `{feature}`, `{kind}`, and `{artifact_path}`.
-- `type: artifact` actions write a local Markdown file after approval.
+- `type: artifact` actions write a local Markdown file after approval. When the template is custom, keep it deterministic and prefer stable placeholders so downstream skills can rediscover the same path later from the workflow config and latest pointer context.
 - `type: tracker` actions post the approved spec body into the current ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy.
 - `approval: auto` runs a CLI/tracker action or creates a missing artifact without prompting; `approval: prompt` asks first. Existing artifact files still require an overwrite/choose/skip decision.
 - `on_failure` is optional and defaults to `prompt`, preserving the retry / skip-this-session / abort flow. Use `continue` for best-effort side effects that should only warn, or `abort` for mandatory side effects that must stop the workflow on failure.
-- Planning approval events support `artifact` and `cli`, with `tracker` additionally supported under `spec_approved`; checkpoint events remain artifact-only. Unsupported providers are reported by doctor and skipped by skills.
+- Planning approval events support `artifact` and `cli`, with `tracker` additionally supported under `spec_approved`; checkpoint events remain artifact-only. Unsupported providers are reported by doctor and skipped by skills. Planning artifact writes should remain template-based so later-session rediscovery can resolve custom paths from the workflow config and latest pointer context, but only when those placeholder inputs are still recoverable.
 
-`ready-for-review` can layer on `ship_time_artifacts` to summarize generated planning artifacts at handoff. The policy is narration-only in v1; it does not auto-commit or auto-delete files.
+`ready-for-review` can layer on `ship_time_artifacts` to summarize generated planning artifacts at handoff, including custom paths rediscovered from the workflow config or latest pointer when present. The policy is narration-only in v1; it does not auto-commit or auto-delete files.
 
 ```beislid:ship_time_artifacts
 mode: remind

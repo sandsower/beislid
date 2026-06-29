@@ -582,7 +582,7 @@ Configure user-approved planning artifacts? (structure / spec / blueprint / any 
 
 Use `structure` for `break_spec_approved`.
 
-For each selected event, ask whether to use the default path or customize it. Defaults are `plans/{feature}-structure.md` for `break_spec_approved`, `plans/{feature}-spec.md` for `spec_approved`, and `plans/{feature}-design.md` for `blueprint_approved`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{feature}`, `{kind}`, and `{ticket_id}`. Then ask:
+For each selected event, ask whether to use the default path or customize it. Defaults are `plans/{feature}-structure.md` for `break_spec_approved`, `plans/{feature}-spec.md` for `spec_approved`, and `plans/{feature}-design.md` for `blueprint_approved`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{feature}`, `{kind}`, and `{ticket_id}`. Tell the user these templates stay rediscoverable later because downstream skills resolve them from the workflow config and latest pointer context. Then ask:
 
 ```text
 Ask each time, or auto-create when missing? (prompt / auto)
@@ -619,7 +619,7 @@ events:
 
 ### Checkpoint artifacts
 
-When the user asks for clear-context, Rondo-style, or checkpoint workflow support, configure checkpoint artifact actions inside the canonical `lifecycle_actions` block. Explain that this is a lightweight workflow option, not the durable run ledger: skills write human-readable Markdown checkpoints and update `.beislid/checkpoints/latest.json` for rediscovery, but do not create run IDs, event history, gate logs, or automatic resume state.
+When the user asks for clear-context, Rondo-style, or checkpoint workflow support, configure checkpoint artifact actions inside the canonical `lifecycle_actions` block. Explain that this is a lightweight workflow option, not the durable run ledger: skills write human-readable Markdown checkpoints and update `.beislid/checkpoints/latest.json` for rediscovery, and planning artifacts can also be rediscovered later through the same latest-pointer convention when configured, but none of this creates run IDs, event history, gate logs, or automatic resume state.
 
 P0 executable checkpoint events are `kickoff_context_ready` and `implementation_plan_created`. Reserved events `review_feedback_loaded` and `ready_for_review_pre_submit` may be kept as workflow intent but no P0 skill executes them yet. For each selected executable event, ask whether to use the default path or customize it. Defaults are `checkpoints/{event}-{ticket_id}.md` when ticket context is known, otherwise `checkpoints/{event}-{feature}.md`. Custom paths must be relative `.md` file templates, must not contain `..`, and may only use `{event}`, `{feature}`, `{kind}`, and `{ticket_id}`. Then ask:
 

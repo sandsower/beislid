@@ -83,7 +83,7 @@ export default function beislidExtension(pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand(INTERNAL_HANDOFF_COMMAND, {
-		description: "Internal Beislið command: start a fresh Pi session from the latest checkpoint",
+		description: "Internal Beislið command: start a fresh Pi session from the latest checkpoint boundary",
 		handler: async (_args, ctx) => {
 			const boundary = pendingBoundary;
 			const workflow = pendingWorkflow ?? "managed";

@@ -53,6 +53,7 @@ Prefer context supplied by the caller. Otherwise look lightly for:
 - `plans/*-design.md`
 - `plans/*-spec.md`
 - `plans/*-structure.md`
+- matching `break_spec_approved`, `spec_approved`, or `blueprint_approved` latest pointer entries when the ticket uses custom artifact locations
 - Ticket/issue summary if available in the conversation
 - Commit messages in the review range
 

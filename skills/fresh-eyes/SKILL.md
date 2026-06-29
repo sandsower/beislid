@@ -51,6 +51,7 @@ Prefer context supplied by the caller:
 - Ticket/spec/design summary
 - Verification already run
 - Previous review findings that were fixed or accepted
+- matching `break_spec_approved`, `spec_approved`, or `blueprint_approved` latest pointer entries when the ticket uses custom artifact locations
 
 Do not rely on long conversation history. If context is missing, say so and review against general production readiness.
 
