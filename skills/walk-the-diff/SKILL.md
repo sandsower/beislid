@@ -36,7 +36,7 @@ When `BEISLID_VERBOSE=1`, print one aux load stamp after successfully reading ea
 
 ## Checklist and outputs
 
-1. **Gather context** — read `phase-1-context.md`. Outputs: base branch/merge base, commits, linked ticket/plans/specs, changed files, surrounding-code notes.
+1. **Gather context** — read `phase-1-context.md`. Outputs: base branch/merge base, commits, linked ticket/plans/specs, matching `break_spec_approved`, `spec_approved`, or `blueprint_approved` latest pointer entries when present, changed files, surrounding-code notes.
 2. **Plan the tour** — read `phase-2-tour-plan.md`. Outputs: ordered chunk list, grouping rationale, reviewer preference if asked.
 3. **Present chunks** — read `phase-3-present.md`. Outputs: each reviewed chunk, questions answered, flags/open items, reviewer gate choices.
 4. **Wrap up** — read `phase-4-wrap.md` only after all chunks are reviewed or flagged. Outputs: overall feedback, saved feedback doc path, final stop.

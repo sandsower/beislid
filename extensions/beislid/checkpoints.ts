@@ -27,6 +27,12 @@ export type CheckpointPointerSnapshot = {
 	identities: BoundaryIdentity[];
 };
 
+const DEFAULT_AUTO_HANDOFF_EXCLUDED_EVENTS = new Set([
+	"break_spec_approved",
+	"spec_approved",
+	"blueprint_approved",
+]);
+
 function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -101,6 +107,7 @@ export function pickNewBoundary(
 	const beforeIds = new Set(before?.identities.map((identity) => identity.id) ?? []);
 	const candidates = after.identities.filter((identity) => {
 		if (excludedEvents.has(identity.event)) return false;
+		if (allowedEvents === "all" && DEFAULT_AUTO_HANDOFF_EXCLUDED_EVENTS.has(identity.event)) return false;
 		if (allowedEvents !== "all" && !allowedEvents.has(identity.event)) return false;
 		if (consumed.has(identity.id)) return false;
 		return !beforeIds.has(identity.id);
