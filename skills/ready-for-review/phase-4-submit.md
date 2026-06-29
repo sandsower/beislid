@@ -52,7 +52,7 @@ If draft PRs + provider bot review supported, after approval offer draft-bot-rev
 
 ## 4b1. Ship-time planning-artifact summary
 
-Paths from `break_spec_approved`, `spec_approved`, and `blueprint_approved`; use the matching pointer for custom paths.
+Paths from `break_spec_approved`, `spec_approved`, and `blueprint_approved`; use the pointer for custom paths.
 
 - `remind`: note generated artifacts are present and stay normal repo files.
 - `include`: same note plus PR handoff framing.
