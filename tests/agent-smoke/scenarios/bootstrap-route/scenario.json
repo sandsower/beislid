@@ -1,0 +1,8 @@
+{
+  "name": "bootstrap-route",
+  "description": "Fresh-repo bootstrap guidance routes an existing ticket/branch session to kickoff.",
+  "prompt": "Read AGENTS.md and .beislid/workflow.md, then respond with the first Beislið skill you would use for this repo and one short reason. Do not run any commands or edit files. Return a single sentence starting with `first step:` and make the skill name explicit.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}
