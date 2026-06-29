@@ -185,4 +185,4 @@ The portable skill works without Pi-specific tooling by writing files manually. 
 
 Older Beislið builds included a separate Show Me Pi deck-builder extension. That extension is no longer packaged by default; keep using the portable skill workflow unless a future package reintroduces dedicated deck-builder tools.
 
-Window/screen capture, terminal recording, video/GIF conversion helpers, and richer capture automation are planned for later phases.
+Window/screen capture, terminal recording, and video/GIF conversion helpers are available when the local tools are present, and `/show-me doctor` now reports actionable remediation when they are missing.

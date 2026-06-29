@@ -106,6 +106,8 @@ export interface CommandLogBlock {
 	logPath: string;
 	stdoutTruncated?: boolean;
 	stderrTruncated?: boolean;
+	recordingPath?: string;
+	recordingFormat?: string;
 }
 
 export type ShowMeAssetType = "image" | "video" | "gif" | "diagram";
@@ -179,6 +181,8 @@ export interface ShowMeLog {
 	stderrBytes?: number;
 	stdoutTruncated?: boolean;
 	stderrTruncated?: boolean;
+	recordingPath?: string;
+	recordingFormat?: string;
 	redactions?: unknown;
 }
 
@@ -293,6 +297,49 @@ export const CaptureBrowserScreenshotSchema = Type.Object({
 	waitForSelector: Type.Optional(Type.String({ description: "Optional selector to wait for before screenshot" })),
 	timeoutSeconds: Type.Optional(Type.Number({ description: "Timeout in seconds. Default 30, max 120." })),
 	sensitivity: Type.Optional(Type.String({ description: "Sensitivity warning for the screenshot block" })),
+});
+
+export const CaptureScreenScreenshotSchema = Type.Object({
+	deckId: Type.String({ description: "Show Me deck id" }),
+	target: Type.Optional(Type.Union([Type.Literal("screen"), Type.Literal("window")], { description: "Capture the whole screen or the active window. Default screen." })),
+	sectionId: Type.Optional(Type.String({ description: "Optional section id to append the screenshot or NEEDS_CAPTURE block" })),
+	caption: Type.Optional(Type.String({ description: "Caption shown under the screenshot" })),
+	alt: Type.Optional(Type.String({ description: "Alt text for the screenshot" })),
+	timeoutSeconds: Type.Optional(Type.Number({ description: "Timeout in seconds. Default 30, max 120." })),
+	sensitivity: Type.Optional(Type.String({ description: "Sensitivity warning for the screenshot block" })),
+});
+
+export const RecordTerminalSessionSchema = Type.Object({
+	deckId: Type.String({ description: "Show Me deck id" }),
+	command: Type.String({ description: "Shell command to record with asciinema" }),
+	sectionId: Type.Optional(Type.String({ description: "Optional section id to append the recording block" })),
+	title: Type.Optional(Type.String({ description: "Optional display title for the recording" })),
+	cwd: Type.Optional(Type.String({ description: "Working directory for the command" })),
+	timeoutSeconds: Type.Optional(Type.Number({ description: "Timeout in seconds. Default 30, max 120." })),
+	sensitivity: Type.Optional(Type.String({ description: "Sensitivity warning for the recording block" })),
+});
+
+export const ConvertVideoToGifSchema = Type.Object({
+	deckId: Type.String({ description: "Show Me deck id" }),
+	path: Type.String({ description: "Path to a video file to convert to GIF" }),
+	sectionId: Type.Optional(Type.String({ description: "Optional section id to append the converted media block" })),
+	caption: Type.Optional(Type.String({ description: "Caption shown under the converted GIF" })),
+	alt: Type.Optional(Type.String({ description: "Alt text for the converted GIF" })),
+	fps: Type.Optional(Type.Number({ description: "Frames per second for the GIF. Default 12." })),
+	width: Type.Optional(Type.Number({ description: "Output width in pixels. Default 960." })),
+	timeoutSeconds: Type.Optional(Type.Number({ description: "Timeout in seconds. Default 30, max 120." })),
+	sensitivity: Type.Optional(Type.String({ description: "Sensitivity warning for the converted media block" })),
+});
+
+export const ConvertGifToVideoSchema = Type.Object({
+	deckId: Type.String({ description: "Show Me deck id" }),
+	path: Type.String({ description: "Path to a GIF file to convert to video" }),
+	sectionId: Type.Optional(Type.String({ description: "Optional section id to append the converted media block" })),
+	caption: Type.Optional(Type.String({ description: "Caption shown under the converted video" })),
+	alt: Type.Optional(Type.String({ description: "Alt text for the converted video" })),
+	format: Type.Optional(Type.Union([Type.Literal("mp4"), Type.Literal("webm")], { description: "Output format. Default mp4." })),
+	timeoutSeconds: Type.Optional(Type.Number({ description: "Timeout in seconds. Default 30, max 120." })),
+	sensitivity: Type.Optional(Type.String({ description: "Sensitivity warning for the converted media block" })),
 });
 
 export function isShowMeMode(value: unknown): value is ShowMeMode {

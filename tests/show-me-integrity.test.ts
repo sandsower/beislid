@@ -63,6 +63,8 @@ interface ShowMeSandbox {
 	redactText: typeof import("../extensions/show-me/redaction.ts").redactText;
 	findIndexEntry: typeof import("../extensions/show-me/index-store.ts").findIndexEntry;
 	showMeExtension: typeof import("../extensions/show-me/index.ts").default;
+	getShowMeDoctorReport: typeof import("../extensions/show-me/doctor.ts").getShowMeDoctorReport;
+	formatDoctorReport: typeof import("../extensions/show-me/doctor.ts").formatDoctorReport;
 }
 
 async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
@@ -71,15 +73,17 @@ async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
 	const copy = async (name: string) => {
 		await writeFile(join(sandboxDir, name), await readFile(join(sourceDir, name), "utf-8"), "utf-8");
 	};
-	for (const name of ["asset-manager.ts", "capture-browser.ts", "command-runner.ts", "doctor.ts", "index-store.ts", "index.ts", "needs-capture.ts", "redaction.ts", "renderer.ts", "store.ts"]) {
+	for (const name of ["asset-manager.ts", "capture-browser.ts", "capture-helpers.ts", "command-runner.ts", "doctor.ts", "index-store.ts", "index.ts", "needs-capture.ts", "redaction.ts", "renderer.ts", "store.ts", "tooling.ts"]) {
 		await copy(name);
 	}
-	await writeFile(join(sandboxDir, "schema.js"), `const schema = (kind) => ({ kind });\n\nexport const SHOW_ME_MODES = [\n  'verification',\n  'review',\n  'code-walkthrough',\n  'ui-demo',\n  'cli-demo',\n  'docs',\n  'understanding',\n  'mixed',\n];\n\nexport const SHOW_ME_STATUSES = [\n  'PASS',\n  'FAIL',\n  'INCOMPLETE',\n  'NOT SHOWN',\n  'NEEDS CAPTURE',\n  'EXPLANATORY',\n  'CONFLICTING',\n  'LOW_CONFIDENCE',\n];\n\nexport const SHOW_ME_PRESENTATIONS = ['report', 'visual-deck', 'evidence-deck'];\n\nexport const CreateDeckSchema = schema('CreateDeckSchema');\nexport const DeckIdSchema = schema('DeckIdSchema');\nexport const AddSectionSchema = schema('AddSectionSchema');\nexport const AddBlockSchema = schema('AddBlockSchema');\nexport const RunCommandSchema = schema('RunCommandSchema');\nexport const AddAssetSchema = schema('AddAssetSchema');\nexport const AddNeedsCaptureSchema = schema('AddNeedsCaptureSchema');\nexport const CaptureBrowserScreenshotSchema = schema('CaptureBrowserScreenshotSchema');\n\nexport function isShowMeMode(value) {\n  return typeof value === 'string' && SHOW_ME_MODES.includes(value);\n}\n\nexport function isShowMeStatus(value) {\n  return typeof value === 'string' && SHOW_ME_STATUSES.includes(value);\n}\n`, "utf-8");
-	for (const name of ["asset-manager.js", "capture-browser.js", "command-runner.js", "doctor.js", "index-store.js", "needs-capture.js", "redaction.js", "renderer.js", "store.js"]) {
+	await writeFile(join(sandboxDir, "schema.js"), `const schema = (kind) => ({ kind });\n\nexport const SHOW_ME_MODES = [\n  'verification',\n  'review',\n  'code-walkthrough',\n  'ui-demo',\n  'cli-demo',\n  'docs',\n  'understanding',\n  'mixed',\n];\n\nexport const SHOW_ME_STATUSES = [\n  'PASS',\n  'FAIL',\n  'INCOMPLETE',\n  'NOT SHOWN',\n  'NEEDS CAPTURE',\n  'EXPLANATORY',\n  'CONFLICTING',\n  'LOW_CONFIDENCE',\n];\n\nexport const SHOW_ME_PRESENTATIONS = ['report', 'visual-deck', 'evidence-deck'];\n\nexport const CreateDeckSchema = schema('CreateDeckSchema');\nexport const DeckIdSchema = schema('DeckIdSchema');\nexport const AddSectionSchema = schema('AddSectionSchema');\nexport const AddBlockSchema = schema('AddBlockSchema');\nexport const RunCommandSchema = schema('RunCommandSchema');\nexport const AddAssetSchema = schema('AddAssetSchema');\nexport const AddNeedsCaptureSchema = schema('AddNeedsCaptureSchema');\nexport const CaptureBrowserScreenshotSchema = schema('CaptureBrowserScreenshotSchema');\nexport const CaptureScreenScreenshotSchema = schema('CaptureScreenScreenshotSchema');\nexport const RecordTerminalSessionSchema = schema('RecordTerminalSessionSchema');\nexport const ConvertVideoToGifSchema = schema('ConvertVideoToGifSchema');\nexport const ConvertGifToVideoSchema = schema('ConvertGifToVideoSchema');\n\nexport function isShowMeMode(value) {\n  return typeof value === 'string' && SHOW_ME_MODES.includes(value);\n}\n\nexport function isShowMeStatus(value) {\n  return typeof value === 'string' && SHOW_ME_STATUSES.includes(value);\n}\n`, "utf-8");
+	for (const name of ["asset-manager.js", "capture-browser.js", "capture-helpers.js", "command-runner.js", "doctor.js", "index-store.js", "needs-capture.js", "redaction.js", "renderer.js", "store.js", "tooling.js"]) {
 		await writeFile(join(sandboxDir, name), `export * from './${name.replace(/\.js$/, '.ts')}';\n`, "utf-8");
 	}
 	const modules = {
 		showMeExtension: (await import(pathToFileURL(join(sandboxDir, "index.ts")).href)).default,
+		getShowMeDoctorReport: (await import(pathToFileURL(join(sandboxDir, "doctor.ts")).href)).getShowMeDoctorReport,
+		formatDoctorReport: (await import(pathToFileURL(join(sandboxDir, "doctor.ts")).href)).formatDoctorReport,
 		renderShowMeDocument: (await import(pathToFileURL(join(sandboxDir, "renderer.ts")).href)).renderShowMeDocument,
 		runCommandEvidence: (await import(pathToFileURL(join(sandboxDir, "command-runner.ts")).href)).runCommandEvidence,
 		readIndex: (await import(pathToFileURL(join(sandboxDir, "index-store.ts")).href)).readIndex,
@@ -93,7 +97,7 @@ async function prepareShowMeSandbox(): Promise<ShowMeSandbox> {
 }
 
 const sandbox = await prepareShowMeSandbox();
-const { runCommandEvidence, readIndex, showMeRoot, upsertIndexEntry, renderShowMeDocument, findIndexEntry, showMeExtension, redactShowMeDocument, redactText } = sandbox;
+const { runCommandEvidence, readIndex, showMeRoot, upsertIndexEntry, renderShowMeDocument, findIndexEntry, showMeExtension, redactShowMeDocument, redactText, getShowMeDoctorReport, formatDoctorReport } = sandbox;
 after(async () => {
 	await rm(sandbox.sandboxDir, { recursive: true, force: true });
 });
@@ -282,7 +286,25 @@ test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck r
 		status: "PASS",
 		createdAt: "2026-06-26T00:00:00.000Z",
 		updatedAt: "2026-06-26T00:00:00.000Z",
-		sections: [],
+		sections: [{
+			id: "section-1",
+			title: "Evidence",
+			blocks: [{
+				id: "block-1",
+				type: "command-log",
+				logId: "log-1",
+				command: "asciinema rec -q -c 'echo hi' session.cast",
+				cwd: "/tmp/show-me",
+				startedAt: "2026-06-26T00:00:00.000Z",
+				finishedAt: "2026-06-26T00:00:01.000Z",
+				exitCode: 0,
+				timedOut: false,
+				logPath: "logs/terminal/log-1.cast",
+				recordingPath: "logs/terminal/log-1.cast",
+				recordingFormat: "cast",
+				stdoutPreview: "hi",
+			}],
+		}],
 		assets: [],
 		logs: [],
 		provenance: { cwd: "/tmp/show-me" },
@@ -296,16 +318,24 @@ test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck r
 	assert.match(html, /integrity="sha384-F\/bZzf7p3Joyp5psL90p\/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous"/);
 	assert.match(html, /integrity="sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH" crossorigin="anonymous"/);
 	assert.doesNotMatch(html, /cdn\.jsdelivr\.net\/npm\/marked\/marked\.min\.js/);
+	assert.match(html, /recording: logs\/terminal\/log-1\.cast \(cast\)/);
 
 	await withTempState(async (stateDir) => {
 		const commands = new Map<string, ShowMeCommandRegistration>();
+		const tools: string[] = [];
 		showMeExtension({
-			registerTool: () => undefined,
+			registerTool: (tool: { name: string }) => {
+				tools.push(tool.name);
+			},
 			registerCommand: (name: string, command: ShowMeCommandRegistration) => {
 				commands.set(name, command);
 			},
 			on: () => undefined,
 		} as never);
+		assert.ok(tools.includes("show_me_capture_screen_screenshot"));
+		assert.ok(tools.includes("show_me_record_terminal"));
+		assert.ok(tools.includes("show_me_convert_video_to_gif"));
+		assert.ok(tools.includes("show_me_convert_gif_to_video"));
 		const command = commands.get("show-me");
 		assert.ok(command);
 
@@ -349,6 +379,26 @@ test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck r
 		assert.equal(existsSync(corruptRoot), false);
 		assert.match(notifications.at(-1)?.message ?? "", /Deleted 2 show-me deck directories\./);
 	});
+});
+
+test("show-me doctor reports the new capture helpers and actionable remediation", async () => {
+	const report = await getShowMeDoctorReport("/tmp/show-me-doctor");
+	const labels = report.capture.map((capability) => capability.label);
+	assert.ok(labels.includes("browser screenshots"));
+	assert.ok(labels.includes("screen/window screenshots"));
+	assert.ok(labels.includes("terminal recordings"));
+	assert.ok(labels.includes("video → GIF conversion"));
+	assert.ok(labels.includes("GIF → video conversion"));
+
+	const doctorText = formatDoctorReport({
+		builder: [{ id: "extension", label: "extension loaded", status: "available", detail: "Pi loaded the show-me extension." }],
+		capture: [
+			{ id: "browser-screenshot", label: "browser screenshots", status: "missing", detail: "Playwright is not installed.", remediation: "Install Playwright." },
+			{ id: "screen-screenshot", label: "screen/window screenshots", status: "missing", detail: "No supported screenshot tool was found.", remediation: "Install screencapture, grim, gnome-screenshot, scrot, or PowerShell." },
+		],
+	} as never);
+	assert.match(doctorText, /Remediation: Install Playwright\./);
+	assert.match(doctorText, /Remediation: Install screencapture, grim, gnome-screenshot, scrot, or PowerShell\./);
 });
 
 test("beislid show-me command is namespaced when the show-me deck extension is enabled", async () => {
