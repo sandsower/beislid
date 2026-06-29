@@ -8,6 +8,7 @@ import io
 import json
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -20,6 +21,7 @@ assert RUN_SPEC and RUN_SPEC.loader
 run = importlib.util.module_from_spec(RUN_SPEC)
 RUN_SPEC.loader.exec_module(run)
 
+import harness.links as links  # noqa: E402
 from harness.links import _acquire_lock, _lock_path  # noqa: E402
 
 
@@ -107,6 +109,51 @@ class AgentSmokeHarnessTests(unittest.TestCase):
 
             with self.assertRaises(SystemExit):
                 _acquire_lock("codex", skills_dir, run_dir_2, tmp_path)
+
+    def test_lock_blocks_contending_create_before_first_write_finishes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="beislid-agent-smoke-lock-race-") as tmp:
+            tmp_path = Path(tmp)
+            skills_dir = tmp_path / "skills"
+            skills_dir.mkdir()
+            run_dir_1 = tmp_path / "run-1"
+            run_dir_2 = tmp_path / "run-2"
+            run_dir_1.mkdir()
+            run_dir_2.mkdir()
+
+            original_dump = links.json.dump
+            lock_file_created = threading.Event()
+            allow_first_write = threading.Event()
+            first_error: list[BaseException] = []
+
+            def blocking_dump(payload: dict, fh: object, *args: object, **kwargs: object) -> None:
+                lock_file_created.set()
+                self.assertTrue(allow_first_write.wait(timeout=5), "timed out waiting to finish first lock write")
+                original_dump(payload, fh, *args, **kwargs)
+
+            def first_acquire() -> None:
+                try:
+                    _acquire_lock("codex", skills_dir, run_dir_1, tmp_path)
+                except BaseException as exc:  # pragma: no cover - re-raised in the main test thread
+                    first_error.append(exc)
+
+            links.json.dump = blocking_dump  # type: ignore[assignment]
+            try:
+                worker = threading.Thread(target=first_acquire)
+                worker.start()
+                self.assertTrue(lock_file_created.wait(timeout=5), "first lock was not created")
+                self.assertTrue(_lock_path(skills_dir).exists())
+
+                with self.assertRaises(SystemExit):
+                    _acquire_lock("codex", skills_dir, run_dir_2, tmp_path)
+
+                allow_first_write.set()
+                worker.join(timeout=5)
+                self.assertFalse(worker.is_alive())
+                if first_error:
+                    raise first_error[0]
+            finally:
+                links.json.dump = original_dump  # type: ignore[assignment]
+                allow_first_write.set()
 
 
 if __name__ == "__main__":
