@@ -66,7 +66,7 @@ def _acquire_lock(host_name: str, skills_dir: Path, run_dir: Path, worktree: Pat
                 raise SystemExit(
                     f"{host_name} skills are already locked by another smoke run: {lock.get('run_dir')}. "
                     f"Run cleanup for that run before starting another {host_name} smoke."
-                )
+                ) from None
             return
     finally:
         try:
