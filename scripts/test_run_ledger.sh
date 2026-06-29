@@ -366,6 +366,181 @@ PY
   fi
 }
 
+test_dashboard_active_runs() {
+  local state="$TMP/state" out1 out2 run1_id run2_id dash_out dash_json gate_payload cp_payload dash_file
+  dash_file="$TMP/dash_out.txt"
+
+  out1="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 25 --ticket-title 'Dashboard run 1' --branch feature/dash1)"
+  run1_id="$(python3 - <<'PY' "$out1"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+
+  cp_payload="$TMP/cp.json"
+  printf '{"step":"done"}\n' > "$cp_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" checkpoint --run-id "$run1_id" --flow kickoff --name kickoff_context_ready --json-file "$cp_payload" --resume-hint 'proceed') >/dev/null
+
+  gate_payload="$TMP/gate.json"
+  printf '{"gate":{"name":"validate-skills"},"status":"pass"}\n' > "$gate_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run1_id" --flow kickoff --name validate-skills --scope repo --envelope-file "$gate_payload") >/dev/null
+
+  out2="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill implement --flow implement --ticket-id 26 --ticket-title 'Dashboard run 2' --branch feature/dash2)"
+  run2_id="$(python3 - <<'PY' "$out2"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" interrupt --run-id "$run2_id" --flow implement --reason 'human approval required') >/dev/null
+
+  printf '{"gate":{"name":"install-integration-tests"},"status":"fail","environment_failure":true}\n' > "$gate_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run2_id" --flow implement --name install-integration-tests --scope repo --envelope-file "$gate_payload") >/dev/null
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard > "$dash_file"
+  assert_contains "$dash_file" 'Beislið Run Dashboard'
+  assert_contains "$dash_file" '2 run(s)'
+  assert_contains "$dash_file" '1 running'
+  assert_contains "$dash_file" '1 interrupted'
+  assert_contains "$dash_file" '[INTERRUPTED]'
+  assert_contains "$dash_file" '[RUNNING]'
+  assert_contains "$dash_file" 'human approval required'
+  assert_contains "$dash_file" 'Dashboard run 1'
+  assert_contains "$dash_file" 'Dashboard run 2'
+
+  dash_json="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard --json)"
+  python3 - <<'PY' "$dash_json"
+import json, sys
+data = json.loads(sys.argv[1])
+assert data['total'] == 2, f'expected 2 runs, got {data["total"]}'
+assert len(data['runs']) == 2
+run_statuses = {r['run_id']: r['status'] for r in data['runs']}
+assert 'interrupted' in run_statuses.values(), 'expected at least one interrupted run'
+assert 'running' in run_statuses.values(), 'expected at least one running run'
+for r in data['runs']:
+    if r['status'] == 'interrupted':
+        assert 'interruption' in r, 'interrupted run missing interruption details'
+        assert r['interruption']['reason'] == 'human approval required'
+PY
+}
+
+test_dashboard_flow_filter() {
+  local state="$TMP/state" out1 out2 run1_id run2_id dash_file
+  dash_file="$TMP/dash_ff.txt"
+
+  out1="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 25 --ticket-title 'Flow filter test' --branch feature/ff)"
+  run1_id="$(python3 - <<'PY' "$out1"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+
+  out2="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill implement --flow implement --ticket-id 26 --ticket-title 'Other flow' --branch feature/ff2)"
+  run2_id="$(python3 - <<'PY' "$out2"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard --flow kickoff > "$dash_file"
+  assert_contains "$dash_file" '1 run(s)'
+  assert_contains "$dash_file" 'Flow filter test'
+  if grep -q 'Other flow' "$dash_file"; then
+    note_fail "flow filter should exclude implement runs"
+    return 1
+  fi
+}
+
+test_dashboard_empty() {
+  local state="$TMP/state" dash_file dash_json
+  dash_file="$TMP/dash_empty.txt"
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard > "$dash_file"
+  assert_contains "$dash_file" 'No matching runs found'
+
+  dash_json="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard --json)"
+  python3 - <<'PY' "$dash_json"
+import json, sys
+data = json.loads(sys.argv[1])
+assert data['total'] == 0, f'expected 0 runs, got {data["total"]}'
+assert data['runs'] == []
+PY
+}
+
+test_dashboard_with_completed() {
+  local state="$TMP/state" out1 out2 run1_id run2_id report dash_file dash_all_file
+  dash_file="$TMP/dash_comp.txt"
+  dash_all_file="$TMP/dash_comp_all.txt"
+
+  out1="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 25 --ticket-title 'Completed run' --branch feature/comp)"
+  run1_id="$(python3 - <<'PY' "$out1"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  report="$TMP/report.md"
+  printf '# Done\n' > "$report"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" finalize --run-id "$run1_id" --flow kickoff --status completed --report-file "$report") >/dev/null
+
+  out2="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill implement --flow implement --ticket-id 26 --ticket-title 'Running run' --branch feature/comp2)"
+  run2_id="$(python3 - <<'PY' "$out2"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard > "$dash_file"
+  assert_contains "$dash_file" '1 run(s)'
+  if grep -q 'Completed run' "$dash_file"; then
+    note_fail "dashboard without --all should exclude completed runs"
+    return 1
+  fi
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard --all > "$dash_all_file"
+  assert_contains "$dash_all_file" '2 run(s)'
+  assert_contains "$dash_all_file" 'Completed run'
+  assert_contains "$dash_all_file" 'Running run'
+}
+
+test_dashboard_gate_classification() {
+  local state="$TMP/state" out run_id dash_file gate_payload
+  dash_file="$TMP/dash_gates.txt"
+
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 25 --ticket-title 'Gate test' --branch feature/gates)"
+  run_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+
+  gate_payload="$TMP/gate.json"
+  printf '{"gate":{"name":"code-fail"},"status":"fail","classification":"code_failure"}\n' > "$gate_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow kickoff --name code-fail --scope repo --envelope-file "$gate_payload") >/dev/null
+
+  printf '{"gate":{"name":"env-fail"},"status":"fail","environment_failure":true}\n' > "$gate_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow kickoff --name env-fail --scope repo --envelope-file "$gate_payload") >/dev/null
+
+  printf '{"gate":{"name":"skipped"},"status":"skip"}\n' > "$gate_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow kickoff --name skipped --scope repo --envelope-file "$gate_payload") >/dev/null
+
+  cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard > "$dash_file"
+  assert_contains "$dash_file" '[CODE]'
+  assert_contains "$dash_file" '[ENV]'
+  assert_contains "$dash_file" 'code-fail'
+  assert_contains "$dash_file" 'env-fail'
+  assert_contains "$dash_file" 'skipped'
+
+  dash_json="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" dashboard --json)"
+  python3 - <<'PY' "$dash_json"
+import json, sys
+data = json.loads(sys.argv[1])
+assert data['total'] == 1
+gates = data['runs'][0].get('gates', [])
+classifications = {g['name']: g.get('classification') for g in gates}
+assert classifications.get('code-fail') == 'code_failure', f'unexpected: {classifications}'
+assert classifications.get('env-fail') == 'environment_failure', f'unexpected: {classifications}'
+assert classifications.get('skipped') is None, f'skip should have no classification: {classifications}'
+PY
+}
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
 run_test "rejects unsafe run id" test_rejects_unsafe_run_id
@@ -374,6 +549,11 @@ run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
 run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
 run_test "run-ledger skill-example consistency check" test_run_ledger_skill_examples_consistency_check
+run_test "dashboard active runs" test_dashboard_active_runs
+run_test "dashboard flow filter" test_dashboard_flow_filter
+run_test "dashboard empty" test_dashboard_empty
+run_test "dashboard with completed" test_dashboard_with_completed
+run_test "dashboard gate classification" test_dashboard_gate_classification
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 if (( fail > 0 )); then
