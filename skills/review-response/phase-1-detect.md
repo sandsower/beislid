@@ -94,6 +94,8 @@ comment_id: optional
 reviewer: optional
 ```
 
+If a PR review item is from CodeRabbit and the body says `Review skipped`, `Review limit reached`, `rate limited`, or `draft detected`, set `status: deferred_review` and keep it as evidence, not actionable review feedback. Preserve the bot comment text and source metadata so babysit and release summaries can surface the gap. Do not route deferred-review items into Phase 2 fixes unless the body also contains an actual actionable request.
+
 If mode is both, categorize one combined queue so duplicate requests across sources are fixed once. Preserve `source` metadata so replies go back to the right place.
 
 ## Outputs to Phase 2

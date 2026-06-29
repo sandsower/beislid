@@ -14,10 +14,11 @@ For each item, assign one category:
 - **Needs investigation** — valid concern but surrounding code or behavior must be read before deciding.
 - **Pushback candidate** — comment seems technically wrong, conflicts with prior decisions, or asks for unnecessary scope.
 - **Already addressed** — thread/comment is outdated and current code already reflects the requested change.
+- **Deferred review** — CodeRabbit says the review was skipped, rate-limited, or draft-deferred; keep it as not reviewed evidence, not a fix candidate.
 - **Out-of-scope** — valid but belongs in a separate ticket.
 - **Clarification needed** — feedback is ambiguous.
 
-Present the categorized list with proposed action for each item. User may reclassify before fixes begin.
+Present the categorized list with proposed action for each item. User may reclassify before fixes begin. Deferred-review items should stay as evidence unless paired with additional actionable feedback.
 
 ## 2b. Fast-path check
 

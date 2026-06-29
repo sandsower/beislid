@@ -40,6 +40,22 @@ This boundary is intentional. Findings should be safe to ask for even when you a
 - `babysit` requires goal mode and keeps rechecking an open PR, delegating feedback fixes/replies to `review-response`, running configured gates, and performing configured closeout steps when safe.
 - `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates. It can also require a clean worktree/container evaluator before handoff when workflow policy says so.
 
+## CodeRabbit deferred-review evidence
+
+A green CodeRabbit check is not enough on its own. If the PR comments or review text from CodeRabbit contain any of these signals, classify the review as `not reviewed` / `deferred review` even when GitHub shows `SUCCESS`:
+
+- `Review skipped`
+- `Review limit reached`
+- `rate limited`
+- `draft detected`
+
+Observed shapes from recent managed repos:
+
+- `sandsower/rondo#92` — CodeRabbit comment said `Review limit reached`, but the check was green.
+- `sandsower/memento-vault#128` — CodeRabbit said `Review skipped` because the PR was draft when it ran; a later `@coderabbitai review` still did not produce a fresh actionable review before the check stayed green.
+
+Babysit and merge logic should treat this as live evidence that the PR has not been fully reviewed yet. The path must wait/retry, ask for guidance, or create a follow-up issue per policy before merge.
+
 ## Pre-PR hardening
 
 Use this when you want a branch hardened before PR creation:
@@ -64,8 +80,7 @@ For an existing PR, `ready-for-review` uses the update fast path:
 quality gates → push → report PR URL
 ```
 
-It skips local review by default because the branch is already under review. Run `review` or `fresh-eyes` manually first if the update needs another local pass.
-
+It skips local review by default because the branch is already under review. Run `review` or `fresh-eyes` manually first if the update needs another local pass. If deferred-review CodeRabbit evidence is present, carry it into the handoff summary/body instead of treating the green check as sufficient.
 ## Responding to review or QA
 
 Use `review-response` when feedback already exists.

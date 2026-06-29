@@ -69,11 +69,11 @@ Invocation args override config for this run. Examples: `stop when green`, `don'
 2. **Detect persistence mode** — note whether the run is direct, manually wrapped in host `/goal`, or managed by the Pi Beislið babysit runtime. Do not stop solely because persistence is absent.
 3. **Find the PR** — use configured PR host data or `gh pr view` when available. If no current PR is found, stop and ask for the PR URL/number.
 4. **Read live state** — collect checks, mergeability/conflict state, review decision, PR-level comments, and inline review threads.
-5. **Detect actionable feedback** — use configured `pr_review_source`; do not rely on a green review-bot status alone when thread data is available. When `loop.use_review_response` is true, unresolved review comments or requested changes route to `review-response`.
+5. **Detect actionable feedback** — use `pr_review_source`; never trust a green review-bot status alone. Treat CodeRabbit comments containing `Review skipped`, `Review limit reached`, `rate limited`, or `draft detected` as `not reviewed` / `deferred review`, even if the check is green. When `loop.use_review_response` is true, unresolved review comments or requested changes route to `review-response`.
 6. **Feedback handling** — if `loop.use_review_response` is true, invoke `review-response` with the loaded feedback. It owns categorization, fixes, replies, commits, pushes, and child-ticket handling according to workflow config. If `loop.use_review_response` is false, do not fix, reply, commit, or push automatically; stop with the loaded feedback summary and ask the user how to proceed.
 7. **Gate before push** — before any babysit-owned push or merge preparation, run the configured applicable gates. Use existing scope/gate-set selection rules where available. Do not invent hardcoded gates.
 8. **Wait and recheck** — after pushes or pending checks, wait using bounded polling or host monitor facilities. Do not busy-loop. Re-read live PR state after each transition.
-9. **Green audit** — the PR is green only when live evidence shows all required checks successful, mergeable/no conflicts, acceptable review state, and no unaddressed actionable feedback.
+9. **Green audit** — the PR is green only when live evidence shows all required checks successful, mergeable/no conflicts, acceptable review state, and no unaddressed actionable feedback. Green CodeRabbit plus deferred-review evidence is not acceptable.
 10. **Closeout** — perform configured merge, memento capture, and retro only when green audit passes and action policy allows the side effect. Policy-check closeout side effects before running them: `gh.pr.merge` or `pr.merge` as `git-remote`, `memento.capture` as `workspace-write`, `retro.run` as `read` plus `workspace-write` when it may write artifacts, and `retro.apply`/setup edits as `workspace-write`. Stop for approval when mode is `ask`; proceed only when mode is `auto` and policy allows.
 11. **Complete persistence loop when present** — if running under a persistence mechanism, call its completion tool only after final audit and configured closeout are done, or after reaching the configured stop-when-green endpoint. In Pi's Beislið runtime, call `update_beislid_babysit({status:"complete", summary:"..."})`; if blocked, call `update_beislid_babysit({status:"blocked", summary:"..."})`.
 
@@ -109,7 +109,7 @@ When stopping, report:
 
 - PR URL and branch
 - final state: green, merged, blocked, or budget-limited
-- checks/review/mergeability evidence
+- checks/review/mergeability evidence, incl. deferred-review CodeRabbit comments
 - feedback handled and replies posted/printed
 - gates run and result summary
 - closeout side effects performed or skipped
@@ -118,6 +118,7 @@ When stopping, report:
 ## Common mistakes
 
 - Treating CI green as enough when review threads are unresolved.
+- Treating green CodeRabbit as reviewed when comments say skipped, rate-limited, or draft-detected.
 - Hardcoding project gates instead of reading workflow config.
 - Assuming `/goal` is required; direct runs are allowed, but must stop with next steps when no persistence mechanism is active and the PR is not terminal.
 - Posting replies or merging without policy and approval handling.
