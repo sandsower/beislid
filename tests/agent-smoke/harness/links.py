@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from .hosts import get_host
@@ -46,15 +47,32 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def _acquire_lock(host_name: str, skills_dir: Path, run_dir: Path, worktree: Path) -> None:
     lock_path = _lock_path(skills_dir)
-    if lock_path.exists():
-        lock = _read_json(lock_path)
-        if lock.get("run_dir") != str(run_dir):
-            raise SystemExit(
-                f"{host_name} skills are already locked by another smoke run: {lock.get('run_dir')}. "
-                f"Run cleanup for that run before starting another {host_name} smoke."
-            )
-        return
-    _write_json(lock_path, {"host": host_name, "run_dir": str(run_dir), "worktree": str(worktree)})
+    payload = {"host": host_name, "run_dir": str(run_dir), "worktree": str(worktree)}
+    fd, temp_name = tempfile.mkstemp(prefix=f".{LOCK}.", dir=str(skills_dir))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        try:
+            os.link(temp_name, lock_path)
+        except FileExistsError:
+            try:
+                lock = _read_json(lock_path)
+            except Exception as exc:
+                raise SystemExit(f"could not read lock {lock_path}: {exc}") from exc
+            if lock.get("run_dir") != str(run_dir):
+                raise SystemExit(
+                    f"{host_name} skills are already locked by another smoke run: {lock.get('run_dir')}. "
+                    f"Run cleanup for that run before starting another {host_name} smoke."
+                ) from None
+            return
+    finally:
+        try:
+            os.unlink(temp_name)
+        except FileNotFoundError:
+            pass
 
 
 def _release_lock(skills_dir: Path, run_dir: Path, warnings: list[str]) -> None:

@@ -43,11 +43,20 @@ def set_status(run_dir: Path, state: str, exit_code: int | None = None) -> None:
     status.update({"state": state, "updated_at": now()})
     if state == "running" and "started_at" not in status:
         status["started_at"] = now()
-    if state in {"exited", "cleanup-complete"}:
-        status.setdefault("exited_at", now())
+    if state == "exited" and "exited_at" not in status:
+        status["exited_at"] = now()
     if exit_code is not None:
         status["exit_code"] = exit_code
     write_json(path, status)
+
+
+def system_exit_result(exc: SystemExit) -> tuple[int, str]:
+    code = exc.code
+    if isinstance(code, int):
+        return code, ""
+    if code is None:
+        return 1, ""
+    return 1, str(code).strip()
 
 
 def scenario_dir(name: str) -> Path:
@@ -347,7 +356,13 @@ def changed_files() -> set[str]:
     return files
 
 
+def has_origin_main_merge_base() -> bool:
+    return bool(git_output(["git", "merge-base", "HEAD", "origin/main"]))
+
+
 def should_run_changed_only() -> bool:
+    if not has_origin_main_merge_base():
+        return True
     files = changed_files()
     return any(path.startswith(SMOKE_TRIGGER_PREFIXES) or path in SMOKE_TRIGGER_PATHS for path in files)
 
@@ -358,19 +373,23 @@ def gate(args: argparse.Namespace) -> int:
         return 0
 
     hosts = [host.strip() for host in args.hosts.split(",") if host.strip()]
-    failures: list[tuple[str, int]] = []
+    failures: list[tuple[str, int, str]] = []
 
-    def run_one(host: str) -> tuple[str, int]:
-        rc = run_host(
-            argparse.Namespace(
-                scenario=args.scenario,
-                host=host,
-                timeout=args.timeout,
-                no_verify=False,
-                no_cleanup=False,
+    def run_one(host: str) -> tuple[str, int, str]:
+        try:
+            rc = run_host(
+                argparse.Namespace(
+                    scenario=args.scenario,
+                    host=host,
+                    timeout=args.timeout,
+                    no_verify=False,
+                    no_cleanup=False,
+                )
             )
-        )
-        return host, rc
+            return host, rc, ""
+        except SystemExit as exc:
+            rc, detail = system_exit_result(exc)
+            return host, rc, detail
 
     if args.serial or len(hosts) == 1:
         results = [run_one(host) for host in hosts]
@@ -381,12 +400,13 @@ def gate(args: argparse.Namespace) -> int:
             for future in as_completed(futures):
                 results.append(future.result())
 
-    for host, rc in results:
+    for host, rc, detail in results:
         if rc != 0:
-            failures.append((host, rc))
+            failures.append((host, rc, detail))
     if failures:
-        for host, rc in failures:
-            print(f"failed: {host} rc={rc}", file=sys.stderr)
+        for host, rc, detail in failures:
+            suffix = f": {detail}" if detail else ""
+            print(f"failed: {host} rc={rc}{suffix}", file=sys.stderr)
         return 1
     print(f"ok: {args.scenario} agent smoke passed on {', '.join(hosts)}")
     return 0
