@@ -38,7 +38,10 @@ path, dotted = sys.argv[1:]
 data = json.load(open(path, encoding='utf-8'))
 cur = data
 for part in dotted.split('.'):
-    cur = cur[part]
+    if isinstance(cur, list):
+        cur = cur[int(part)]
+    else:
+        cur = cur[part]
 print(cur)
 PY
 }
@@ -122,6 +125,9 @@ PY
   printf '{"gate":{"name":"validate-skills"},"status":"pass","authorization":"Bearer abc123"}\n' > "$gate_payload"
   (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow kickoff --name validate-skills --scope repo --envelope-file "$gate_payload") >/dev/null
   assert_file "$run_dir/artifacts/gates/repo/validate-skills/1/envelope.json"
+  [[ "$(json_get "$run_dir/run.json" artifacts.0.kind)" == "gate" ]] || { note_fail "gate artifact bookkeeping not recorded"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" logs.0.kind)" == "gate" ]] || { note_fail "gate log bookkeeping not recorded"; return 1; }
+  [[ "$(json_get "$run_dir/run.json" logs.0.path)" == "$run_dir/artifacts/gates/repo/validate-skills/1/envelope.json" ]] || { note_fail "gate log path not recorded"; return 1; }
   if grep -q 'Bearer abc123' "$run_dir/artifacts/gates/repo/validate-skills/1/envelope.json" "$run_dir/events.jsonl"; then
     note_fail "gate logs/events should redact auth values"
     return 1
@@ -155,6 +161,22 @@ payload = json.loads(sys.argv[1])
 assert payload['run_id']
 assert payload['run_dir']
 PY
+}
+
+test_cli_dispatch_requires_python3() {
+  local state="$TMP/state" path_dir err
+  state="$TMP/state"
+  path_dir="$TMP/no-python"
+  mkdir -p "$path_dir"
+  ln -s "$(command -v bash)" "$path_dir/bash"
+  ln -s "$(command -v dirname)" "$path_dir/dirname"
+  ln -s "$(command -v readlink)" "$path_dir/readlink"
+  err="$TMP/err.txt"
+  if cd "$TMP/repo" && BEISLID_STATE_DIR="$state" PATH="$path_dir" BEISLID_HOME="$REPO_DIR" "$CLI" run-ledger init --skill implement --flow implement --ticket-id 15 --ticket-title 'CLI dispatch' --branch feature/ledger >"$TMP/out.txt" 2>"$err"; then
+    note_fail "expected run-ledger dispatch to fail without python3"
+    return 1
+  fi
+  grep -qF 'error: beislid run-ledger requires python3' "$err" || { note_fail "expected python3 guard error"; return 1; }
 }
 
 test_run_ledger_skill_examples_consistency_check() {
@@ -347,6 +369,7 @@ run_test "rejects unsafe run id" test_rejects_unsafe_run_id
 run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
 run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
+run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
 run_test "run-ledger skill-example consistency check" test_run_ledger_skill_examples_consistency_check
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

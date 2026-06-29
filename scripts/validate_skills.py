@@ -12,26 +12,75 @@ import re
 import sys
 
 
-FRONTMATTER = re.compile(r"\A---\s*\n(.*?\n)---\s*\n", re.DOTALL)
 KEY = re.compile(r"^([a-zA-Z_][\w-]*):\s*(.*)$")
+BLOCK_SCALAR = re.compile(r"^[>|](?:[+-])?(?:\s+#.*)?$")
+
+
+def _strip_scalar(value: str) -> str:
+    raw = value.rstrip()
+    if not raw:
+        return ""
+    if raw[0] in {'"', "'"}:
+        quote = raw[0]
+        escaped = False
+        for idx in range(1, len(raw)):
+            ch = raw[idx]
+            if quote == '"' and ch == "\\" and not escaped:
+                escaped = True
+                continue
+            if ch == quote and not escaped:
+                return raw[1:idx]
+            escaped = False
+        return raw[1:]
+    comment = re.search(r"\s+#", raw)
+    return (raw[: comment.start()] if comment else raw).rstrip()
 
 
 def parse_frontmatter(text: str) -> dict[str, str] | None:
-    m = FRONTMATTER.match(text)
-    if not m:
+    lines = text.splitlines()
+    if not lines or lines[0].strip().lstrip("\ufeff") != "---":
         return None
+
     out: dict[str, str] = {}
-    for line in m.group(1).splitlines():
+    i = 1
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "---":
+            return out
         if not line.strip() or line.lstrip().startswith("#"):
+            i += 1
             continue
+
         km = KEY.match(line)
         if not km:
+            i += 1
             continue
-        value = km.group(2).strip()
-        if value.startswith(('"', "'")) and value.endswith(value[0]) and len(value) >= 2:
-            value = value[1:-1]
-        out[km.group(1)] = value
-    return out
+
+        key = km.group(1)
+        raw = km.group(2).rstrip()
+        if BLOCK_SCALAR.match(raw):
+            block_lines: list[str] = []
+            i += 1
+            while i < len(lines):
+                next_line = lines[i]
+                if next_line.strip() == "---":
+                    break
+                if not next_line.strip():
+                    block_lines.append("")
+                    i += 1
+                    continue
+                if next_line.startswith((" ", "\t")):
+                    block_lines.append(next_line.lstrip(" \t"))
+                    i += 1
+                    continue
+                break
+            out[key] = "\n".join(block_lines).strip("\n")
+            continue
+
+        out[key] = _strip_scalar(raw)
+        i += 1
+
+    return None
 
 
 def main() -> int:

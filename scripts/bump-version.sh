@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bump the package version in both package.json and .claude-plugin/plugin.json
-# atomically. Prints the new version on stdout; human messages go to stderr.
+# together. Prints the new version on stdout; human messages go to stderr.
 #
 # Usage:
 #   scripts/bump-version.sh patch

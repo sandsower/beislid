@@ -241,10 +241,18 @@ case "$cmd" in
     ;;
   run-ledger)
     shift
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "error: beislid run-ledger requires python3" >&2
+      exit 1
+    fi
     python3 "$BEISLID_ROOT/scripts/run_ledger.py" "$@"
     ;;
   action-policy)
     shift
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "error: beislid action-policy requires python3" >&2
+      exit 1
+    fi
     python3 "$BEISLID_ROOT/scripts/action_policy.py" "$@"
     ;;
   visual-feedback)
@@ -253,6 +261,10 @@ case "$cmd" in
     case "$subcmd" in
       normalize)
         shift
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "error: beislid visual-feedback requires python3" >&2
+          exit 1
+        fi
         python3 "$BEISLID_ROOT/scripts/visual_feedback.py" "$@"
         ;;
       "")
@@ -273,6 +285,10 @@ case "$cmd" in
     case "$subcmd" in
       validate)
         shift
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "error: beislid export requires python3" >&2
+          exit 1
+        fi
         python3 "$BEISLID_ROOT/scripts/validate_export.py" "$@"
         ;;
       "")
