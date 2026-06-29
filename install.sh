@@ -28,6 +28,8 @@ Flags:
   --copy                  Copy project-local skills instead of symlinking them
   --write-gitignore       Create or update the managed project .gitignore block
   --with-security-hooks   Install credential_guard hook (opt-in; user install only)
+  --strict                Exit nonzero when expected artifacts are skipped
+                          or conflicted during install
   --update                Fast-forward this Beislið repo, then re-run install
                           while preserving previous manifest opt-ins
   --migrate-v0.2          One-time migration from pre-v0.2 installs after
@@ -61,6 +63,7 @@ while (($#)); do
   case "$1" in
     --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
     --force|--repoint) FORCE=1 ;;
+    --strict) STRICT=1 ;;
     --status) STATUS=1 ;;
     --update) UPDATE=1 ;;
     --migrate-v0.2|--migrate-v0.2.0) MIGRATE_V0_2=1 ;;

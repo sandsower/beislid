@@ -96,9 +96,8 @@ For boundary workflows, the Pi extension can automatically start a fresh session
 The CLI wraps user-level install, project install, status, and update:
 
 ```bash
-beislid install user
-beislid install project [path]
-beislid install project [path] --copy
+beislid install user [--strict]
+beislid install project [path] [--copy] [--strict]
 beislid status
 beislid status project [path]
 beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
@@ -111,7 +110,7 @@ beislid update
 beislid help
 ```
 
-`install.sh --project [path]` is compatibility sugar for `beislid install project [path]`; add `--copy` there too for copied project skills. Project install creates `.agents/skills`, `.claude/skills`, and `.codex/skills` under the target project. Symlink mode is the default. Copy mode writes `.beislid-owner.json` markers inside copied skill dirs and records copy ownership in `.beislid/project-install.json`, so reruns refresh only Beislið-owned copies. `beislid status project [path]` reports missing skills per host and exits non-zero when any supported host is incomplete. Project installs print a suggested managed `.gitignore` block by default; add `--write-gitignore` to create or replace it. It warns if `.beislid/workflow.md` is missing but does not create it; use `setup` for project workflow config.
+`install.sh --project [path]` is compatibility sugar for `beislid install project [path]`; add `--copy` there too for copied project skills. Add `--strict` when you want installs to exit nonzero on skipped or conflicted expected artifacts. Project install creates `.agents/skills`, `.claude/skills`, and `.codex/skills` under the target project. Symlink mode is the default. Copy mode writes `.beislid-owner.json` markers inside copied skill dirs and records copy ownership in `.beislid/project-install.json`, so reruns refresh only Beislið-owned copies. `beislid status project [path]` reports missing skills per host and exits non-zero when any supported host is incomplete. Project installs print a suggested managed `.gitignore` block by default; add `--write-gitignore` to create or replace it. It warns if `.beislid/workflow.md` is missing but does not create it; use `setup` for project workflow config.
 
 A Homebrew formula lives at `packaging/homebrew/beislid.rb` for Homebrew installs. It packages the runtime subset under `libexec`, including `.beislid/`, and exposes `beislid` on PATH. Use `brew upgrade beislid` to update a Homebrew install; use `beislid update` / `install.sh --update` for a source checkout. Maintainers update the formula here and publish the tap/release so `brew upgrade` picks up the new runtime.
 

@@ -189,8 +189,8 @@ Edit the repo to edit the skills. When Beislið probes for a named project skill
 CLI commands available now:
 
 ```bash
-beislid install user
-beislid install project [path]
+beislid install user [--strict]
+beislid install project [path] [--copy] [--strict]
 beislid status
 beislid status project [path]
 beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
@@ -204,7 +204,7 @@ beislid migrate v0.2
 beislid help
 ```
 
-Project install defaults to symlink mode. Use `beislid install project [path] --copy` when the project needs portable local copies instead. With no path, `beislid install project` targets the git root when run inside a git repo; outside git it targets the current directory and warns. An explicit path is used exactly, even when it sits inside a larger repo. The installer creates all three project-local host dirs:
+Project install defaults to symlink mode. Use `beislid install project [path] --copy` when the project needs portable local copies instead. Add `--strict` when you want the command to exit nonzero on skipped or conflicted expected artifacts; it still never clobbers unowned files or directories. With no path, `beislid install project` targets the git root when run inside a git repo; outside git it targets the current directory and warns. An explicit path is used exactly, even when it sits inside a larger repo. The installer creates all three project-local host dirs:
 
 - `<project>/.agents/skills`
 - `<project>/.claude/skills`
@@ -239,6 +239,7 @@ beislid migrate v0.2
 Flags:
 
 - `--with-security-hooks`: enable `credential_guard` for Claude Code
+- `--strict`: exit nonzero when expected artifacts are skipped or conflicted during install
 - `--update`: fast-forward the Beislið checkout and re-run install
 - `--migrate-v0.2`: one-time migration from pre-v0.2 installs after cloning the clean v0.2 history
 - `--status`: print installed commit and symlink status

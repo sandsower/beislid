@@ -463,6 +463,20 @@ test_wrong_target_skipped_without_force() {
   assert_stderr_contains "--force"
 }
 
+test_wrong_target_fails_under_strict() {
+  local other="$TMP/other-beislid/skills/verify"
+  mkdir -p "$other"
+  ln -s "$other" "$CLAUDE_SKILLS/verify"
+
+  if run_installer --strict; then
+    note_fail "expected strict user install to fail on a foreign live symlink"
+  fi
+
+  assert_symlink_to "$CLAUDE_SKILLS/verify" "$other"
+  assert_stderr_contains "symlinked elsewhere"
+  assert_json_field "$STATE/install.json" security_hooks "False"
+}
+
 test_wrong_target_repointed_with_force() {
   local other="$TMP/other-beislid/skills/verify"
   mkdir -p "$other"
@@ -1581,6 +1595,23 @@ test_project_copy_never_clobbers_unmarked_entries() {
   assert_json_field "$project/.beislid/project-install.json" counts.skipped_copies 2
 }
 
+test_project_copy_fails_under_strict() {
+  local project="$TMP/project-copy-unmarked-strict"
+  mkdir -p "$project/.codex/skills/verify" "$project/.agents/skills"
+  printf 'project content\n' >"$project/.codex/skills/verify/SKILL.md"
+  printf 'project file\n' >"$project/.agents/skills/verify"
+
+  if run_cli install project "$project" --copy --strict --force; then
+    note_fail "expected strict copy install to fail on unmarked project entries"
+  fi
+
+  assert_file_contents "$project/.codex/skills/verify/SKILL.md" "project content"
+  assert_file_contents "$project/.agents/skills/verify" "project file"
+  assert_stderr_contains "verify (codex) exists at $project/.codex/skills/verify (not Beislið-owned), skipping"
+  assert_stderr_contains "verify (agents) exists at $project/.agents/skills/verify (not Beislið-owned), skipping"
+  assert_json_field "$project/.beislid/project-install.json" counts.skipped_copies 2
+}
+
 test_project_copy_refreshes_marker_owned_dirs() {
   local project="$TMP/project-copy-refresh-marker"
   mkdir -p "$project"
@@ -1695,6 +1726,21 @@ test_project_foreign_symlink_skipped_without_force() {
   ln -s "$other" "$project/.agents/skills/verify"
 
   run_cli install project "$project"
+
+  assert_symlink_to "$project/.agents/skills/verify" "$other"
+  assert_stderr_contains "verify (agents) symlinked elsewhere"
+  assert_json_field "$project/.beislid/project-install.json" counts.skipped_links 1
+}
+
+test_project_foreign_symlink_fails_under_strict() {
+  local project="$TMP/project-foreign-strict"
+  local other="$TMP/other-beislid/skills/verify"
+  mkdir -p "$project/.agents/skills" "$other"
+  ln -s "$other" "$project/.agents/skills/verify"
+
+  if run_cli install project "$project" --strict; then
+    note_fail "expected strict project install to fail on a foreign live symlink"
+  fi
 
   assert_symlink_to "$project/.agents/skills/verify" "$other"
   assert_stderr_contains "verify (agents) symlinked elsewhere"
@@ -1945,6 +1991,7 @@ run_test "fresh install creates all expected symlinks"        test_fresh_install
 run_test "re-running is idempotent"                           test_idempotent_rerun
 run_test "dangling symlinks are auto-repaired"                test_dangling_symlink_autorepair
 run_test "wrong-target symlinks are skipped without --force"  test_wrong_target_skipped_without_force
+run_test "wrong-target symlinks fail under strict"            test_wrong_target_fails_under_strict
 run_test "wrong-target symlinks are repointed with --force"   test_wrong_target_repointed_with_force
 run_test "regular files at dst are never clobbered"           test_regular_file_never_clobbered
 run_test "legacy skill symlinks are removed"                  test_legacy_skill_symlinks_are_removed
@@ -1998,6 +2045,7 @@ run_test "install.sh --project is compatibility sugar"         test_install_sh_p
 run_test "project install copy mode copies skills"             test_cli_project_copy_install_explicit_path
 run_test "install.sh --project --copy is compatibility sugar"  test_install_sh_project_copy_compat_explicit_path
 run_test "project copy never clobbers unmarked entries"        test_project_copy_never_clobbers_unmarked_entries
+run_test "project copy fails under strict"                     test_project_copy_fails_under_strict
 run_test "project copy refreshes marker-owned dirs"            test_project_copy_refreshes_marker_owned_dirs
 run_test "project copy uses manifest when marker missing"      test_project_copy_uses_manifest_when_marker_missing
 run_test "project copy manifest preserves recreated dirs"      test_project_copy_manifest_does_not_clobber_recreated_unmarked_dir
@@ -2006,6 +2054,7 @@ run_test "project gitignore write is idempotent"               test_project_giti
 run_test "project gitignore write replaces managed block"      test_project_gitignore_write_replaces_managed_block
 run_test "project install repairs dangling symlinks"           test_project_dangling_symlink_autorepair
 run_test "project install skips foreign symlinks"              test_project_foreign_symlink_skipped_without_force
+run_test "project install fails under strict"                 test_project_foreign_symlink_fails_under_strict
 run_test "project install --force repoints symlinks"           test_project_foreign_symlink_repointed_with_force
 run_test "project install never clobbers regular dirs"         test_project_regular_dir_never_clobbered
 run_test "project install skips symlinked host dirs"           test_project_symlinked_host_dir_is_skipped

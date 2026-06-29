@@ -21,6 +21,8 @@ BEISLID_CLI_PATH="$BEISLID_BIN_DIR_RESOLVED/beislid"
 
 WITH_SECURITY_HOOKS=0
 FORCE=0
+STRICT=0
+STRICT_FAILED=0
 PROJECT_MODE="symlink"
 PROJECT_WRITE_GITIGNORE=0
 BEISLID_CLI_LINK_OK=0
@@ -38,6 +40,12 @@ PY
 
 _current_commit() {
   git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null || echo "unknown"
+}
+
+_strict_mark_failure() {
+  if [[ "$STRICT" == 1 ]]; then
+    STRICT_FAILED=1
+  fi
 }
 
 # _link src dst label
@@ -76,12 +84,14 @@ _link() {
       return 0
     fi
     echo "warn: $label symlinked elsewhere ($current), skipping (re-run with --force to repoint)" >&2
+    _strict_mark_failure
     return 0
   fi
 
   if [[ -e "$dst" ]]; then
     echo "warn: $label exists at $dst (not a symlink), skipping" >&2
     echo "      move it aside and re-run if you want the version from this repo" >&2
+    _strict_mark_failure
     return 0
   fi
 
@@ -96,6 +106,7 @@ link_skill() {
 
   if [[ ! -d "$src" ]]; then
     echo "skip: $name (not in repo yet)"
+    _strict_mark_failure
     return
   fi
 
@@ -169,6 +180,7 @@ link_hook() {
 
   if [[ ! -f "$src" ]]; then
     echo "skip: hook $name (not in repo yet)"
+    _strict_mark_failure
     return
   fi
 
@@ -661,6 +673,7 @@ install_cli_link() {
   if [[ ! -f "$src" ]]; then
     echo "skip: beislid CLI (not in repo yet)"
     BEISLID_CLI_LINK_OK=0
+    _strict_mark_failure
     return
   fi
 
@@ -1132,6 +1145,7 @@ _project_copy_and_count() {
       return 0
     fi
     echo "warn: $label symlinked at $dst ($current), skipping (re-run with --force to replace with copy)" >&2
+    _strict_mark_failure
     PROJECT_SKIPPED_COPIES=$((PROJECT_SKIPPED_COPIES + 1))
     return 0
   fi
@@ -1141,6 +1155,7 @@ _project_copy_and_count() {
       _project_copy_skill_dir "$src" "$dst" "$label" "$project" "$host" "$skill" "refresh"
     else
       echo "warn: $label exists at $dst (not Beislið-owned), skipping" >&2
+      _strict_mark_failure
       PROJECT_SKIPPED_COPIES=$((PROJECT_SKIPPED_COPIES + 1))
     fi
     return 0
@@ -1148,6 +1163,7 @@ _project_copy_and_count() {
 
   if [[ -e "$dst" ]]; then
     echo "warn: $label exists at $dst (not Beislið-owned), skipping" >&2
+    _strict_mark_failure
     PROJECT_SKIPPED_COPIES=$((PROJECT_SKIPPED_COPIES + 1))
     return 0
   fi
@@ -1244,7 +1260,9 @@ _project_gitignore_guidance() {
   echo
   echo "Gitignore:"
   if [[ "$PROJECT_WRITE_GITIGNORE" == 1 ]]; then
-    _write_project_gitignore "$project" || true
+    if ! _write_project_gitignore "$project"; then
+      _strict_mark_failure
+    fi
   else
     echo "Suggested managed block (not written; re-run with --write-gitignore to manage it):"
     _project_gitignore_block
@@ -1258,20 +1276,24 @@ _ensure_project_skill_dir() {
 
   if [[ -L "$root" ]]; then
     echo "warn: .$host is a symlink at $root, skipping $host skills to avoid writing outside the project" >&2
+    _strict_mark_failure
     return 1
   fi
   if [[ -e "$root" && ! -d "$root" ]]; then
     echo "warn: .$host exists at $root (not a directory), skipping $host skills" >&2
+    _strict_mark_failure
     return 1
   fi
   mkdir -p "$root"
 
   if [[ -L "$dir" ]]; then
     echo "warn: .$host/skills is a symlink at $dir, skipping $host skills to avoid writing outside the project" >&2
+    _strict_mark_failure
     return 1
   fi
   if [[ -e "$dir" && ! -d "$dir" ]]; then
     echo "warn: .$host/skills exists at $dir (not a directory), skipping $host skills" >&2
+    _strict_mark_failure
     return 1
   fi
   mkdir -p "$dir"
@@ -1283,10 +1305,12 @@ _ensure_project_metadata_dir() {
 
   if [[ -L "$dir" ]]; then
     echo "warn: .beislid is a symlink at $dir, skipping project manifest to avoid writing outside the project" >&2
+    _strict_mark_failure
     return 1
   fi
   if [[ -e "$dir" && ! -d "$dir" ]]; then
     echo "warn: .beislid exists at $dir (not a directory), skipping project manifest" >&2
+    _strict_mark_failure
     return 1
   fi
   mkdir -p "$dir"
@@ -1295,6 +1319,7 @@ _ensure_project_metadata_dir() {
 beislid_install_project() {
   local requested="${1:-}"
   local project
+  STRICT_FAILED=0
   if ! project="$(_project_target_from_arg "$requested")"; then
     return 1
   fi
@@ -1378,6 +1403,7 @@ beislid_install_project() {
 
   echo
   echo "Done. Restart Claude Code / pi / Codex from this project to pick up project-local skills."
+  return "$STRICT_FAILED"
 }
 
 _count_project_installed_skills() {
@@ -1735,6 +1761,7 @@ beislid_update_repo() {
   local rerun_args=()
   [[ "$WITH_SECURITY_HOOKS" == 1 ]] && rerun_args+=(--with-security-hooks)
   [[ "$FORCE" == 1 ]] && rerun_args+=(--force)
+  [[ "$STRICT" == 1 ]] && rerun_args+=(--strict)
 
   local rerun_display=""
   if (( ${#rerun_args[@]} > 0 )); then
@@ -1763,6 +1790,7 @@ beislid_update_repo() {
 }
 
 beislid_install_user() {
+  STRICT_FAILED=0
   mkdir -p "$CLAUDE_SKILLS"
   mkdir -p "$AGENTS_SKILLS"
   mkdir -p "$CODEX_SKILLS"
@@ -1801,4 +1829,5 @@ beislid_install_user() {
 
   echo
   echo "Done. Restart Claude Code / pi / Codex to pick up new skills."
+  return "$STRICT_FAILED"
 }

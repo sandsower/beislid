@@ -1266,9 +1266,9 @@ The CLI validates its runtime layout before loading installer code. It expects `
 ## CLI commands and optional install flags
 
 ```bash
-beislid install user
-beislid install project [path]
-beislid install project [path] --copy
+beislid install user [--strict]
+beislid install project [path] [--strict]
+beislid install project [path] [--copy] [--strict]
 beislid status
 beislid status project [path]
 beislid workflow-signal status
@@ -1282,15 +1282,19 @@ Legacy installer flags remain supported:
 
 ```bash
 ./install.sh --with-security-hooks
+./install.sh --strict
 ./install.sh --update
 ./install.sh --migrate-v0.2
 ./install.sh --status
 ./install.sh --project [path]
+./install.sh --project [path] --strict
 ./install.sh --project [path] --copy
+./install.sh --project [path] --copy --strict
 ./install.sh --force
 ```
 
 - `--with-security-hooks`: enable the Claude Code `credential_guard` hook.
+- `--strict`: exit nonzero when expected artifacts are skipped or conflicted during install.
 - `--update`: fast-forward the Beislið checkout and re-run install, preserving previous manifest install targets and opt-ins.
 - `--migrate-v0.2`: one-time migration from a pre-v0.2 install after cloning the clean v0.2 repository history.
 - `--status`: print installed commit and symlink status.
