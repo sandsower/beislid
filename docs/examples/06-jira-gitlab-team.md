@@ -175,7 +175,8 @@ overrides:
 ## Turn this into your own config
 
 1. Verify your Jira MCP tool name — it might be `mcp__atlassian_jira__get_issue`
-   or similar. Run `/doctor` and check the probe output.
+   or similar. If your host exposes an equivalent alias, `/doctor` should report
+   whether the match was exact or alias-satisfied.
 2. If you use `gitlab` CLI instead of `glab`, adjust the PR review commands.
    The project path encoding (`%2F` for `/`) is `glab`-specific.
 3. Replace `.venv/bin/python` with your Python environment path.

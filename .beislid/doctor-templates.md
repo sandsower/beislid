@@ -27,8 +27,8 @@ When any probe fails, doctor follows the three-clause failure shape from `output
 🩺 **Workflow check on `<project_name>`.**
 
 ⚠️ <name what's wrong, e.g. "The Linear MCP tool didn't resolve — workflow.md
-points at `mcp__plugin_linear_linear__get_issue` but it isn't registered in
-this session. Probably a plugin rename.">
+points at `mcp__plugin_linear_linear__get_issue` but no exact or alias-matched
+route is registered in this session. Probably a plugin rename.">
 
 ✓ <name what's still working — list capabilities that resolved cleanly, e.g.
 "The other 6 capabilities resolve fine.">
@@ -210,7 +210,7 @@ Field rules:
 - `project_name` — basename of `git rev-parse --show-toplevel`.
 - `cache_ttl_hours` — read from `beislid:probe_cache.ttl_hours` in workflow.md; defaults to `24`.
 - `probe_supported` — `false` only when the host literally cannot probe the kind (e.g., subagent probe on a host without subagents). Capability-not-found-in-session uses `probe_supported: true` with `status: missing`.
-- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, action-policy summary, etc.). Omitted on `disabled` entries. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them. For `action_policy`, summarize effective modes, sandbox minimums, action overrides, fallback decisions when configured, and known-action registry size; do not store the whole policy table in the cache.
+- `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, action-policy summary, etc.). Omitted on `disabled` entries. For MCP-backed tools, prefer an `exact:<tool>` or `alias:<resolved> ← <configured>` prefix so the cache distinguishes a direct registration from a host-adapter alias. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them. For `action_policy`, summarize effective modes, sandbox minimums, action overrides, fallback decisions when configured, and known-action registry size; do not store the whole policy table in the cache.
 - `reason` — only on `missing` and `failed`. Always omitted on `ok` and `disabled`.
 - `probed_at`, `probe_kind`, `value` — omitted on `disabled` entries (no probe was run).
 

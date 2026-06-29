@@ -54,6 +54,8 @@ Three source types are supported:
 - **`file`**: read a file matching a glob that contains the ticket ID.
 - **`paste`**: strict manual paste (fallback only).
 
+For MCP-backed trackers, an equivalent host-adapter alias is acceptable when the host registers one; probes and audits should say whether the configured tool was matched exactly or via alias.
+
 The `id_pattern` is a regex that validates extracted ticket IDs. `branch_pattern` extracts ticket IDs from branch names: the first capture group is the ID. If your branches use names like `vic/bei-43-fix-thing`, the pattern `^[^/]+/([a-z]+-\d+)` captures `bei-43`.
 
 Also add `ticket_update` to let orchestrators post plan comments and status updates; its issue channel is also reused by `spec_approved` tracker actions that update the ticket body:

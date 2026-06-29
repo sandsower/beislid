@@ -113,7 +113,7 @@ Try MCP discovery via `probe-semantics.md` (search for tools matching `*linear*`
 (`<tool-name>`). Use this for ticket fetching? [Y/n/different]
 ```
 
-On `Y`: capture `type: mcp, tool: <tool-name>, id_pattern: '^[A-Z]+-\d+$'`. Ask once for the workspace name to populate `link_template: 'https://linear.app/<workspace>/issue/{id}'`.
+On `Y`: capture `type: mcp, tool: <tool-name>, id_pattern: '^[A-Z]+-\d+$'`. Ask once for the workspace name to populate `link_template: 'https://linear.app/<workspace>/issue/{id}'`. If the host resolves the same integration through an alias, keep the configured tool name canonical and let the probe report the alias-satisfied match instead of forcing a session-local override.
 
 If MCP discovery returns no Linear-shaped tools: do NOT ask the user to type an MCP tool name. Pivot:
 
