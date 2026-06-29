@@ -18,6 +18,8 @@ Setup walks through each section, shows diffs before writing, and won't silently
 /doctor
 ```
 
+For starter policy shapes, see [Setup templates](./setup-templates.md); for scope examples, see [Work Contract examples](./work-contract-examples.md).
+
 If you prefer to write workflow.md by hand, create the file and add the required version stamp:
 
 ```markdown

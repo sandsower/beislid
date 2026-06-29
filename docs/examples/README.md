@@ -26,3 +26,7 @@ Beislið capabilities.
    own config" section listing specific changes you'll need.
 4. **Audit** with `/doctor` to verify the config and probe capabilities.
 5. **Extend** with `/setup` to add sections not covered by the example.
+
+Related references:
+- [Work Contract examples](../work-contract-examples.md)
+- [Setup templates](../setup-templates.md)
