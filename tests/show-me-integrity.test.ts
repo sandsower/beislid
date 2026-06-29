@@ -350,3 +350,8 @@ test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck r
 		assert.match(notifications.at(-1)?.message ?? "", /Deleted 2 show-me deck directories\./);
 	});
 });
+
+test("beislid show-me command is namespaced when the show-me deck extension is enabled", async () => {
+	const { commandNameForSkill } = await import(pathToFileURL(join(process.cwd(), "extensions/beislid/skill-commands.ts")).href);
+	assert.equal(commandNameForSkill("show-me"), "show-me-skill");
+});
