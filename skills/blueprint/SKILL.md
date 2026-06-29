@@ -31,12 +31,12 @@ If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and ho
 4. **Ask implementation questions one at a time** — prefer multiple choice. Focus on architecture, data flow, boundaries, edge cases, and tests.
 5. **Propose 2–3 implementation approaches** — include trade-offs and your recommendation. Lead with the recommended option and say why.
 6. **Present the design** — scale to complexity. A few sentences for simple changes, detailed sections for complex ones. Get approval section by section. Offer: "Want to stress-test this design before we finalize?" (invokes `poke-holes`). Optional Lavish design surface: if Step 1 found active `beislid:visual_surfaces` routing, apply `visual-surface-protocol.md` at this approval/choice/revision boundary when a visual plan, comparison, architecture/data-flow diagram, option table, or risk/test matrix materially improves understanding. Keep small/linear designs Markdown-first, but for large changes comparable to work that benefits from `walk-the-diff`, lean toward suggesting or prompting for the surface rather than skipping it. Respect `suggest`/`prompt`/`auto` exactly; absent config or `off` must not mention or invoke Lavish. Use the protocol's `plan`, `comparison`, `diagram`, and `input` guidance with a typed `BEISLID_VISUAL_FEEDBACK_V1` gate for `workflow: blueprint`, action `approve_revise_or_choose_blueprint`, and decisions `approve`, `revise`, or `choose` (`choose` requires `selected_option`). Copy accepted visual approvals, revisions, or choices into the canonical Markdown/chat design record before proceeding; visual controls never bypass explicit blueprint approval before `implement`.
-7. **Run `blueprint_approved` artifact actions** — after the design is approved, execute configured artifact lifecycle actions for the approved design. Do not auto-write design files outside this lifecycle behavior in configured repos.
-8. **Transition** — normally invoke `implement` to create the implementation plan and include any artifact status/path. If invoked by `kickoff`, return the approved design plus artifact status/path to `kickoff` instead; kickoff must record discoveries and update the ticket first.
+7. **Run `blueprint_approved` lifecycle actions** — after the design is approved, execute configured artifact and CLI lifecycle actions for the approved design. Do not auto-write design files or run ad-hoc side effects outside this lifecycle behavior in configured repos.
+8. **Transition** — normally invoke `implement` to create the implementation plan and include any lifecycle status/path. If invoked by `kickoff`, return the approved design plus lifecycle status/path to `kickoff` instead; kickoff must record discoveries and update the ticket first.
 
 ## Scaling to Complexity
 
-- **Small change** (config, rename, simple fix): 1–2 questions, 1 paragraph design, lifecycle artifact only when configured or explicitly useful in standalone mode.
+- **Small change** (config, rename, simple fix): 1–2 questions, 1 paragraph design, lifecycle actions only when configured or explicitly useful in standalone mode.
 - **Medium feature** (new component, API endpoint): architecture + data flow + testing approach.
 - **Large feature** (new subsystem, multi-file): route to `break-spec` before implementation design.
 
@@ -54,11 +54,11 @@ If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and ho
 - **Explore alternatives** — always propose 2–3 approaches before settling.
 - **Incremental validation** — present design, get approval before moving on.
 
-## Artifact lifecycle actions
+## Lifecycle actions
 
-If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.blueprint_approved.actions[]` entries after the user approves the implementation design. If no workflow exists, preserve standalone usefulness by offering a local design artifact for larger/spec-originated work after explicit approval. If a workflow exists but no `blueprint_approved` artifact action is configured, do not write a design file automatically; workflow config controls artifacts.
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.blueprint_approved.actions[]` entries in order after the user approves the implementation design. If no workflow exists, preserve standalone usefulness by offering a local design artifact for larger/spec-originated work after explicit approval. If a workflow exists but no `blueprint_approved` action is configured, do not write a design file or run a side effect automatically; workflow config controls lifecycle actions.
 
-Supported P0 action shape:
+Supported P0 action shapes:
 
 ```yaml
 - name: write-design-artifact
@@ -66,16 +66,25 @@ Supported P0 action shape:
   approval: prompt # optional; prompt when omitted, auto creates missing target
   on_failure: prompt # optional; prompt when omitted, or continue | abort
   path: 'plans/{feature}-design.md' # optional default
+- name: run-approved-design-hook
+  type: cli
+  command: 'planning-hook {event} {ticket_id} {artifact_path}'
+  approval: prompt # required for cli
+  classes: [git-remote] # optional action-policy classes
 ```
 
-Execute only `type: artifact` under `blueprint_approved`; skip other providers as reserved. Multiple artifact actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip and reserved actions do not block the transition to `implement` or back to `kickoff`. `on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed writes, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and transitions without the artifact, and `abort` stops the transition.
+Execute `type: artifact` and `type: cli` under `blueprint_approved`; skip other providers as reserved. Multiple actions are allowed and run in order. Before each supported action, evaluate action policy with action id `lifecycle.blueprint_approved.<name>`: artifact actions use class `workspace-write`; CLI actions use configured `classes` or the conservative default `[workspace-write, git-remote]`. A policy denial records `denied` and skips that action; a policy `ask` boundary must be handled before running.
 
-Default path: `plans/{feature}-design.md`. Supported placeholders are `{feature}`, `{kind}` (`design`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved design title, then spec artifact title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
+For artifact actions, `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Default path: `plans/{feature}-design.md`. Supported artifact placeholders are `{feature}`, `{kind}` (`design`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved design title, then spec artifact title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-Artifact content must be the approved design as primary content, using the Blueprint artifact shape from `artifact-templates.md` when a durable file or report is written. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, spec artifact path, and related artifact status. Do not add unapproved design decisions. Treat written design artifacts as checkpoint-compatible state seeds for fresh-context handoff into `implement`.
+Artifact content must be the approved design as primary content, using the Blueprint artifact shape from `artifact-templates.md` when a durable file or report is written. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, spec artifact path, and related lifecycle status. Do not add unapproved design decisions. Treat written design artifacts as checkpoint-compatible state seeds for fresh-context handoff into `implement`.
 
-Record artifact results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths when available. Pass written artifact paths in handoff context so `implement` can read custom paths in the same session.
+For CLI actions, `approval` is required. `approval: prompt` asks run/skip and shows action name, command summary, placeholders used, and action-policy classes. `approval: auto` runs once configured after policy allows it. Supported CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, `{event}` (`blueprint_approved`), `{feature}`, `{kind}` (`design`), and `{artifact_path}` (latest written/auto-written artifact path for this event, or empty). Pass placeholder values through argv construction when available or shell-quote them before execution; never splice raw branch/ticket text into a shell and never expose the approved design body as a command-line placeholder.
+
+`on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed actions, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and transitions without that side effect, and `abort` stops the transition.
+
+Record lifecycle results as `written`, `auto-written`, `ran`, `skipped`, `denied`, `reserved`, `not configured`, or `failed`, with paths/action names when available. Pass written artifact paths in handoff context so `implement` can read custom paths in the same session.
 
 ## Terminal State
 
-The only normal next step after design approval and artifact handling is `implement`. Do not invoke unrelated implementation skills. If `kickoff` invoked this skill, return control to kickoff with the approved design and artifact status/path.
+The only normal next step after design approval and lifecycle handling is `implement`. Do not invoke unrelated implementation skills. If `kickoff` invoked this skill, return control to kickoff with the approved design and lifecycle status/path.

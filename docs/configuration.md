@@ -29,7 +29,7 @@ setup
 - ticket update path
 - PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
-- planning artifacts written after approved structures/specs/designs
+- planning lifecycle actions after approved structures/specs/designs
 - quality gates
 - scopes
 - action policy overrides
@@ -398,7 +398,7 @@ children: []
 Beislið owns work-contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
 ````
 
-Work Contract artifacts use existing lifecycle artifact actions. `break_spec_approved` may write an approved structure for multi-slice planning, `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract and structure artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
+Work Contract artifacts use existing planning lifecycle actions. `break_spec_approved` may write an approved structure for multi-slice planning, `spec_approved` may write a spec that contains a Work Contract, and `blueprint_approved` may write a design derived from an approved Work Contract; those same approval events may also run configured CLI side effects after approval. There is no separate `beislid:work_contract` config key in v1. Doctor validates configured Work Contract and structure artifact writes through the existing `beislid:lifecycle_actions` rules: relative `.md` paths, supported placeholders, prompted or safe auto writes, and no overwrite without approval. Beislið owns contract semantics; Rondo owns execution/proof/run state; Memento owns curated memory.
 
 ## Execution Envelope v0
 
@@ -689,7 +689,7 @@ CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, and `{event}`. O
 
 Every lifecycle action may set `on_failure: prompt | continue | abort`; omitted `on_failure` defaults to `prompt` for compatibility. `prompt` preserves the existing retry / skip-remaining-this-session / abort flow when an action fails. `continue` records a warning and proceeds without blocking the workflow, which is useful for explicitly best-effort side effects such as optional labels or local notes. `abort` stops the owning workflow immediately and should be reserved for side effects that are required before later steps are safe, such as a mandatory tracker transition in teams that rely on it.
 
-P0 also supports local planning artifacts for approved structures, specs, and designs through `type: artifact` actions, and `spec_approved` can also post the approved spec body back into the current tracker ticket body through a `type: tracker` action that reuses the configured `ticket_update` issue channel:
+P0 also supports ordered lifecycle actions for approved structures, specs, and designs. Use `type: artifact` to write local planning files, `type: cli` to run a configured side effect after approval, and `type: tracker` under `spec_approved` to post the approved spec body back into the current tracker ticket body through the configured `ticket_update` issue channel:
 
 ````markdown
 ## Lifecycle actions
@@ -711,18 +711,30 @@ events:
       - name: post-spec-body-to-tracker
         type: tracker
         approval: prompt
+      - name: run-approved-spec-hook
+        type: cli
+        command: 'planning-hook {event} {ticket_id} {artifact_path}'
+        approval: prompt
+        classes: [git-remote]
   blueprint_approved:
     actions:
       - name: write-design-artifact
         type: artifact
         approval: auto
         path: 'plans/{feature}-design.md'
+      - name: run-approved-design-hook
+        type: cli
+        command: 'planning-hook {event} {feature} {kind}'
+        approval: auto
+        classes: [workspace-write]
 ```
 ````
 
-`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. `tracker` actions on `spec_approved` post the approved spec body into the ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy. `approval: prompt` asks before writing/posting; `approval: auto` creates a missing file via auto-write but never overwrites an existing file. Omitted approval defaults to `prompt`. Omitted `on_failure` defaults to `prompt`: failed actions ask for retry / skip or override / abort. `on_failure: continue` warns and routes onward without that side effect; `on_failure: abort` stops downstream routing. Omitted paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
+`break-spec` runs `break_spec_approved` after the structure is approved. `spec` runs `spec_approved` after the spec is approved. `blueprint` runs `blueprint_approved` after the implementation design is approved. Actions run in configured order. Artifact `approval: prompt` asks before writing; artifact `approval: auto` creates a missing file via auto-write, but never overwrites an existing file. Omitted artifact approval defaults to `prompt`. `tracker` actions on `spec_approved` post the approved spec body into the ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy. Omitted `on_failure` defaults to `prompt`: failed actions ask for retry / skip or override / abort. `on_failure: continue` warns and routes onward without that side effect; `on_failure: abort` stops downstream routing. Omitted artifact paths use `plans/{feature}-structure.md`, `plans/{feature}-spec.md`, and `plans/{feature}-design.md`. Supported artifact path placeholders are `{feature}`, `{kind}`, and `{ticket_id}`. Paths must be relative `.md` file templates inside the repo, with no `..` segments. Parent directories are created as part of an approved or auto-write.
 
-Artifact results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted write, `auto-written` for an automatic missing-file write, `skipped` for user-declined prompts or existing-file conflicts the user declines, `not configured` when no event action exists, and `failed` for unexpected write/path errors.
+Planning-event CLI actions require `approval: auto` or `approval: prompt`, may declare action-policy `classes` (default `[workspace-write, git-remote]` when omitted), and use placeholders `{ticket_id}`, `{id}`, `{branch}`, `{event}`, `{feature}`, `{kind}`, and `{artifact_path}`. `{artifact_path}` resolves to the latest written/auto-written artifact path for that event, or empty when no artifact has been written. Skills pass placeholder values through argv construction when possible or shell-quote before execution, and they never expose approved structure/spec/design body text as a shell placeholder. Before each supported action, skills evaluate action policy with action id `lifecycle.<event>.<name>`. MCP/file-payload providers remain reserved for later lifecycle work; unsupported providers are reported by doctor and skipped by skills.
+
+Lifecycle results use the same status vocabulary in skill output and same-session handoff context: `written` for a prompted artifact write, `auto-written` for an automatic missing-file artifact write, `posted` for a tracker action, `ran` for a CLI action, `skipped` for declined prompts or existing-file conflicts the user declines, `denied` for action-policy denials, `reserved` for unsupported providers, `not configured` when no event action exists, and `failed` for unexpected write/path/command/post errors.
 
 Default `plans/` paths are intentionally discoverable by downstream skills. Custom paths are passed through same-session handoff context; broader later-session rediscovery is future work. Planning artifacts are also checkpoint-compatible state seeds: a fresh context may use an approved structure/spec/design artifact as its primary input when it captures enough context for the next skill.
 
@@ -1151,7 +1163,7 @@ These skills read `workflow.md`:
 - `ready-for-review`: PR target, clean-eval policy, ship-time planning-artifact policy, quality gates, scopes, review flow, final `fresh-eyes` policy, PR description formatting, triggered checks, and model-routing disclosure.
 - `review-response`: PR review source/update path, ticket update path, feedback handling, and model-routing disclosure.
 - `babysit`: PR review source/update path, configured gates/scopes/gate sets, action policy, babysit closeout policy, and goal-support disclosure.
-- `spec` / `blueprint`: planning artifact lifecycle actions for their own approval events plus model-routing status from the host.
+- `spec` / `blueprint`: approved-planning lifecycle actions for their own approval events plus model-routing status from the host.
 - `doctor`: all configured capabilities.
 - `retro`: current workflow config plus available run/session evidence, producing recommendations only; accepted config changes route through `setup`.
 - `setup`: writes and updates config.

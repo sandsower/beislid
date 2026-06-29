@@ -254,7 +254,7 @@ closeout:
 
 ### Lifecycle actions
 
-Lifecycle actions run side effects at named workflow events. They are not quality gates — gates verify branch readiness; lifecycle actions update external systems or write planning artifacts. For before/after phase hooks, use `lifecycle_hooks`.
+Lifecycle actions run side effects at named workflow events. They are not quality gates — gates verify branch readiness; lifecycle actions update external systems, write planning artifacts, or run configured approval-time hooks. For before/after phase hooks, use `lifecycle_hooks`.
 
 ````markdown
 ## Lifecycle actions
@@ -277,6 +277,11 @@ events:
       - name: post-spec-body-to-tracker
         type: tracker
         approval: prompt
+      - name: run-approved-spec-hook
+        type: cli
+        command: 'planning-hook {event} {ticket_id} {artifact_path}'
+        approval: prompt
+        classes: [git-remote]
   blueprint_approved:
     actions:
       - name: write-design-artifact
@@ -286,11 +291,12 @@ events:
 ```
 ````
 
-- `type: cli` actions run a command with `{ticket_id}`, `{branch}`, and `{event}` placeholders.
+- `type: cli` actions run a command with safe placeholders. Kickoff supports `{ticket_id}`, `{id}`, `{branch}`, and `{event}`; planning approval events also support `{feature}`, `{kind}`, and `{artifact_path}`.
 - `type: artifact` actions write a local Markdown file after approval.
 - `type: tracker` actions post the approved spec body into the current ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy.
-- `approval: auto` runs without prompting; `approval: prompt` asks first.
+- `approval: auto` runs a CLI/tracker action or creates a missing artifact without prompting; `approval: prompt` asks first. Existing artifact files still require an overwrite/choose/skip decision.
 - `on_failure` is optional and defaults to `prompt`, preserving the retry / skip-this-session / abort flow. Use `continue` for best-effort side effects that should only warn, or `abort` for mandatory side effects that must stop the workflow on failure.
+- Planning approval events support `artifact` and `cli`, with `tracker` additionally supported under `spec_approved`; checkpoint events remain artifact-only. Unsupported providers are reported by doctor and skipped by skills.
 
 `ready-for-review` can layer on `ship_time_artifacts` to summarize generated planning artifacts at handoff. The policy is narration-only in v1; it does not auto-commit or auto-delete files.
 

@@ -112,15 +112,15 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "status": "ok",
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
-      "probe_kind": "artifact",
-      "value": "(prompted artifact + tracker body post via ticket_update issue channel)"
+      "probe_kind": "mixed",
+      "value": "artifact + tracker + cli: planning-hook"
     },
     "lifecycle_actions.blueprint_approved": {
       "status": "ok",
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
-      "probe_kind": "artifact",
-      "value": "(auto artifact at runtime)"
+      "probe_kind": "mixed",
+      "value": "artifact + cli: planning-hook"
     },
     "lifecycle_actions.kickoff_context_ready": {
       "status": "ok",
@@ -235,8 +235,8 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ pr_review_source cli:gh                                  ok (probed <ISO-8601>)
 ✓ pr_review_update manual                                  ok (manual at runtime)
 ✓ lifecycle_actions.break_spec_approved artifact            ok (prompted artifact at runtime)
-✓ lifecycle_actions.spec_approved artifact/tracker          ok (prompted artifact + tracker body post via ticket_update issue channel)
-✓ lifecycle_actions.blueprint_approved artifact             ok (auto artifact at runtime)
+✓ lifecycle_actions.spec_approved mixed                    ok (artifact + tracker + cli: planning-hook)
+✓ lifecycle_actions.blueprint_approved mixed               ok (artifact + cli: planning-hook)
 ✓ lifecycle_actions.kickoff_context_ready artifact          ok (prompted artifact at runtime)
 ✓ lifecycle_actions.implementation_plan_created artifact    ok (auto artifact at runtime)
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
