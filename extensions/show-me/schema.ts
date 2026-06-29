@@ -240,7 +240,15 @@ export const AddSectionSchema = Type.Object({
 export const AddBlockSchema = Type.Object({
 	deckId: Type.String(),
 	sectionId: Type.String(),
-	block: Type.Unknown({ description: "ShowMeBlock JSON object. Canonical keys: markdown.markdown, table.columns/rows, code.code/language, diff.diff, diagram.diagram/language for Mermaid source, callout.text, verdict.text/status, file-role-table.rows. Common aliases like content/body and headers are normalized." }),
+	block: Type.Object(
+		{
+			type: Type.String({ description: "Show Me block type" }),
+		},
+		{
+			additionalProperties: Type.Unknown(),
+			description: "ShowMeBlock JSON object. Canonical keys: markdown.markdown, table.columns/rows, code.code/language, diff.diff, diagram.diagram/language for Mermaid source, callout.text, verdict.text/status, file-role-table.rows. Common aliases like content/body and headers are normalized.",
+		},
+	),
 });
 
 export const RunCommandSchema = Type.Object({

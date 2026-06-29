@@ -290,6 +290,11 @@ test("show-me renderer pins CDN libraries and clean-all tolerates corrupt deck r
 	assert.match(html, /marked@18\.0\.5\/lib\/marked\.umd\.js/);
 	assert.match(html, /dompurify@3\.4\.11\/dist\/purify\.min\.js/);
 	assert.match(html, /mermaid@11\.16\.0\/dist\/mermaid\.min\.js/);
+	assert.match(html, /integrity="sha384-ZD0fTOwPMHi7zM6WTVIWJR21I07lq0ccnqz3J6WMvQKG9thh4y7TA1QE6PJu0Af8" crossorigin="anonymous"/);
+	assert.match(html, /integrity="sha384-o44XUELLEnv\/iSlA1NWxBweqbD4TSR0qgq2VzVsxtkHS989JJjGKSE9vkfo5MN4K" crossorigin="anonymous"/);
+	assert.match(html, /integrity="sha384-T\/0lMUdJpd2S1ZHtRiofG3htU3xPCrFVeAQ1UUE2TJwlEJSV5NUwn30kP28n238E" crossorigin="anonymous"/);
+	assert.match(html, /integrity="sha384-F\/bZzf7p3Joyp5psL90p\/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous"/);
+	assert.match(html, /integrity="sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH" crossorigin="anonymous"/);
 	assert.doesNotMatch(html, /cdn\.jsdelivr\.net\/npm\/marked\/marked\.min\.js/);
 
 	await withTempState(async (stateDir) => {
