@@ -361,6 +361,24 @@ Workflow auth preflight warning:
 This PR changes GitHub workflow files, but `gh auth status` does not show `workflow` scope. Refresh auth, proceed with warning, or abort?
 ```
 
+Scope expansion / keep-vs-split warning:
+
+```text
+This review/fix path is expanding into a new subsystem or second scope. Keep it in this PR, or split the new scope into a follow-up ticket?
+```
+
+Beislið skill-change warning:
+
+```text
+This branch changes Beislið skills/config. This session may not be dogfooding freshly edited skill files until restart/reinstall; I will treat those edits as potentially stale.
+```
+
+PR CI post-create note:
+
+```text
+PR created. Poll/report CI once before final handoff, then include the result in the summary.
+```
+
 Clean evaluator setup failure prompt:
 
 ```text
