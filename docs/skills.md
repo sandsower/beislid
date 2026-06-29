@@ -7,9 +7,9 @@ Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.m
 ## Plan
 
 - `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.
-- `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract, write approved spec artifacts when configured, and optionally post the approved spec body back into the tracker body.
+- `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and run configured approved-spec lifecycle actions, including optional tracker posting when configured.
 - `break-spec`: break large specs into vertical implementation phases.
-- `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
+- `blueprint`: design before implementation from clear requirements or an approved Work Contract; may run configured approved-design lifecycle actions.
 - `envelope`: author, approve, and export execution envelopes for AFK slices as validated `.beislid/exports/` bundles; explicit trigger only. Re-feeding a manifest with pause/review feedback self-detects revision mode and re-exports a superseding version in place.
 - `poke-holes`: adversarial plan stress-test.
 
@@ -45,10 +45,10 @@ Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.m
 
 | Skill           | Category                    | Use when                                                                                                                  | Usually followed by                                           |
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec or Work Contract writing; runs configured spec artifact actions after approval | `break-spec` or `blueprint`                                   |
-| `break-spec`    | Product decomposition       | A spec or Work Contract is classified as `multi_slice`, or `project` boundaries are approved for slicing; runs configured structure artifact actions after approval | `blueprint` for one phase                                     |
+| `spec`          | Product shaping             | Brainstorming, vague tickets, lightweight PRD/spec or Work Contract writing; runs configured spec lifecycle actions after approval | `break-spec` or `blueprint`                                   |
+| `break-spec`    | Product decomposition       | A spec or Work Contract is classified as `multi_slice`, or `project` boundaries are approved for slicing; runs configured structure lifecycle actions after approval | `blueprint` for one phase                                     |
 | `kickoff`       | Ticket router               | Starting work from an existing ticket branch; reads `<repo>/.beislid/workflow.md`; may derive a Work Contract and write configured context checkpoints | `spec`, `break-spec`, or `blueprint`                          |
-| `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design artifact actions after approval | `implement`                                                   |
+| `blueprint`     | Implementation design gate  | Desired behavior or an approved Work Contract is known; code approach is not; runs configured design lifecycle actions after approval | `implement`                                                   |
 | `implement`     | Execution planning          | Implementation design is approved; may consume approved execution envelopes and write configured implementation-plan checkpoints | code changes + `verify`                                       |
 | `envelope`      | AFK export flow             | Explicitly invoked to author/approve/export execution envelopes for AFK slices in a standalone session; fail-closed export validated by `beislid export validate` | external runner execution (e.g. `rondo run-once`)             |
 | `verify`        | Evidence gate               | Before claiming done/fixed/passing                                                                                        | commit/submit                                                   |

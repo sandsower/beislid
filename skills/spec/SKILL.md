@@ -128,9 +128,9 @@ Population rules:
 
 Examples: typo-level doc fix with no branching → `atomic`; one coherent skill behavior update → `single_pr`; multiple shippable workflow slices → `multi_slice`; broad new-product or cross-system initiative needing milestones/boundaries → `project`.
 
-## Step 7: Run `spec_approved` artifact and tracker actions
+## Step 7: Run `spec_approved` lifecycle actions
 
-If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.spec_approved.actions[]` entries. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-spec.md` after explicit approval. If a workflow exists but no `spec_approved` action is configured, do not ask for ad-hoc tracker/local destinations; workflow config controls artifacts.
+If inside a git repo with `.beislid/workflow.md`, read only the `beislid:lifecycle_actions` block and execute supported `events.spec_approved.actions[]` entries in order. If no workflow exists, preserve standalone usefulness by offering a local write to `plans/<feature-name>-spec.md` after explicit approval. If a workflow exists but no `spec_approved` action is configured, do not ask for ad-hoc tracker/local destinations; workflow config controls lifecycle actions.
 
 Supported P0 action shapes:
 
@@ -140,30 +140,39 @@ Supported P0 action shapes:
   approval: prompt # optional; prompt when omitted, auto creates missing target
   on_failure: prompt # optional; prompt when omitted, or continue | abort
   path: 'plans/{feature}-spec.md' # optional default
-```
-
-```yaml
 - name: post-spec-body-to-tracker
   type: tracker
-  approval: prompt # optional; posts approved spec body through ticket_update.issue_tool / issue_command
+  approval: prompt # posts approved spec body through ticket_update.issue_tool / issue_command
+  on_failure: prompt # optional; prompt when omitted, or continue | abort
+- name: run-approved-spec-hook
+  type: cli
+  command: 'planning-hook {event} {ticket_id} {artifact_path}'
+  approval: prompt # required for cli
+  classes: [git-remote] # optional action-policy classes
   on_failure: prompt # optional; prompt when omitted, or continue | abort
 ```
 
-Execute `type: artifact` actions first to write the approved spec. Execute `type: tracker` actions after that to post the approved spec body into the tracker ticket body through the configured `ticket_update` issue channel; tracker actions must evaluate `ticket.update` policy before posting. Skip other providers as reserved. Multiple actions are allowed and run in order. `approval: prompt` asks write/skip and shows action name, resolved path or tracker target, and parent directory creation when applicable. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Skip and reserved actions do not block routing. `on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed actions, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and routes onward without that side effect, and `abort` stops downstream routing.
+Execute `type: artifact`, `type: tracker`, and `type: cli` under `spec_approved`; skip other providers as reserved. Multiple actions are allowed and run in order. Before each supported action, evaluate action policy: artifact actions use action id `lifecycle.spec_approved.<name>` with class `workspace-write`; tracker actions use `ticket.update`; CLI actions use `lifecycle.spec_approved.<name>` with configured `classes` or the conservative default `[workspace-write, git-remote]`. A policy denial records `denied` and skips that action; a policy `ask` boundary must be handled before running.
 
-Default path: `plans/{feature}-spec.md`. Supported placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
+For artifact actions, `approval: prompt` asks write/skip and shows action name, resolved path, and parent directory creation. `approval: auto` writes automatically only when the target does not exist. Existing targets always prompt: overwrite / choose another path / skip. Default path: `plans/{feature}-spec.md`. Supported artifact placeholders are `{feature}`, `{kind}` (`spec`), and `{ticket_id}` when ticket context is known. Derive `{feature}` from the approved spec title, then ticket title, then branch name; ask for a filename stem if none is available. Slug values by lowercasing, replacing non-alphanumeric runs with `-`, collapsing repeats, stripping edge `-`, and keeping names readable (about 60 chars). If `{ticket_id}` is used without ticket context, ask for another path or skip. Paths must be relative, stay inside the repo root (or cwd for standalone fallback), contain no `..`, and end in `.md`. Create parent directories only as part of an approved or auto write.
 
-Artifact content must be the approved spec as primary content. Tracker actions must use the approved spec body, including the canonical `## Validation/Test Plan` section, as the tracker update body; they may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related artifact status when writing files. Do not alter approved decisions. Treat written spec artifacts and tracker posts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`.
+Artifact content must be the approved spec as primary content. It may add a clearly labeled `## Artifact Context` section with known source event, ticket, branch, and related lifecycle status. Do not alter approved decisions. Treat written spec artifacts as checkpoint-compatible state seeds for fresh-context handoff into `break-spec` or `blueprint`.
 
-Record action results as `written`, `auto-written`, `skipped`, `not configured`, or `failed`, with paths or tracker targets when available.
+For tracker actions, `approval: prompt` asks post/skip and shows action name plus tracker target. `approval: auto` posts once configured after policy allows it. Tracker actions must use the approved spec body, including the canonical `## Validation/Test Plan` section, as the tracker update body through the configured `ticket_update` issue channel. Treat tracker posts as same-session lifecycle results, not local checkpoint artifacts.
+
+For CLI actions, `approval` is required. `approval: prompt` asks run/skip and shows action name, command summary, placeholders used, and action-policy classes. `approval: auto` runs once configured after policy allows it. Supported CLI placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, `{event}` (`spec_approved`), `{feature}`, `{kind}` (`spec`), and `{artifact_path}` (latest written/auto-written artifact path for this event, or empty). Pass placeholder values through argv construction when available or shell-quote them before execution; never splice raw branch/ticket text into a shell and never expose the approved spec body as a command-line placeholder.
+
+`on_failure` may be `prompt`, `continue`, or `abort`; omitted means `prompt`. On failed actions, `prompt` asks retry / skip or explicitly override / abort, `continue` warns and routes onward without that side effect, and `abort` stops downstream routing.
+
+Record lifecycle results as `written`, `auto-written`, `posted`, `ran`, `skipped`, `denied`, `reserved`, `not configured`, or `failed`, with paths/action names/tracker targets when available.
 
 ## Step 8: Output and route
 
-Print the approved spec summary, artifact status/path list, and routing recommendation.
+Print the approved spec summary, lifecycle status/path list, and routing recommendation.
 
 Then route by `scope_classification` when present:
-- `atomic` or `single_pr`: hand off to `blueprint` with the approved spec/Work Contract and any artifact path written in this session.
-- `multi_slice`: hand off to `break-spec` with the approved spec/Work Contract and any artifact path written in this session.
+- `atomic` or `single_pr`: hand off to `blueprint` with the approved spec/Work Contract and any lifecycle artifact path written in this session.
+- `multi_slice`: hand off to `break-spec` with the approved spec/Work Contract and any lifecycle artifact path written in this session.
 - `project`: recommend `spec_refinement` until project boundaries are approved, then hand off to `break-spec`/slice planning; do not scaffold by default.
 - `unknown`: keep refining; do not hand off to automation as approved.
-- If invoked by `kickoff`, return the approved spec or Work Contract, artifact status/path, and routing recommendation to `kickoff`.
+- If invoked by `kickoff`, return the approved spec or Work Contract, lifecycle status/path, and routing recommendation to `kickoff`.

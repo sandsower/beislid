@@ -72,7 +72,7 @@ rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewe
 
 ## Quality gates
 
-The repo has no scope separation (single markdown distribution). Top-level gates run install integration, skill validation, and artifact/workflow consistency checks from the repo root.
+The repo has no scope separation (single markdown distribution). Top-level gates run install integration, skill validation, and artifact/workflow/planning-lifecycle consistency checks from the repo root.
 
 ```beislid:gates
 - name: diff-whitespace
@@ -95,8 +95,8 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
-- name: break-spec-artifact-consistency
-  command: 'python3 scripts/check_break_spec_artifact_consistency.py'
+- name: approved-planning-lifecycle-consistency
+  command: 'python3 scripts/check_planning_lifecycle_consistency.py'
   parallel_safe: true
   mutates: false
   cost: cheap

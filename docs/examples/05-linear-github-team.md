@@ -85,7 +85,7 @@ rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewe
 
 ## Lifecycle actions
 
-Assign the ticket on kickoff and write planning artifacts after approval.
+Assign the ticket on kickoff, write planning artifacts after approval, and optionally run a configured approved-design hook.
 
 ```beislid:lifecycle_actions
 events:
@@ -102,6 +102,11 @@ events:
         type: artifact
         approval: auto
         path: 'plans/{feature}-design.md'
+      - name: notify-design-approved
+        type: cli
+        command: 'planning-hook {event} {ticket_id} {artifact_path}'
+        approval: prompt
+        classes: [git-remote]
 ```
 
 ## Lifecycle hooks

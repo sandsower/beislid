@@ -92,7 +92,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `gate_sets` — changed-file-aware gate selection. Fields: `sets` (map of set name → object with `gates`, optional `cwd`, optional `stage`) and `selectors` (ordered list with `name`, `paths`, `gate_sets`, optional `exclude`). See **Gate-set selection shape** below.
 
 **Lifecycle actions:**
-- `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.break_spec_approved.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; planning approval and checkpoint events support `type: artifact`, and `spec_approved` may also include `type: tracker` actions that post approved spec text into the current ticket body through the configured `ticket_update` issue channel. Tracker actions are approval-gated and action-policy-checked with `ticket.update`. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command` and require `approval` (`auto` / `prompt`). Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and documented placeholders. Any action may set `on_failure` to `prompt`, `continue`, or `abort`; omitted means `prompt`. Actions run in order. For before/after phase hooks, use `lifecycle_hooks`.
+- `lifecycle_actions` — event-keyed side effects. P0 executable events are `events.kickoff_start.actions[]`, `events.break_spec_approved.actions[]`, `events.spec_approved.actions[]`, `events.blueprint_approved.actions[]`, `events.kickoff_context_ready.actions[]`, and `events.implementation_plan_created.actions[]`. `kickoff_start` supports `type: cli`; planning approval events (`break_spec_approved`, `spec_approved`, `blueprint_approved`) support `type: artifact` and `type: cli`, and `spec_approved` may also include `type: tracker` actions that post approved spec text into the current ticket body through the configured `ticket_update` issue channel. Checkpoint events support `type: artifact` only. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` may be validated but are not executed by P0 skills yet. Every action has `name` and `type`. CLI actions use `command`, require `approval` (`auto` / `prompt`), and may declare `classes` using action-policy class names. Tracker actions are approval-gated and action-policy-checked with `ticket.update`. Artifact actions may use optional `approval` (defaults to `prompt`) plus optional `path` file templates and documented placeholders. Any action may set `on_failure` to `prompt`, `continue`, or `abort`; omitted means `prompt`. Actions run in order. For before/after phase hooks, use `lifecycle_hooks`.
 
 **Lifecycle hooks:**
 - `lifecycle_hooks` — phase-boundary side effects. Fields: `phases.<phase>.before.actions[]` and `phases.<phase>.after.actions[]`. Supported phases are `spec`, `blueprint`, `implement`, `verify`, `review`, `fresh_eyes`, `ready_for_review`, and `review_response`. Each hook action reuses the lifecycle action shape (`name`, `type`, provider-specific `command` / `tool`, `approval`) and may add optional `when` trigger rules: `paths`, `exclude`, `scopes`, and `branch_pattern`. Hooks run before/after the phase body, obey action policy and approval gates, and do not replace quality gates.
@@ -507,7 +507,7 @@ events:
 
 For CLI actions, `approval` is required. `approval: auto` runs once configured; `approval: prompt` asks before running. Orchestrators must pass placeholder values through argv construction when available or shell-quote them before execution; raw branch/ticket text must not be spliced into a shell. `on_failure` is optional and defaults to `prompt`, which preserves the current retry / skip-remaining-this-session / abort flow when a configured side effect fails. `on_failure: continue` warns and proceeds without blocking the workflow, while `on_failure: abort` stops the owning skill immediately. Use `continue` only for explicitly best-effort side effects; use `abort` when later workflow steps are unsafe without the side effect.
 
-P0 also executes artifact actions for approved planning outputs:
+P0 also executes ordered actions for approved planning outputs. Artifact actions write the approved Markdown output; CLI actions run configured side effects after approval:
 
 ````markdown
 ## Lifecycle actions
@@ -531,6 +531,11 @@ events:
       - name: post-spec-body-to-tracker
         type: tracker
         approval: prompt
+      - name: announce-approved-spec
+        type: cli
+        command: 'notify-planning-approved {event} {ticket_id} {artifact_path}'
+        approval: prompt
+        classes: [git-remote]
   blueprint_approved:
     actions:
       - name: write-design-artifact
@@ -538,12 +543,19 @@ events:
         approval: auto
         # optional; default is plans/{feature}-design.md
         path: 'plans/{feature}-design.md'
+      - name: run-design-hook
+        type: cli
+        command: 'planning-hook {event} {feature} {kind}'
+        approval: auto
+        classes: [workspace-write]
 ```
 ````
 
-`break-spec` owns the `break_spec_approved` event; `spec` owns the `spec_approved` event; `blueprint` owns the `blueprint_approved` event. Kickoff only passes context in and records returned artifact status/path. Under these events, P0 supports `type: artifact` for all planning approvals, and `spec_approved` additionally supports `type: tracker` posts that reuse the configured `ticket_update` issue channel to update the ticket body with approved spec text. CLI, MCP, and other providers are reserved and skipped unless the event explicitly documents them. Artifact actions write the approved structure/spec/design Markdown to a repo file; a `work-contract-v1` section or artifact uses these same events rather than a separate config key. `approval: prompt` asks before writing; `approval: auto` creates a missing target without another prompt; omitted approval defaults to `prompt`. Existing targets always prompt for overwrite / choose another path / skip. Skips and reserved providers do not block routing to downstream skills. Failed actions use `on_failure`: omitted/`prompt` asks for retry / skip or override / abort, `continue` warns and routes onward without that side effect, and `abort` stops downstream routing.
+`break-spec` owns the `break_spec_approved` event; `spec` owns the `spec_approved` event; `blueprint` owns the `blueprint_approved` event. Kickoff only passes context in and records returned lifecycle status/path. Under these events, P0 supports `type: artifact` and `type: cli` for all planning approvals, and `spec_approved` additionally supports `type: tracker` posts that reuse the configured `ticket_update` issue channel to update the ticket body with approved spec text. MCP and other providers are reserved and skipped unless the event explicitly documents them. Artifact actions write the approved structure/spec/design Markdown to a repo file; a `work-contract-v1` section or artifact uses these same events rather than a separate config key. `approval: prompt` asks before writing, running, or posting; `approval: auto` creates a missing artifact without another prompt or runs/posts once configured; omitted artifact approval defaults to `prompt`, while CLI and tracker approval are required. Existing artifact targets always prompt for overwrite / choose another path / skip. Skips and reserved providers do not block routing to downstream skills. Failed actions use `on_failure`: omitted/`prompt` asks for retry / skip or override / abort, `continue` warns and routes onward without that side effect, and `abort` stops downstream routing.
 
 Artifact `path` is a file path template. If omitted, defaults are `plans/{feature}-structure.md` for break-spec outputs, `plans/{feature}-spec.md` for specs, and `plans/{feature}-design.md` for designs. Supported placeholders are `{feature}` (slug from approved title, then ticket title, then branch, else ask), `{kind}` (`structure`, `spec`, or `design`), and `{ticket_id}` when ticket context is known. If `{ticket_id}` is used and no ticket id is available, runtime asks for another path or skip; it must not write `unknown` or silently drop the placeholder. Paths must be relative, stay inside the repo root, contain no `..` segments, and end in `.md`. Parent directories may be created as part of an approved or auto write.
+
+Planning-event CLI actions use the same placeholder safety posture as kickoff lifecycle CLI actions: orchestrators pass values through argv construction when available or shell-quote before execution, never splicing raw branch/ticket text into a shell. Supported planning placeholders are `{ticket_id}`, `{id}` (alias), `{branch}`, `{event}`, `{feature}`, `{kind}`, and `{artifact_path}` (the latest written/auto-written artifact path for this event, or empty when no artifact has been written). Do not expose approved structure/spec/design body text as a command-line placeholder; use an artifact path or a future file-based provider instead. Before each action, skills evaluate action policy with action id `lifecycle.<event>.<name>`; artifact actions use class `workspace-write`, and CLI actions use configured `classes` or the conservative default `[workspace-write, git-remote]`.
 
 Planning artifacts are checkpoint-compatible state seeds: a fresh context may use an approved structure/spec/design artifact as primary input when it captures enough context for the next skill. Checkpoint event artifacts are a narrow bridge toward clear-context and Rondo-style execution when workflows need operational resume metadata around a boundary, not just the approved planning deliverable. P0 executes `kickoff_context_ready` after kickoff has enough context to choose the next route, and `implementation_plan_created` after `implement` has written the implementation plan but before code changes. Reserved checkpoint events `review_feedback_loaded` and `ready_for_review_pre_submit` are valid to document future workflow intent, but current skills report and skip them.
 
@@ -551,7 +563,7 @@ Checkpoint event artifacts use the same safety posture as planning artifacts: `a
 
 The durable run ledger is separate from workflow-configured checkpoint artifacts. It lives in external Beislið state by default at `${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/` and is managed by `beislid run-ledger ...`. The ledger may index checkpoint artifact paths, but it owns run IDs, append-only event history, gate log indexes, interruption/resume metadata, approved risks, and final reports. Current run status values are `running`, `interrupted`, `failed`, and `completed`; repo-local `.beislid/runs` is reserved for a future explicit opt-in.
 
-Future events such as `pr_opened`, ship-time artifact handling, and repo-local run-ledger storage are reserved for later Beislið versions.
+Future events such as `pr_opened`, MCP/file-payload providers for planning events, ship-time artifact handling, and repo-local run-ledger storage are reserved for later Beislið versions.
 
 ## Explore skill shape
 
