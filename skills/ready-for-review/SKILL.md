@@ -31,7 +31,7 @@ repo_hash=$(git rev-list --max-parents=0 HEAD | sort | head -c 12)
 workflow_hash=$(git hash-object .beislid/workflow.md)
 ```
 
-Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` and starts with empty in-memory state; matching hash means `fresh` and loads capability entries. Per-cap freshness uses `cache_ttl_hours` from workflow.md, default 24.
+Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` and starts with empty in-memory state; matching hash means `fresh` and loads capability entries. Per-cap freshness uses `probe_cache.ttl_hours`, default 24.
 
 After config/cache setup, initialize verbose transcript if enabled and best-effort `beislid run-ledger init/resume ... --flow ready-for-review`. Record safe aux/phase/approval/gate/review/side-effect/final events. Warn on ledger failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
 

@@ -45,7 +45,7 @@ Read three files in this order:
 
 2. `probe-semantics.md` (relative to this SKILL.md, resolved through the per-skill symlink). If the Read fails (broken symlink), hard-fail:
 
-   > 🛑 Doctor's probe-semantics aux is unreadable — likely a broken symlink. Re-run `~/Projects/beislid/install.sh` to repair it.
+   > 🛑 Doctor's probe-semantics aux is unreadable — likely a broken symlink. Re-run the Beislið installer to repair it.
 
 3. `workflow-md-format.md` (relative to this SKILL.md, same pattern). Same broken-symlink message tailored to the format spec.
 
