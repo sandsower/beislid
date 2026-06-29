@@ -44,6 +44,19 @@ When no current PR is found:
 
 ## PR review source notes
 
+Detection boundary:
+
+```
+🔒 PR detection is identity-only. `gh pr view` does not authorize PR review reads; feedback retrieval must use configured `pr_review_source` or strict paste.
+```
+
+Absent source:
+
+```
+⚠️ `pr_review_source` is not configured. I will not fetch PR review feedback with ad-hoc `gh` commands.
+Paste the full source, including unresolved threads, author/source, status, file/line if relevant, and links if available.
+```
+
 Missing `threads_command`:
 
 ```
@@ -68,7 +81,13 @@ Manual update:
 Absent update:
 
 ```
-💭 No PR review update path is configured — I'll print reply and re-request instructions.
+💭 No PR review update path is configured — I'll print reply and re-request instructions instead of posting through ad-hoc `gh` commands.
+```
+
+Update boundary:
+
+```
+🔒 PR review updates require configured `pr_review_update`; absent/manual/skipped update paths mean print-only replies and no ad-hoc PR comments, inline replies, or review re-requests.
 ```
 
 JSON-file write rule:

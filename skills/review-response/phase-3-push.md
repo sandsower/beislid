@@ -6,6 +6,8 @@ Authoritative JIT protocol for Phase 3. Load after Phase 2 has completed fixes/d
 
 Print the Phase 3 entry one-liner from `review-response-templates.md`. In verbose mode, emit `✓ review-response/phase-3-push v1 loaded` after reading this file. Print the Phase 3 exit one-liner after push and reply handling.
 
+**Hard boundary:** Push is not PR feedback update authority. Only configured `pr_review_update` may post PR comments/replies, submit/dismiss reviews, or re-request review; absent/manual/skipped means print only.
+
 ## 3a. Decide whether gates are needed
 
 Changes that only affect comments, variable names within function bodies, or whitespace are cosmetic. Everything else is functional.
@@ -16,22 +18,22 @@ If only cosmetic changes were made, pushing without gates is allowed after telli
 
 Categorize the fix diff by gate model:
 
-- `gate_sets`: match selectors, apply excludes, union/de-dupe sets, apply set `cwd`/`stage` defaults before normalization, run selected executable `pre-pr` gates, and record reasons.
+- `gate_sets`: select by files, apply excludes/defaults, union/de-dupe, run executable `pre-pr` gates, and record reasons.
 - `scopes`: for each touched scope, `pushd <scope.cwd>` and run executable `pre-pr` gates.
 - top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
 - none: print `no gates configured — skipping`.
 
-Normalize effective gates after `gate_sets` selection, or before legacy scope/top-level selection. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, and `mutates: false`. P0 review-response executes gates where `stage` is absent/`pre-pr`, `kind` is absent/`sensor`, `command` is present, and `execution` is absent/`computational`. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor declarations are skipped-by-execution, not failures.
+Normalize gates before running. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, `mutates: false`. P0 runs absent/`pre-pr` sensor computational gates with commands. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor gates are skipped-by-execution.
 
 Before each selected gate, probe the gate command plus any `required_tools[]`. On failure use the gate prompt; `(b)` skips only this gate and is not cached.
 
-For every gate, capture duration and parse stdout/stderr into the shared Gate envelope; use pytest parser for pytest-like output, otherwise generic. Store raw logs by path when possible, or a safe summary.
+For every gate, capture duration and parse stdout/stderr into the shared Gate envelope; store raw logs by path when possible, otherwise a safe summary.
 
 Gate failure handling:
 
 - Gate `autofix` with `fail` / not env failure: show summary, policy-check, run on `allow`/approved `ask`, show diff, ask before commit.
-- Envelope `status: error` or `environment_failure: true`: do not run autofix; prompt to repair/retry the environment or abort.
-- Gate without `autofix`: prompt from the envelope (`summary`, key failures, retryable/environment flags, suggested next action, raw-log reference) plus configured `failure.*` / `output.parser` context. Do not guess.
+- Envelope error/environment failure: do not autofix; prompt to repair/retry or abort.
+- No `autofix`: prompt from the envelope plus configured failure/parser context. Do not guess.
 
 If `split_policy: exclusive` and post-fix diff touches >1 scope, warn but don't block. `gate_sets` unioning areas is not itself a violation.
 
@@ -57,7 +59,7 @@ For PR review items:
 - Write temp JSON payloads and substitute `{json_file}` into configured commands. Never shell-interpolate comment bodies.
 - Clear-fix replies may be `Fixed in <short-sha>` after commit/push when fast path or item-level approval authorized them.
 - Pushback and clarification replies always require per-item approval before posting.
-- If update is absent, `type: manual`, or skipped, print reply instructions.
+- If update is absent, `type: manual`, or skipped, print reply instructions only. Do not use ad-hoc `gh api`, `gh pr review`, `gh pr comment`, GraphQL, or host API fallbacks.
 
 Reply payload:
 
@@ -73,7 +75,7 @@ For QA/ticket items:
 
 ## 3f. Re-request review
 
-Only re-request review when the fix involves substantive changes (new logic, pushback, investigation-driven rewrites). Do NOT re-request when simply implementing what the reviewer asked for; the push and reply are enough.
+Re-request only for substantive changes (new logic, pushback, investigation-driven rewrites). Do NOT re-request for simply implementing requested fixes; push/reply is enough.
 
 If warranted and `pr_review_update.rerequest_command` exists, write JSON payload:
 
@@ -81,7 +83,7 @@ If warranted and `pr_review_update.rerequest_command` exists, write JSON payload
 { "reviewers": ["<reviewer>"] }
 ```
 
-Policy-check `pr.review.rerequest`, then run configured command with `{json_file}` on `allow`/approved `ask`. If absent/manual/skipped, print instructions.
+Policy-check `pr.review.rerequest`, then run configured command with `{json_file}` on `allow`/approved `ask`. If absent/manual/skipped, print only; no ad-hoc fallbacks.
 
 ## Outputs to run end
 

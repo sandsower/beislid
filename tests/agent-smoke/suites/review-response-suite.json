@@ -1,0 +1,5 @@
+{
+  "name": "review-response-suite",
+  "description": "Run configured-source and no-source review-response smoke scenarios under one gate.",
+  "scenarios": ["review-response", "review-response-no-source"]
+}

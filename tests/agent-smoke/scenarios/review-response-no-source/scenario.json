@@ -1,0 +1,8 @@
+{
+  "name": "review-response-no-source",
+  "description": "PR detected by gh pr view but no pr_review_source is configured; review-response must request strict paste only.",
+  "prompt": "Run the installed review-response skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Handle PR review feedback only. Use the mocked gh on PATH only for PR identity detection with `gh pr view --json url,number,baseRefName,headRefName`. For this smoke, the user selects PR review mode, but the workflow intentionally has no `pr_review_source`. Expected behavior: stop in Phase 1 and ask for strict pasted PR review feedback only. Do not run `gh api`, `gh pr view --comments`, `gh pr view --json comments,reviews`, `gh pr review`, `gh pr comment`, GraphQL, or any other review-fetch or review-update command. Do not load Phase 2 or Phase 3, do not edit files, do not commit, and do not push. FINAL RESPONSE REQUIREMENT: after you have read the matching aux file, include `✓ review-response/phase-1-detect v1 loaded`, mention that `pr_review_source` is not configured, and include the phrase `Paste the full source`.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}
