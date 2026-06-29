@@ -18,7 +18,7 @@ Apply this policy to `review`, final checks, and fast-path combined review:
 - Never silently skip review coverage; fast-path combined review must be explicit.
 - Cancellation is not a pass.
 
-If cancel-and-salvage: extract partial output. Carry usable findings by severity; mark incomplete observations. If `approval_gates.reduced_review_coverage` is `auto`, record `auto-accepted` in transcript/ledger, continue. Else require explicit reduced-coverage acceptance in the final blocking response; record in transcript, exit summary, memory brief, PR notes.
+If cancel-and-salvage: extract partial output. Carry usable findings; mark incomplete observations. If `approval_gates.reduced_review_coverage` is `auto`, record `auto-accepted` in transcript/ledger, continue. Else ask reduced-coverage acceptance only in the final blocking response; record in transcript, exit summary, memory, PR notes.
 
 ## 3a. Normal review loop
 
