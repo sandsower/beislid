@@ -39,7 +39,7 @@ Break work into bite-sized tasks (2-5 minutes each). Each task specifies:
 2. Run it — confirm it fails (red)
 3. Write minimal code to pass (green)
 4. Refactor if needed
-5. Commit
+5. Commit the task or batch before starting the next one or handing off
 
 **TDD exceptions** — mark tasks as non-TDD only when testing doesn't apply:
 - CSS/styling changes
@@ -96,7 +96,7 @@ Create an item for every task in the host agent's todo/task mechanism. If the ho
 ## Phase 3: Execute
 
 ### Single tasks
-Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group only when policy allows or `ask` is approved.
+Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group before starting the next task or handing off; if policy allows, do it immediately after verification. If policy asks or denies, stop at the commit boundary before advancing.
 
 ### Parallel batches
 When a batch has 3+ independent tasks, dispatch subagents:
