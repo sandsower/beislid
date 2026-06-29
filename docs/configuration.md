@@ -1234,7 +1234,7 @@ Project install creates:
 - `<project>/.claude/skills`
 - `<project>/.codex/skills`
 
-It writes `<project>/.beislid/project-install.json` with source path, version/commit, mode, targets, and install counts. In copy mode, each copied skill dir also gets a `.beislid-owner.json` marker with `owner: beislid`, `mode: copy`, the skill name, host, source path, version, and commit. Reruns refresh existing Beislið-owned copied dirs using either the marker or manifest as ownership evidence. Unmarked project files or directories are skipped and are not clobbered, even with `--force`.
+It writes `<project>/.beislid/project-install.json` with source path, version/commit, mode, targets, and install counts. In copy mode, each copied skill dir also gets a `.beislid-owner.json` marker with `owner: beislid`, `mode: copy`, the skill name, host, source path, version, and commit. Reruns refresh existing Beislið-owned copied dirs using either the marker or manifest as ownership evidence. `beislid status project [path]` reports missing skills per host and exits non-zero when any supported host is incomplete. Unmarked project files or directories are skipped and are not clobbered, even with `--force`.
 
 Project installs do not edit `.gitignore` by default. They print this suggested block:
 

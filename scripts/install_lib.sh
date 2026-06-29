@@ -1050,6 +1050,18 @@ _project_copy_is_owned() {
   _project_copy_marker_owns "$dst" "$skill" || _project_manifest_owns_copy "$project" "$host" "$skill" "$dst"
 }
 
+_project_skill_is_installed() {
+  local project="$1" host="$2" skill="$3" dir="$4" expected
+  expected="$SCRIPT_DIR/skills/$skill"
+  if [[ -L "$dir/$skill" && "$(readlink "$dir/$skill")" == "$expected" ]]; then
+    return 0
+  fi
+  if [[ -d "$dir/$skill" ]] && _project_copy_is_owned "$project" "$host" "$skill" "$dir/$skill"; then
+    return 0
+  fi
+  return 1
+}
+
 _write_project_copy_marker() {
   local dst="$1" project="$2" host="$3" skill="$4" src="$5" fingerprint="$6"
   if command -v python3 >/dev/null 2>&1; then
@@ -1370,11 +1382,10 @@ beislid_install_project() {
 
 _count_project_installed_skills() {
   local project="$1"
-  local count=0 dir skill_dir skill expected host found
+  local count=0 dir skill_dir skill host found
   for skill_dir in "$SCRIPT_DIR"/skills/*/; do
     [[ -d "$skill_dir" ]] || continue
     skill="$(basename "$skill_dir")"
-    expected="$SCRIPT_DIR/skills/$skill"
     found=0
     for host in agents claude codex; do
       case "$host" in
@@ -1382,11 +1393,7 @@ _count_project_installed_skills() {
         claude) dir="$project/.claude/skills" ;;
         codex) dir="$project/.codex/skills" ;;
       esac
-      if [[ -L "$dir/$skill" && "$(readlink "$dir/$skill")" == "$expected" ]]; then
-        found=1
-        break
-      fi
-      if [[ -d "$dir/$skill" ]] && _project_copy_is_owned "$project" "$host" "$skill" "$dir/$skill"; then
+      if _project_skill_is_installed "$project" "$host" "$skill" "$dir"; then
         found=1
         break
       fi
@@ -1428,7 +1435,7 @@ PY
     echo "  manifest: missing ($manifest)"
   fi
 
-  local name dir state count
+  local name dir state count failed=0 host_missing skill_dir skill
   for name in agents claude codex; do
     case "$name" in
       agents) dir="$project/.agents/skills" ;;
@@ -1441,10 +1448,30 @@ PY
       state="missing"
     fi
     echo "  $name: $state ($dir)"
+    if [[ "$state" == "missing" ]]; then
+      failed=1
+      continue
+    fi
+
+    host_missing=0
+    for skill_dir in "$SCRIPT_DIR"/skills/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      skill="$(basename "$skill_dir")"
+      if _project_skill_is_installed "$project" "$name" "$skill" "$dir"; then
+        continue
+      fi
+      echo "    ✗ $skill"
+      host_missing=1
+      failed=1
+    done
+    if [[ "$host_missing" == 0 ]]; then
+      echo "    ✓ all skills"
+    fi
   done
 
   count="$(_count_project_installed_skills "$project")"
   echo "  installed_skills: $count"
+  return "$failed"
 }
 
 _preserve_manifest_for_update() {

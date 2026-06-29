@@ -1791,6 +1791,25 @@ test_cli_project_status_reports_manifest_and_counts() {
   assert_stdout_contains "agents: present ($project/.agents/skills)"
   assert_stdout_contains "claude: present ($project/.claude/skills)"
   assert_stdout_contains "codex: present ($project/.codex/skills)"
+  assert_stdout_contains "✓ all skills"
+  assert_stdout_contains "installed_skills: $expected_skills"
+}
+
+test_cli_project_status_reports_missing_skill() {
+  local project="$TMP/project-status-missing-skill"
+  mkdir -p "$project/.beislid"
+  printf '<!-- beislid-workflow: v1 -->\n' >"$project/.beislid/workflow.md"
+  run_cli install project "$project"
+  rm "$project/.claude/skills/verify"
+
+  if run_cli status project "$project"; then
+    note_fail "expected project status to fail when a host is missing a core skill"
+  fi
+
+  local expected_skills=${#SKILLS_EXPECTED[@]}
+  assert_stdout_contains "beislid project status"
+  assert_stdout_contains "claude: present ($project/.claude/skills)"
+  assert_stdout_contains "✗ verify"
   assert_stdout_contains "installed_skills: $expected_skills"
 }
 
@@ -1798,7 +1817,9 @@ test_cli_project_status_missing_manifest() {
   local project="$TMP/project-status-missing"
   mkdir -p "$project"
 
-  run_cli status project "$project"
+  if run_cli status project "$project"; then
+    note_fail "expected project status to fail when the project has no installed skills"
+  fi
 
   assert_stdout_contains "beislid project status"
   assert_stdout_contains "manifest: missing ($project/.beislid/project-install.json)"
@@ -1992,6 +2013,7 @@ run_test "project workflow note survives metadata block"       test_project_work
 run_test "install.sh --project rejects user-only flags"        test_install_sh_project_rejects_user_only_flags
 run_test "repo ignores project manifest path"                  test_repo_ignores_project_manifest_path
 run_test "CLI project status reports manifest and counts"      test_cli_project_status_reports_manifest_and_counts
+run_test "CLI project status reports missing skill"           test_cli_project_status_reports_missing_skill
 run_test "CLI project status handles missing manifest"         test_cli_project_status_missing_manifest
 run_test "pi package manifest includes default extensions"     test_pi_package_manifest_includes_default_extensions
 run_test "pi Beislið command registry matches skills"         test_pi_beislid_command_registry_matches_skills
