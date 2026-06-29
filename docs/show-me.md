@@ -181,7 +181,7 @@ The global deck index is written with atomic replacement and can be rebuilt from
 
 ## Pi tooling
 
-The portable skill works without Pi-specific tooling by writing files manually. In Pi, the Beislið Pi extension routes `/show-me` to this portable skill like the rest of the skill surface.
+The portable skill works without Pi-specific tooling by writing files manually. In Pi, when the deck-builder extension is also enabled, the Beislið Pi extension routes `/show-me-skill` to this portable skill while `/show-me` remains the deck-builder command.
 
 Older Beislið builds included a separate Show Me Pi deck-builder extension. That extension is no longer packaged by default; keep using the portable skill workflow unless a future package reintroduces dedicated deck-builder tools.
 

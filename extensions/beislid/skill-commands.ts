@@ -25,7 +25,9 @@ export const BEISLID_SKILLS = [
 
 export type BeislidSkill = (typeof BEISLID_SKILLS)[number];
 
-export const COMMAND_COLLISIONS: Partial<Record<BeislidSkill, string>> = {};
+export const COMMAND_COLLISIONS: Partial<Record<BeislidSkill, string>> = {
+	"show-me": "show-me-skill",
+};
 
 export const BOUNDARY_CAPABLE_SKILLS = new Set<BeislidSkill>([
 	"break-spec",
