@@ -1,9 +1,10 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { execFile } from "node:child_process";
 import { readFile, rm } from "node:fs/promises";
-import { AddAssetSchema, AddBlockSchema, AddNeedsCaptureSchema, AddSectionSchema, CaptureBrowserScreenshotSchema, CreateDeckSchema, DeckIdSchema, RunCommandSchema } from "./schema.js";
+import { AddAssetSchema, AddBlockSchema, AddNeedsCaptureSchema, AddSectionSchema, CaptureBrowserScreenshotSchema, CaptureScreenScreenshotSchema, ConvertGifToVideoSchema, ConvertVideoToGifSchema, CreateDeckSchema, DeckIdSchema, RecordTerminalSessionSchema, RunCommandSchema } from "./schema.js";
 import { type AddAssetInput, addAsset } from "./asset-manager.js";
 import { type CaptureBrowserScreenshotInput, captureBrowserScreenshot } from "./capture-browser.js";
+import { captureScreenScreenshot, convertGifToVideo, convertVideoToGif, recordTerminalSession, type CaptureScreenScreenshotInput, type ConvertGifToVideoInput, type ConvertVideoToGifInput, type RecordTerminalSessionInput } from "./capture-helpers.js";
 import { formatDoctorReport, getShowMeDoctorReport } from "./doctor.js";
 import { type AddNeedsCaptureInput, addNeedsCaptureBlock } from "./needs-capture.js";
 import { type RunCommandInput, runCommandEvidence } from "./command-runner.js";
@@ -124,6 +125,50 @@ export default function showMeExtension(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
+		name: "show_me_capture_screen_screenshot",
+		label: "Show Me: capture screen screenshot",
+		description: "Capture the whole screen or active window with the best local tool available, ingest it as an image asset, or add a NEEDS_CAPTURE block when capture tooling is missing.",
+		parameters: CaptureScreenScreenshotSchema,
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const result = await captureScreenScreenshot(params as CaptureScreenScreenshotInput, ctx.cwd);
+			return jsonResult(result);
+		},
+	});
+
+	pi.registerTool({
+		name: "show_me_record_terminal",
+		label: "Show Me: record terminal session",
+		description: "Record a terminal session with asciinema when available, or add a NEEDS_CAPTURE block when terminal recording tools are missing.",
+		parameters: RecordTerminalSessionSchema,
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const result = await recordTerminalSession(params as RecordTerminalSessionInput, ctx.cwd);
+			return jsonResult(result);
+		},
+	});
+
+	pi.registerTool({
+		name: "show_me_convert_video_to_gif",
+		label: "Show Me: convert video to GIF",
+		description: "Convert a local video into a GIF with gifski or ffmpeg, or add a NEEDS_CAPTURE block when conversion tooling is missing.",
+		parameters: ConvertVideoToGifSchema,
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const result = await convertVideoToGif(params as ConvertVideoToGifInput, ctx.cwd);
+			return jsonResult(result);
+		},
+	});
+
+	pi.registerTool({
+		name: "show_me_convert_gif_to_video",
+		label: "Show Me: convert GIF to video",
+		description: "Convert a local GIF into video with ffmpeg, or add a NEEDS_CAPTURE block when conversion tooling is missing.",
+		parameters: ConvertGifToVideoSchema,
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const result = await convertGifToVideo(params as ConvertGifToVideoInput, ctx.cwd);
+			return jsonResult(result);
+		},
+	});
+
+	pi.registerTool({
 		name: "show_me_run_command",
 		label: "Show Me: run command evidence",
 		description: "Run a command, store redacted stdout/stderr logs with metadata, and optionally add a command-log block to a section. Blocks risky commands unless allowRisky=true after explicit user approval.",
@@ -163,14 +208,18 @@ export default function showMeExtension(pi: ExtensionAPI) {
 			return values.filter((value) => value.startsWith(prefix)).map((value) => ({ value, label: value }));
 		},
 		handler: async (args, ctx) => {
-			if (!ctx.hasUI) return;
 			const [subcommand = "doctor", target = "latest"] = args.trim().split(/\s+/).filter(Boolean);
-			const notifyError = (error: unknown) => ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			const notifyError = (error: unknown) => {
+				if (ctx.hasUI) ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			};
 
 			if (subcommand === "doctor") {
-				ctx.ui.notify(await doctorText(ctx.cwd), "info");
+				const report = await doctorText(ctx.cwd);
+				if (ctx.hasUI) ctx.ui.notify(report, "info");
 				return;
 			}
+
+			if (!ctx.hasUI) return;
 
 			if (subcommand === "list") {
 				const entries = await listIndexEntries();
