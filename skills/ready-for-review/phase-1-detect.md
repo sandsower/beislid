@@ -25,11 +25,11 @@ Ticket association is explicit-only:
 - Otherwise emit workflow-signal `waiting`, then ask: `What is the ticket ID? Reply with an ID, or \`none\` for maintenance/no-ticket work.`
 - Do not list/search open issues to guess. Only use a ticket id after branch/user confirmation.
 
-Determine `base` from `pr_base.default` when configured, otherwise `main`; if a stacked/non-default base is likely, ask the user and update `base`.
+Determine `base` from `pr_base.default` when configured, otherwise `main`; if a stacked/non-default base is likely, ask.
 
 If `branch == base` or the configured default branch and local changes exist, emit workflow-signal `blocked`, then stop before gates/push. Show concise `git status --short`, explain direct PR handoff from base is unsafe, then ask for branch name and include set (`all`, selected paths, or abort). Selected paths require exact confirmation and a commit message; untracked files are excluded unless named. Create the branch and commit only approved paths before continuing. If there are no local changes and no branch diff, stop: nothing to prepare for review.
 
-If on a feature branch with committed diff plus uncommitted files, warn that uncommitted files are excluded from the PR unless the user commits them.
+If on a feature branch with committed diff plus uncommitted files, warn uncommitted files are excluded unless committed. If the branch has changes but no commits, warn tree uncommitted; implement skipped commits.
 
 ### 1b. Check for existing PR
 
@@ -39,7 +39,7 @@ Run:
 gh pr view --json url,baseRefName,headRefName 2>/dev/null
 ```
 
-If a PR exists, enter fast-path mode: record `existing_pr_fast_path = true`, `pr_url`, and `base` from `baseRefName`; keep Phase 2 enabled, then push/report after gates and skip Phases 3/4. Split policy still runs but only warns.
+If a PR exists, enter fast-path: record `existing_pr_fast_path = true`, `pr_url`, and `base` from `baseRefName`; keep Phase 2, then push/report after gates and skip Phases 3/4. Split policy warns.
 
 ### 1c. Categorize changes
 
