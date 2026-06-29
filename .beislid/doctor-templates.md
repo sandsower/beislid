@@ -9,9 +9,7 @@ When every probe resolves cleanly, doctor narrates in this shape (≤500 chars):
 ```
 🩺 **Workflow check on `<project_name>`.**
 
-Configured: <one or two sentences listing what's set up — issue tracker, scopes,
-which optional skills are wired>. <Translation sync / browser compat / domain
-capture, etc.> are off in this project.
+Configured: <one or two sentences listing what's set up — issue tracker, scopes/setup, which optional skills are wired>. <Translation sync / browser compat / domain capture, etc.> are off in this project.
 
 Just probed all of them — ✓ everything resolves. Cache refreshed, valid for the
 next <ttl_hours>h.

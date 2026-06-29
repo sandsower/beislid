@@ -27,7 +27,7 @@ Run applicable checks in order and fail fast; fast-path may parallelize safe gat
 Selection:
 
 - `gate_sets`: run Phase 1 selected gates with set defaults.
-- `scopes`: run touched scopes only (`pushd <cwd>`, pre-pr gates, `popd`).
+- `scopes`: run scope `setup` before pre-pr gates (`pushd <cwd>`, `popd`). `setup` blocks gates.
 - top-level `gates`: run pre-pr gates from repo root.
 - none: `no gates configured — skipping`.
 

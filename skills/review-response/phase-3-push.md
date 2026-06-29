@@ -19,11 +19,11 @@ If only cosmetic changes were made, pushing without gates is allowed after telli
 Categorize the fix diff by gate model:
 
 - `gate_sets`: select by files, apply excludes/defaults, union/de-dupe, run executable `pre-pr` gates, and record reasons.
-- `scopes`: for each touched scope, `pushd <scope.cwd>` and run executable `pre-pr` gates.
+- `scopes`: for each touched scope, `pushd <scope.cwd>`, run scope `setup` once if present, then run executable `pre-pr` gates.
 - top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
 - none: print `no gates configured — skipping`.
 
-Normalize gates before running. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, `mutates: false`. P0 runs absent/`pre-pr` sensor computational gates with commands. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor gates are skipped-by-execution.
+Normalize gates before running. Flat `name` + `command` defaults to `stage: pre-pr`, `kind: sensor`, `execution: computational`, `mutates: false`. Scope `setup` is a prerequisite command, not a gate. P0 runs absent/`pre-pr` sensor computational gates with commands. Other stages are skipped-by-stage; pre-pr non-computational/non-sensor gates are skipped-by-execution.
 
 Before each selected gate, probe the gate command plus any `required_tools[]`. On failure use the gate prompt; `(b)` skips only this gate and is not cached.
 
