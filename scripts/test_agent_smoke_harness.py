@@ -62,15 +62,43 @@ class AgentSmokeHarnessTests(unittest.TestCase):
 
             stdout = io.StringIO()
             stderr = io.StringIO()
-            args = argparse.Namespace(scenario="ready-for-review", hosts="codex,claude", timeout=5, changed_only=False, serial=False)
+            args = argparse.Namespace(scenario="ready-for-review", suite=None, hosts="codex,claude", timeout=5, changed_only=False, serial=False)
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 rc = run.gate(args)
 
             self.assertEqual(rc, 1)
-            self.assertIn("failed: codex rc=1: setup boom", stderr.getvalue())
+            self.assertIn("failed: ready-for-review/codex rc=1: setup boom", stderr.getvalue())
             self.assertNotIn("Traceback", stderr.getvalue())
         finally:
             run.run_host = orig_run_host  # type: ignore[assignment]
+            run.should_run_changed_only = orig_should_run_changed_only  # type: ignore[assignment]
+
+    def test_gate_supports_suite(self) -> None:
+        orig_run_host = run.run_host
+        orig_load_suite = run.load_suite
+        orig_should_run_changed_only = run.should_run_changed_only
+        try:
+            run.should_run_changed_only = lambda: True  # type: ignore[assignment]
+            run.load_suite = lambda name: {"name": name, "scenarios": ["walk-the-diff", "walk-the-diff-wrap"]}  # type: ignore[assignment]
+            seen: list[str] = []
+
+            def fake_run_host(args: argparse.Namespace) -> int:
+                seen.append(args.scenario)
+                return 0
+
+            run.run_host = fake_run_host  # type: ignore[assignment]
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            args = argparse.Namespace(scenario=None, suite="walk-the-diff-suite", hosts="codex", timeout=5, changed_only=False, serial=False)
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                rc = run.gate(args)
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(seen, ["walk-the-diff", "walk-the-diff-wrap"])
+            self.assertIn("ok: suite walk-the-diff-suite agent smoke passed on codex", stdout.getvalue())
+        finally:
+            run.run_host = orig_run_host  # type: ignore[assignment]
+            run.load_suite = orig_load_suite  # type: ignore[assignment]
             run.should_run_changed_only = orig_should_run_changed_only  # type: ignore[assignment]
 
     def test_cleanup_complete_does_not_fabricate_exited_at(self) -> None:

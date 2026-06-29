@@ -11,6 +11,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.verification import require_repo_snapshot
+
 
 REQUIRED_TRANSCRIPT_PATTERNS = [
     ("phase-1 aux load", r"phase-1-detect"),
@@ -35,7 +39,7 @@ REQUIRED_LOADED_AUX = ["phase-1-detect", "phase-2-gates", "phase-3-review", "pha
 
 
 def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
+    errors.append(f"verifier: {message}")
 
 
 def load_metadata(run_dir: Path) -> dict:
@@ -158,6 +162,15 @@ def verify(run_dir: Path) -> list[str]:
     branch = metadata["branch"]
     repo = Path(metadata["repo"])
     origin = Path(metadata["origin"])
+
+    require_repo_snapshot(
+        errors,
+        repo=repo,
+        expected_head=metadata.get("head_sha"),
+        expected_files=metadata.get("tracked_files"),
+        expected_hashes=metadata.get("tracked_hashes"),
+        kind="artifact",
+    )
 
     if not gh_log.exists():
         fail(errors, f"missing mock gh log: {gh_log}")

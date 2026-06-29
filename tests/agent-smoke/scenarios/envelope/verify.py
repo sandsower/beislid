@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REQUIRED_STAMPS = [
@@ -46,10 +47,103 @@ def agent_output_text(run_dir: Path) -> str:
     return "\n".join(chunks)
 
 
+def write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def run(args: list[str], cwd: Path | None = None) -> str:
+    result = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(args)}\n{result.stderr}")
+    return result.stdout.strip()
+
+
+def self_test() -> int:
+    with tempfile.TemporaryDirectory(prefix="beislid-envelope-verify-selftest-") as tmp:
+        run_dir = Path(tmp)
+        repo = run_dir / "repo"
+        origin = run_dir / "origin.git"
+        run(["git", "init", "--bare", str(origin)])
+        run(["git", "clone", str(origin), str(repo)])
+        run(["git", "config", "user.email", "selftest@example.invalid"], cwd=repo)
+        run(["git", "config", "user.name", "Self Test"], cwd=repo)
+
+        bundle_id = "wid-7-wid-8-widget-suite"
+        bundle_dir = repo / ".beislid" / "exports" / bundle_id
+        slices_dir = bundle_dir / "slices"
+        prompt = "\n".join([f"## {section}" for section in PROMPT_SECTIONS])
+        bundle = {
+            "kind": "approved-slice-plan-export-v0",
+            "version": 1,
+            "status": "approved",
+            "supersedes": None,
+            "generated_from": {"source": "self-test"},
+            "source_work_contract": {"title": "self-test"},
+            "slice_plan": {"parallel_groups": [["wid-7-export"], ["wid-8-report"]]},
+            "children": [
+                {"id": "wid-7-export", "source_ticket": "WID-7"},
+                {"id": "wid-8-report", "source_ticket": "WID-8"},
+            ],
+            "dependency_graph": {"wid-7-export": [], "wid-8-report": ["wid-7-export"]},
+            "proof_requirements": {"gates": ["validate-export"]},
+            "guides_and_gates": {"notes": ["self-test"]},
+            "approval": {"approved_at": "2026-01-01T00:00:00Z", "approved_by": "Self Test"},
+            "runner_extensions": {"notes": []},
+            "validation": {"schema_version": "approved-slice-plan-export-v0", "rubric_version": "afk-rubric-v1"},
+            "ownership": {"team": "beislid"},
+        }
+        write(bundle_dir / "bundle.json", json.dumps(bundle, indent=2) + "\n")
+        for child_id, ticket, body in [
+            ("wid-7-export", "WID-7", "export widgets"),
+            ("wid-8-report", "WID-8", "report widgets"),
+        ]:
+            manifest = {
+                "schema": "approved-slice-v1",
+                "slice_id": child_id,
+                "prompt": prompt,
+                "repo": {
+                    "url": "https://example.invalid/sandsower/beislid",
+                    "base_ref": "main",
+                    "base_sha": "0" * 64,
+                },
+                "allowed_actions": {"run_mode": "supervised-auto", "allow": [], "ask": [], "deny": []},
+                "process_provider": {"name": "claude_code"},
+                "runner_extensions": {
+                    "model_routing": {
+                        "tier": "standard",
+                        "mode": "prefer",
+                        "candidates": ["openrouter/deepseek"],
+                    }
+                },
+            }
+            write(slices_dir / f"{child_id}.json", json.dumps(manifest, indent=2) + "\n")
+            write(slices_dir / f"{child_id}.md", f"# {ticket}\n\n{body}\n")
+        write(repo / ".beislid" / "checkpoints" / "latest.json", json.dumps({"latest": {"envelope_exported": {"source_skill": "envelope"}}}, indent=2) + "\n")
+        run(["git", "add", ".beislid/exports/"], cwd=repo)
+        run(["git", "commit", "-m", f"Export envelope bundle {bundle_id} (WID-7, WID-8)"], cwd=repo)
+
+        metadata = {"repo": str(repo), "bundle_id": bundle_id, "beislid_root": str(Path(__file__).resolve().parents[4])}
+        write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
+        write(run_dir / "bundle.log", "\n".join([*REQUIRED_STAMPS, "src/widget_export.py", "self-test", ""]))
+
+        result = subprocess.run([sys.executable, str(Path(__file__).resolve()), str(run_dir)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if result.returncode != 0:
+            print(result.stdout, file=sys.stderr)
+            return 1
+        print("ok: envelope verify self-test passed")
+        return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("run_dir")
+    parser.add_argument("run_dir", nargs="?")
+    parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
+    if args.self_test:
+        return self_test()
+    if not args.run_dir:
+        parser.error("run_dir is required unless --self-test is used")
     run_dir = Path(args.run_dir).resolve()
     metadata = load_metadata(run_dir)
     repo = Path(metadata["repo"])

@@ -12,6 +12,7 @@ For local PR handoff gates, run hosts AFK with broad fixture permissions. This i
 python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate walk-the-diff --hosts codex --timeout 900
 python3 tests/agent-smoke/run.py gate walk-the-diff-wrap --hosts codex --timeout 900
+python3 tests/agent-smoke/run.py gate --suite walk-the-diff-suite --hosts codex --timeout 900
 ```
 
 Use `--changed-only` from the Beislið workflow prompt to skip unless Beislið skill/smoke files changed:
@@ -27,6 +28,22 @@ Pass `--serial` only when debugging host interactions one at a time. Run one hos
 ```bash
 python3 tests/agent-smoke/run.py run ready-for-review --host codex --timeout 900
 ```
+
+## Suite gates
+
+Related scenarios can run under one gate with `--suite`.
+
+```bash
+python3 tests/agent-smoke/run.py gate --suite walk-the-diff-suite --hosts codex --timeout 900
+```
+
+## Verifier review checklist
+
+- Assertions should target product behavior, not host formatting preferences.
+- Classify failures as product/protocol, verifier, prompt/evidence-shape, or host transcript artifact.
+- Every assertion should have positive and negative self-tests where practical.
+- Normalize raw transcript/log checks consistently before comparing evidence.
+- Avoid exact final-answer strings unless that exact string is the behavior under test.
 
 ## Launch a scenario interactively
 

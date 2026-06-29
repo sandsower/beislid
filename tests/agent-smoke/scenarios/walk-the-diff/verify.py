@@ -12,6 +12,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.verification import collect_agent_output, require_repo_snapshot, require_stamp_sequence, strip_trailing_stamp_restatement
+
 REQUIRED_STAMPS = [
     "✓ walk-the-diff/phase-1-context v1 loaded",
     "✓ walk-the-diff/phase-2-tour-plan v1 loaded",
@@ -45,7 +49,7 @@ def load_metadata(run_dir: Path) -> dict:
 
 
 def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
+    errors.append(f"verifier: {message}")
 
 
 def strip_codex_exec_blocks(text: str) -> str:
@@ -164,21 +168,31 @@ def verify_clean_repo(errors: list[str], metadata: dict) -> None:
 def verify(run_dir: Path) -> list[str]:
     errors: list[str] = []
     metadata = load_metadata(run_dir)
-    verify_clean_repo(errors, metadata)
+    require_repo_snapshot(
+        errors,
+        repo=Path(metadata["repo"]),
+        expected_head=metadata.get("head_sha"),
+        expected_files=metadata.get("tracked_files"),
+        expected_hashes=metadata.get("tracked_hashes"),
+        kind="artifact",
+    )
 
     state_dir = Path(metadata["state_dir"])
     feedback_dir = state_dir / "feedback"
     if feedback_dir.exists() and list(feedback_dir.glob("*.md")):
         fail(errors, "pacing smoke should not write feedback docs before wrap")
 
-    host_text = agent_output_text(run_dir)
-    stamp_source = drop_trailing_stamp_restatement(host_text, REQUIRED_STAMPS)
+    host_text = collect_agent_output(run_dir, strip_tokens=True, strip_exec=True)
+    stamp_source = strip_trailing_stamp_restatement(host_text, REQUIRED_STAMPS)
     if PHASE_4_STAMP in stamp_source:
         fail(errors, "default pacing smoke must not load Phase 4 wrap")
-    stamp_text = strip_markdown_fences(stamp_source)
-    stamp_lines = [line.strip() for line in stamp_text.splitlines() if line.strip().startswith("✓ walk-the-diff/phase-")]
-    if stamp_lines != REQUIRED_STAMPS:
-        fail(errors, f"agent output must contain exactly the expected Phase 1-3 aux load stamps in order: {stamp_lines!r}")
+    require_stamp_sequence(
+        errors,
+        text=stamp_source,
+        stamps=REQUIRED_STAMPS,
+        label="agent output",
+        kind="verifier",
+    )
 
     for label, pattern in [
         ("base context", r"\bmain\b|merge[- ]base|base branch"),

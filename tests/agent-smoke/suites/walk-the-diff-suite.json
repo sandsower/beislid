@@ -1,0 +1,5 @@
+{
+  "name": "walk-the-diff-suite",
+  "description": "Run the pacing and wrap walk-the-diff smoke scenarios under one gate.",
+  "scenarios": ["walk-the-diff", "walk-the-diff-wrap"]
+}
