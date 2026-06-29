@@ -108,10 +108,22 @@ print('ok: skills area validated')
     os.chmod(repo / "scripts" / "validate_skills_area.py", 0o755)
     write(repo / "scripts" / "workflows_should_skip.py", """#!/usr/bin/env python3
 from pathlib import Path
-Path('workflows-should-skip.marker').write_text('workflow gate unexpectedly ran\\n', encoding='utf-8')
-raise SystemExit('workflow gate should be skipped when no workflow files changed')
+assert Path('.github/workflows/validate.yml').exists(), 'workflow file missing'
+print('ok: workflow gate validated')
 """)
     os.chmod(repo / "scripts" / "workflows_should_skip.py", 0o755)
+    write(repo / ".github" / "workflows" / "validate.yml", """name: Validate Fixture
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'fixture workflow change'
+""")
     write(repo / "scripts" / "fresh_eyes_check.py", """#!/usr/bin/env python3
 import os
 import sys
@@ -155,8 +167,20 @@ Initial text.
 
 Skill-area smoke change.
 """)
-    run(["git", "add", "docs/smoke.md", "skills/example/SKILL.md"], cwd=repo)
-    run(["git", "commit", "-m", "Update smoke fixture docs and skills"], cwd=repo)
+    write(repo / ".github" / "workflows" / "validate.yml", """name: Validate Fixture
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'fixture workflow change on branch'
+""")
+    run(["git", "add", "docs/smoke.md", "skills/example/SKILL.md", ".github/workflows/validate.yml"], cwd=repo)
+    run(["git", "commit", "-m", "Update smoke fixture docs, skills, and workflows"], cwd=repo)
 
     evidence_helper = SCENARIO_DIR / "evidence_helper.py"
     metadata: dict[str, object] = {

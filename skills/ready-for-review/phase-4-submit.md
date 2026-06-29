@@ -67,7 +67,7 @@ Draft path adds `--draft`; readying later uses provider command such as `gh pr r
 
 On network/sandbox failure, emit `blocked`, surface retry/escalation/abort. Never re-draft or change approved title/body.
 
-Report PR URL with success template. Verbose records push, PR creation, bot-review, fixes, ready-marking, auth preflight.
+Report PR URL with success template. If the provider can report checks, poll/report PR CI once after creation and before final success so the handoff notes capture the initial state. Verbose records push, PR creation, bot-review, fixes, ready-marking, auth preflight.
 
 ## 4d. Capture domain knowledge
 

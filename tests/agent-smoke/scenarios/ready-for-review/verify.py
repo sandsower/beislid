@@ -30,7 +30,11 @@ REQUIRED_TRANSCRIPT_PATTERNS = [
     ("fixture gate evidence", r"validate-fixture|ok:\s*fixture validated"),
     ("skills gate evidence", r"validate-skills-area|ok:\s*skills area validated"),
     ("gate-set selection evidence", r"gate[-_ ]sets?|selector|docs-files"),
-    ("gate-set skip evidence", r"workflows-should-skip|workflow-files|skipped"),
+    ("workflow gate evidence", r"workflow-files|ok:\s*workflow gate validated|workflow gate"),
+    ("scope expansion warning", r"keep[- ]vs[- ]split|split the new scope|new subsystem|second scope"),
+    ("skill-change warning", r"skill[- ]change|skill changes?|freshly edited skill files|restart/reinstall|dogfooding"),
+    ("workflow auth preflight", r"workflow auth preflight|gh auth status|workflow scope"),
+    ("PR CI report", r"gh pr checks|PR CI|checks? status|checks? report"),
     ("push side effect", r"\bpush(?:ed)?\b|git push"),
     ("PR creation side effect", r"pr create|PR opened|Opened PR|pull/1"),
 ]
@@ -180,10 +184,20 @@ def verify(run_dir: Path) -> list[str]:
 
     gh_lines = gh_text.splitlines()
     pr_create_lines = [line for line in gh_lines if "gh pr create" in line]
+    auth_status_events = [i for i, line in enumerate(gh_lines) if "gh auth status" in line]
+    pr_checks_events = [i for i, line in enumerate(gh_lines) if "gh pr checks" in line]
     if not pr_create_lines:
         fail(errors, "mock gh did not record `gh pr create`")
     fresh_eyes_events = [i for i, line in enumerate(gh_lines) if "fresh_eyes.command invoked" in line]
     pr_create_events = [i for i, line in enumerate(gh_lines) if "gh pr create" in line]
+    if not auth_status_events:
+        fail(errors, "mock gh did not record `gh auth status` before PR creation")
+    elif pr_create_events and min(auth_status_events) > min(pr_create_events):
+        fail(errors, "workflow auth preflight ran after PR creation")
+    if not pr_checks_events:
+        fail(errors, "mock gh did not record `gh pr checks` after PR creation")
+    elif pr_create_events and min(pr_checks_events) < min(pr_create_events):
+        fail(errors, "PR CI polling/reporting ran before PR creation")
     if not fresh_eyes_events:
         fail(errors, "mock event log did not record fresh_eyes.command before PR creation")
     elif pr_create_events and min(fresh_eyes_events) > min(pr_create_events):
@@ -205,11 +219,6 @@ def verify(run_dir: Path) -> list[str]:
         fail(errors, "configured fresh_eyes command log did not contain invocation marker")
     if not (run_dir / "pr-url.txt").exists():
         fail(errors, "fake PR URL was not produced")
-    skipped_gate_marker = repo / "workflows-should-skip.marker"
-    if skipped_gate_marker.exists():
-        fail(errors, f"changed-file gate selection ran a gate that should have been skipped: {skipped_gate_marker}")
-    if "workflows_should_skip.py" in gh_text or "workflows-should-skip" in gh_text:
-        fail(errors, "mock event log suggests skipped workflow gate ran or was treated as selected")
 
     pushed = subprocess.run(
         ["git", "--git-dir", str(origin), "show-ref", "--verify", f"refs/heads/{branch}"],
@@ -232,6 +241,12 @@ def verify(run_dir: Path) -> list[str]:
                 fail(errors, f"transcript {newest} missing marker: {label}")
         if not re.search(r"no[- ]issue|ticket[_ -]?id\s*[:=]\s*`?none`?|ticket:\s*\{id:\s*\"none\"", text, re.IGNORECASE):
             fail(errors, f"transcript {newest} does not record no-ticket state")
+        if not re.search(r"keep[- ]vs[- ]split|split the new scope|new subsystem|second scope", text, re.IGNORECASE):
+            fail(errors, f"transcript {newest} missing keep-vs-split scope warning")
+        if not re.search(r"skill[- ]change|skill changes?|freshly edited skill files|restart/reinstall|dogfooding", text, re.IGNORECASE):
+            fail(errors, f"transcript {newest} missing skill-change dogfood warning")
+        if not re.search(r"gh pr checks|PR CI|checks? status|checks? report", text, re.IGNORECASE):
+            fail(errors, f"transcript {newest} missing PR CI polling/reporting note")
         phase2_entry = re.search(r"phase[- ]2[- ]entry|Phase 2 entered", text, re.IGNORECASE)
         if phase2_entry:
             preload_area = text[:phase2_entry.start()]
@@ -289,7 +304,7 @@ def self_test() -> int:
         subprocess.run(["git", "branch", "-M", "agent-smoke/no-ticket-verbose"], cwd=repo, check=True)
         subprocess.run(["git", "remote", "add", "origin", str(run_dir / "origin.git")], cwd=repo, check=True)
         subprocess.run(["git", "push", "origin", "agent-smoke/no-ticket-verbose"], cwd=repo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-        write(log, f"2026-01-01T00:00:00Z\tcwd={repo}\tgh pr view\nfresh_eyes.command invoked\n2026-01-01T00:00:01Z\tcwd={repo}\tgh pr create --head agent-smoke/no-ticket-verbose --title Smoke\n")
+        write(log, f"2026-01-01T00:00:00Z\tcwd={repo}\tgh auth status\n2026-01-01T00:00:01Z\tcwd={repo}\tgh pr view\nfresh_eyes.command invoked\n2026-01-01T00:00:02Z\tcwd={repo}\tgh pr create --head agent-smoke/no-ticket-verbose --title Smoke\n2026-01-01T00:00:03Z\tcwd={repo}\tgh pr checks --watch\n")
         write(run_dir / "pr-url.txt", "https://example.invalid/beislid-smoke/pull/1\n")
         write(run_dir / "fresh-eyes.log", "fresh_eyes.command invoked\n")
         transcript = state / "runs" / "ready-for-review" / "abc123" / "20260101T000000Z" / "transcript.md"
@@ -305,11 +320,17 @@ phase 4 entry
 fast-path eligible
 parallel safe gate validate-fixture
 parallel safe gate validate-skills-area
+parallel safe gate workflow gate validated
 selected gate validate-fixture from gate_sets selector docs-files
 selected gate validate-skills-area from gate_sets selector skill-files
-skipped gate workflows-should-skip selector workflow-files no changed files matched
+selected gate workflow gate validated from gate_sets selector workflow-files
+keep-vs-split scope warning
+skill-change dogfood warning
+workflow auth preflight
 combined review/final-check complete
 ok: fixture validated
+ok: workflow gate validated
+PR CI checks reported
 ticket_id: `none`
 git push completed
 PR opened at https://example.invalid/beislid-smoke/pull/1

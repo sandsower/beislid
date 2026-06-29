@@ -10,7 +10,7 @@ Inputs: `base`, full diff against `base`, ticket/spec/design context, Phase 2 ga
 
 ## Long-running review policy
 
-Apply this policy to `review`, enabled final checks, and fast-path combined review invocations:
+Apply this policy to `review`, final checks, and fast-path combined review:
 
 - Announce the review start and that progress will be reported every 60s.
 - Poll/report every 60s while the host supports it.
@@ -40,13 +40,15 @@ When valid findings require fixes:
 
 If rerun gates fail, use Phase 2 failure handling before resuming Phase 3.
 
+If review/fixes expand into a new subsystem or second scope, warn that the PR is expanding and ask whether to keep it here or split it into a follow-up ticket.
+
 The normal review loop converges only when no blocking review findings remain, when remaining Important items are explicitly accepted risks, or when the user explicitly accepts reduced coverage after cancel-and-salvage.
 
 ## 3b. Final whole-diff review
 
 Read optional `beislid:fresh_eyes`. Absent/`enabled: true` uses built-in; `enabled: false` is explicit policy. `type: command`: `probe(fresh_eyes.command)`, policy-check classes (`read` unless metadata mutates), then run from repo root with full diff/ticket/spec/design/gate context. Do not rewrite env vars, args, or output paths for ledger storage; record/copy artifacts separately. Treat nonzero/unclear output as blocking unless evidence disproves it.
 
-If `fast_path_eligible=true`, use one combined review: primary review contract plus the selected final whole-diff check. Label built-in mode `combined review`; label custom mode `combined review + fresh_eyes.command`.
+If `fast_path_eligible=true`, use one combined review: primary review plus the final check. Label built-in mode `combined review`; label custom mode `combined review + fresh_eyes.command`.
 
 Otherwise, after normal review converges, run the selected final check unless disabled. Handle findings with the same severity and long-running policies. If fixes touch functional code, rerun applicable Phase 2 gates before exiting Phase 3.
 

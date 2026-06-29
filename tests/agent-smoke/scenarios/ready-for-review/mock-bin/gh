@@ -63,6 +63,13 @@ OUT
   exit 0
 fi
 
+if [[ "$cmd $sub" == "pr checks" ]]; then
+  cat <<'OUT'
+✓ All checks passed
+OUT
+  exit 0
+fi
+
 if [[ "$cmd" == "issue" ]]; then
   echo "mock gh: issue lookup/list disabled for no-ticket smoke" >&2
   exit 45

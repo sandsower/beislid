@@ -50,11 +50,13 @@ git diff <base>...HEAD --name-only
 git diff <base>...HEAD --shortstat
 ```
 
-Store files/stats. If `gate_sets` exists, match ordered selectors to changed files, apply `exclude`, union sets deterministically, de-dupe by stable gate identity, and record selected/skipped reasons. Else mark touched scopes; else create implicit repo-root scope for top-level `gates`; else no gate scopes.
+Store files/stats. If the diff touches `skills/**` or `.beislid/**`, emit the skill-change warning.
+
+If `gate_sets` exists, match selectors to changed files, apply `exclude`, union deterministically, de-dupe by gate identity, and record selected/skipped reasons. Else mark touched scopes; else create repo-root scope for top-level `gates`; else no gate scopes.
 
 ### 1d. Apply split policy
 
-Skip when `split_policy` is absent or only one scope is touched. If `split_policy: exclusive` and two or more scopes are touched, set `split_policy_violation=true`, block the normal path before Phase 2, and guide the user to split branches/tickets manually; on existing-PR fast path, warn and continue. Do not auto-split.
+Skip when `split_policy` is absent or only one scope is touched. If `split_policy: exclusive` and 2+ scopes are touched, set `split_policy_violation=true`, block before Phase 2, and ask the user to split; on existing-PR fast path, warn and continue. Do not auto-split.
 
 ### 1e. Detect triggered skills
 
