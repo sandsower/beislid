@@ -82,7 +82,7 @@ skills/review-response/review-response-templates.md → ../../.beislid/review-re
 
 Editing the symlinked file in a skill folder transparently edits the master — that's the intended behavior. **Do not replace symlinks with regular files.** Some IDEs and `cp`/`mv` commands break symlinks silently; CI catches this in `validate.yml`, but a careful `git status` or `git ls-files -s` after edits is the surest local check (mode `120000` indicates a symlink, `100644` indicates a regular file).
 
-If you legitimately need to add a new shared format doc, add it under `.beislid/`, symlink it into each consuming skill folder, and extend the symlink integrity check in `.github/workflows/validate.yml` to cover it. For guidance on writing your own skills that follow these conventions, see [Skill authoring guide](../docs/skill-authoring.md).
+If you legitimately need to add a new shared format doc, add it under `.beislid/`, symlink it into each consuming skill folder, and extend the symlink integrity check in `.github/workflows/validate.yml` to cover it. For guidance on writing your own skills that follow these conventions, see [Skill authoring guide](./docs/skill-authoring.md).
 
 ## Skill auxiliary protocol files
 
