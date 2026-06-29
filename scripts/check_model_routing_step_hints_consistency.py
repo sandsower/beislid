@@ -26,7 +26,6 @@ REQUIRED_REFERENCES = {
         "tier: frontier",
         "tier: heavy",
         "tier: standard",
-        "tier: light",
         "stage: implement",
         "stage: ready-for-review",
         "phase: gates",
@@ -109,7 +108,6 @@ def validate_profile(text: str, errors: list[str]) -> None:
         "tier: standard",
         "stage: ready-for-review",
         "phase: gates",
-        "tier: light",
         "phase: review",
         "step: fresh-eyes",
         "tier: heavy",
@@ -117,6 +115,15 @@ def validate_profile(text: str, errors: list[str]) -> None:
     for snippet in required_snippets:
         if snippet not in hints:
             errors.append(f"WORKFLOW.md: step_hints is missing required hint `{snippet}`")
+
+    ready_start = hints.find("stage: ready-for-review")
+    if ready_start >= 0:
+        ready_block = hints[ready_start:]
+        next_step = ready_block.find("stage: review-response")
+        if next_step >= 0:
+            ready_block = ready_block[:next_step]
+        if not any(tier in ready_block for tier in ("tier: light", "tier: standard")):
+            errors.append("WORKFLOW.md: ready-for-review gate execution must stay on light or standard")
 
     # Quick structural guardrails: every explicit tier in the step-hints block must be known.
     for match in re.finditer(r"^\s*tier:\s*([A-Za-z0-9_.:-]+)\s*$", hints, flags=re.MULTILINE):

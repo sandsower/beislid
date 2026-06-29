@@ -100,9 +100,9 @@ model_routing:
       - stage: ready-for-review
         skill: ready-for-review
         phase: gates
-        tier: light
+        tier: standard
         mode: prefer
-        rationale: gate execution is mechanical and can stay light
+        rationale: gate execution is mechanical and should stay on the repo default standard tier
       - stage: review-response
         skill: review-response
         phase: fix
