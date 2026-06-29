@@ -5,7 +5,7 @@ description: Use when splitting work to another agent, session, or worktree; cre
 
 # Handoff
 
-Create a paste-ready opening prompt for another agent/session/worktree. This skill is read-only in the parent workspace except for copying text to the local clipboard.
+Create a paste-ready opening prompt for another agent/session/worktree. For repo-local isolation policy and cleanup paths, see [docs/worktree-isolation.md](../../docs/worktree-isolation.md). This skill is read-only in the parent workspace except for copying text to the local clipboard.
 
 Use this when:
 - Work is being split across parallel sessions or worktrees

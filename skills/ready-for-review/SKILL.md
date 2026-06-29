@@ -6,7 +6,7 @@ description: >
 
 # Ready for Review
 
-Take a branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small new PRs use fast-path: preload aux, parallel-safe gates, combined review/final-check.
+Take a branch through gates, review, and PR creation. See [worktree isolation](../../docs/worktree-isolation.md). Existing PR updates: gates, push, report URL. Small new PRs use fast-path: preload aux, parallel-safe gates, combined review/final-check.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 

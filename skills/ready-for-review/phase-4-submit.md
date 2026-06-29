@@ -41,7 +41,7 @@ Compose the proposed PR:
 - Title: `<TICKET-ID>: <ticket title>` only when a real ticket id is confirmed; otherwise a concise no-ticket title. Never render `none` as a prefix; `none: <title>` is invalid.
 - Base: Phase 1 base.
 - Body: Ship summary shape from `artifact-templates.md`: changes, why, proof, warnings, artifacts/follow-ups, ship-time note, deferred-review evidence, accepted risks/reduced coverage.
-- Include carried warnings such as AI-generated translation notices.
+- Include AI-generated translation notices and a worktree cleanup note when isolated.
 - Labels/reviewers only when configured or requested.
 
 If `pr_description.formatter_skill` configured, probe on first need; on failure use Phase 4b prompt + raw draft. No formatter → raw-draft note.

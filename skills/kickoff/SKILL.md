@@ -5,8 +5,7 @@ description: Use when starting work on a ticket after checking out the feature b
 
 # Start Work on Ticket
 
-Turn a checked-out feature branch and ticket into an implementation-ready plan. Kickoff is the front door of the Beislið lifecycle: ticket → context → spec/blueprint/breakdown → ticket update → `implement`.
-
+Turn a checked-out feature branch into an implementation plan. For mutations, see [worktree isolation](../../docs/worktree-isolation.md). Kickoff is the front door: ticket → context → spec/blueprint/breakdown → update → `implement`
 **Don't use this for:** creating PRs, handling review/QA feedback, or PR handoff for completed work. Use `ready-for-review` or `review-response` for those.
 
 Project config: `<repo>/.beislid/workflow.md` (see `workflow-md-format.md`). Probe lazily; policy-check side effects per `action-policy-protocol.md`. Output follows templates.
@@ -36,9 +35,9 @@ Try to read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>
 
 Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
-On `continue this ticket` / `continue from checkpoint`, read `.beislid/checkpoints/latest.json` first. Prefer matching `kickoff_context_ready`; ask if unclear. Use as planning context; validate live ticket first. Bad/missing pointers are non-blocking. `beislid run-ledger resume --flow kickoff --ticket-id <id> --branch <branch>` may add context but never replaces live validation or checkpoint artifacts.
+On `continue this ticket` / `continue from checkpoint`, read `.beislid/checkpoints/latest.json` first. Prefer matching `kickoff_context_ready`; ask if unclear. Use as planning context; validate the live ticket first. Bad/missing pointers are non-blocking. `beislid run-ledger resume --flow kickoff --ticket-id <id> --branch <branch>` may add context but never replaces live validation or checkpoints.
 
-For durable evidence, best-effort `beislid run-ledger init --skill kickoff --flow kickoff` after cache setup; record checkpoints with `beislid run-ledger checkpoint --run-id <run_id> --flow kickoff --name kickoff_context_ready` (later checkpoints use `--name <step_name>`). Warn on ledger failure; don't block kickoff.
+For durable evidence, best-effort `beislid run-ledger init --skill kickoff --flow kickoff`; record checkpoints with `beislid run-ledger checkpoint --run-id <run_id> --flow kickoff --name kickoff_context_ready` (later checkpoints use `--name <step_name>`). Warn on ledger failure; don't block kickoff.
 
 ## Internal: probe(<cap>)
 

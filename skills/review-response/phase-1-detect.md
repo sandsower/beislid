@@ -19,7 +19,7 @@ git status --short
 git branch --show-current
 ```
 
-If there are uncommitted changes, summarize them and ask before continuing. Do not overwrite or mix uncommitted user work into feedback fixes without explicit approval.
+If there are uncommitted changes, summarize them and ask before continuing. If the checkout is a linked worktree, preserve that context for later cleanup notes. Do not overwrite or mix uncommitted user work into feedback fixes without explicit approval.
 
 ## 1c. Derive PR host and detect PR
 

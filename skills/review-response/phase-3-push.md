@@ -1,6 +1,6 @@
 # review-response phase 3 push v1
 
-Authoritative JIT protocol for Phase 3. Load after Phase 2 has completed fixes/drafts. If unreadable, hard-fail instead of reconstructing from memory.
+JIT protocol for Phase 3 after Phase 2 fixes/drafts. If unreadable, hard-fail.
 
 ## Entry / exit output
 
@@ -71,6 +71,7 @@ For QA/ticket items:
 
 - Use `ticket_update.comment_tool` / `comment_command` after approval and `ticket.comment` policy.
 - CLI commands write reply text to temp file and substitute `{body_file}`; never raw body shell interpolation. If configured `{body}`, stop and ask for `/setup` update or print manually.
+- Mention linked worktree paths in replies/manual cleanup notes.
 - If absent/skipped, print manual reply text.
 
 ## 3f. Re-request review
