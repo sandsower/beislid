@@ -105,6 +105,19 @@ python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 9
 
 ## Ready-for-review
 
+This repo uses explicit-approval defaults; all gates prompt by default. Low-friction
+auto-approval is available for repos that trust the agent's generated metadata after
+recording decisions to the transcript and run ledger.
+
+```beislid:ready_for_review
+approval_gates:
+  pr_title_body: prompt
+  gate_failure: prompt
+  autofix_commit: prompt
+  clean_eval_failure: prompt
+  reduced_review_coverage: prompt
+```
+
 ```beislid:clean_eval
 mode: require
 surface: auto
