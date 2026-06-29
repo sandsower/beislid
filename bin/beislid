@@ -70,6 +70,8 @@ Beislið CLI
 Usage:
   beislid install user [--with-security-hooks] [--force] [--strict]
   beislid install project [path] [--copy] [--write-gitignore] [--force] [--strict]
+  beislid repair user [--force] [--strict]
+  beislid repair project [path] [--force] [--strict]
   beislid status [project [path]]
   beislid plugin <enable|disable|status> lavish [--check]
   beislid workflow-signal <emit|status> [...]
@@ -167,6 +169,53 @@ _parse_update_flags() {
         echo "Unknown update flag: $1" >&2
         _usage >&2
         exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+_parse_repair_user_flags() {
+  while (($#)); do
+    case "$1" in
+      --force|--repoint) FORCE=1 ;;
+      --strict) STRICT=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      *)
+        echo "Unknown repair user flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+_parse_repair_project_flags() {
+  REPAIR_PROJECT_PATH=""
+  while (($#)); do
+    case "$1" in
+      --force|--repoint) FORCE=1 ;;
+      --strict) STRICT=1 ;;
+      -h|--help)
+        _usage
+        exit 0
+        ;;
+      --*)
+        echo "Unknown repair project flag: $1" >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        if [[ -n "$REPAIR_PROJECT_PATH" ]]; then
+          echo "repair project accepts at most one path" >&2
+          _usage >&2
+          exit 2
+        fi
+        REPAIR_PROJECT_PATH="$1"
         ;;
     esac
     shift
@@ -380,6 +429,32 @@ case "$cmd" in
         ;;
       *)
         echo "Unknown install target: $subcmd" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  repair)
+    shift
+    subcmd="${1:-}"
+    case "$subcmd" in
+      user)
+        shift
+        _parse_repair_user_flags "$@"
+        beislid_repair_user
+        ;;
+      project)
+        shift
+        _parse_repair_project_flags "$@"
+        beislid_repair_project "$REPAIR_PROJECT_PATH"
+        ;;
+      "")
+        echo "Missing repair target." >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        echo "Unknown repair target: $subcmd" >&2
         _usage >&2
         exit 2
         ;;

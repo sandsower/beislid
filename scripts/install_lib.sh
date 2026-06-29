@@ -842,6 +842,24 @@ _project_manifest_path() {
   printf '%s/.beislid/project-install.json\n' "$1"
 }
 
+_project_manifest_mode() {
+  local manifest="$(_project_manifest_path "$1")"
+  [[ -f "$manifest" ]] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - <<'PY' "$manifest"
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+mode = data.get("mode")
+if mode:
+    print(mode)
+    sys.exit(0)
+sys.exit(1)
+PY
+}
+
 _write_project_manifest() {
   local project="$1" agents_dir="$2" claude_dir="$3" codex_dir="$4" mode="$5" installed_links="$6" skipped_links="$7" installed_copies="$8" refreshed_copies="$9" skipped_copies="${10}"
   if ! command -v python3 >/dev/null 2>&1; then
@@ -1830,4 +1848,50 @@ beislid_install_user() {
   echo
   echo "Done. Restart Claude Code / pi / Codex to pick up new skills."
   return "$STRICT_FAILED"
+}
+
+beislid_repair_user() {
+  if [[ ! -f "$MANIFEST" ]]; then
+    echo "error: no install manifest found at $MANIFEST; run 'beislid install user' first" >&2
+    return 1
+  fi
+
+  echo "Repair:"
+  _preserve_manifest_for_update
+  echo
+  beislid_install_user
+}
+
+beislid_repair_project() {
+  local requested="${1:-}"
+  local project manifest mode
+  if ! project="$(_project_target_from_arg "$requested")"; then
+    return 1
+  fi
+
+  manifest="$(_project_manifest_path "$project")"
+  if [[ ! -f "$manifest" ]]; then
+    echo "error: no project install manifest found at $manifest; run 'beislid install project [path]' first" >&2
+    return 1
+  fi
+
+  if ! mode="$(_project_manifest_mode "$project")"; then
+    echo "error: could not read project install mode from $manifest" >&2
+    return 1
+  fi
+
+  case "$mode" in
+    symlink|copy)
+      PROJECT_MODE="$mode"
+      ;;
+    *)
+      echo "error: unsupported project install mode in $manifest: $mode" >&2
+      return 1
+      ;;
+  esac
+
+  PROJECT_WRITE_GITIGNORE=0
+  echo "Repair:"
+  echo
+  beislid_install_project "$project"
 }
