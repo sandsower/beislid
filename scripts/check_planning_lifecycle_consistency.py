@@ -83,6 +83,11 @@ REQUIRED_REFERENCES = {
         "structure lifecycle actions after approval",
         "design lifecycle actions after approval",
     ],
+    "skills/kickoff/step-8-ticket-update.md": [
+        "planning lifecycle results",
+        "checkpoint artifact paths/status",
+        "design lifecycle status/artifact path",
+    ],
 }
 
 

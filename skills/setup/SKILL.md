@@ -670,6 +670,10 @@ events:
         on_failure: prompt
   spec_approved:
     actions:
+      - name: write-spec-artifact
+        type: artifact
+        approval: prompt
+        path: 'plans/{feature}-spec.md'
       - name: run-approved-spec-hook
         type: cli
         command: 'planning-hook {event} {ticket_id} {artifact_path}'
