@@ -21,7 +21,7 @@ Beislið is repo-local. It installs portable skills, but the skills are only the
    /setup
    ```
 
-   This creates or updates `<repo>/.beislid/workflow.md` and can add an agent-instructions block to `AGENTS.md`.
+   This creates or updates `<repo>/.beislid/workflow.md` and can add an agent-instructions block to `AGENTS.md`. If you are introducing Beislið to a team, follow the [team rollout guide](./team-rollout.md) for the minimum viable config, strictness layers, and PR checklist.
 
    To update the installed Beislið distribution later, run:
 
@@ -202,6 +202,7 @@ Beislið won't:
 - [Workflows](./workflows.md): detailed lifecycle diagrams and routing rules.
 - [Skills](./skills.md): full skill catalog.
 - [Configuration](./configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, and probe cache.
+- [Team rollout](./team-rollout.md): minimum viable repo config, strictness layers, and `AGENTS.md` rollout block.
 - [Review workflows](./review-workflows.md): `review`, `fresh-eyes`, `rinse`, `pr-patrol`, `walk-the-diff`, `review-response`, `babysit`, and `ready-for-review` review behavior.
 - [FAQ](./faq.md): positioning, Superpowers/GSD comparisons, autonomy, team use, and workflow philosophy.
 - [Show Me](./show-me.md): local HTML evidence and explanation decks.

@@ -2,7 +2,7 @@
 
 Beislið keeps project policy in the repo. Teams author `<repo>/.beislid/workflow.md` to declare ticket sources, quality gates, review sources, and automation boundaries. This guide covers how to write and test that config.
 
-For the full configuration reference, see [Configuration](./configuration.md). For the format grammar, see [workflow.md format](../.beislid/workflow-md-format.md).
+For the full configuration reference, see [Configuration](./configuration.md). If you are rolling this out to teammates, start with the [team rollout guide](./team-rollout.md) before choosing optional strictness layers. For the format grammar, see [workflow.md format](../.beislid/workflow-md-format.md).
 
 ## Getting started
 

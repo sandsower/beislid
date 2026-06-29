@@ -213,13 +213,28 @@ Then run the AGENTS.md block insertion (section 12 below).
 
 After writing the minimum, offer the menu mode (section 11 — same UI as re-run) for adding optional sections.
 
-## 10. First-run wrap-up
+## 10. Next-steps report after writes
 
-Print one nudge to run `/doctor`:
+After any successful `.beislid/workflow.md` write (first-run, add/change/remove, or reset), print a concise next-steps report:
 
 ```
-💭 Next: run /doctor to verify the config and warm the probe cache.
+✅ Beislið config written.
+
+Files to review/commit:
+- .beislid/workflow.md
+- AGENTS.md (when added or updated)
+
+Configured now: <ticket source, branch pattern, gates, PR reviews, ticket updates, etc.>
+Not configured yet: <missing strictness layers, or "none obvious">
+
+Next:
+1. Run /doctor to verify the config and warm the probe cache.
+2. Run each configured gate command once from the repo root.
+3. Commit .beislid/workflow.md and AGENTS.md together.
+4. For team rollout guidance, read the Beislið team rollout guide: https://github.com/sandsower/beislid/blob/main/docs/team-rollout.md.
 ```
+
+Keep the report factual. Do not imply unconfigured layers are required; present them as optional strictness layers to add deliberately later.
 
 ## 11. Menu mode
 
@@ -256,9 +271,9 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **PR review source / replies** — *Let review-response read PR review comments and either post clear-fix replies or print manual reply instructions.*
 - **PR host override** — *Override owner/repo/remote only when git remote derivation is wrong, such as forks or non-origin upstreams.*
 
-Walk the chosen section's sub-interview (asking one Y/N or value at a time). Compose the section block in memory. Insert at the canonical position in the file (canonical order is the order in `workflow-md-format.md` § Section grammar). Show diff (`git diff --no-index <old> <new>` formatted prose). Ask `Write? [Y/n]`. On `Y`: write atomically (whole-file rewrite via Read → mutate → Write).
+Walk the chosen section's sub-interview (asking one Y/N or value at a time). Compose the section block in memory. Insert at the canonical position in the file (canonical order is the order in `workflow-md-format.md` § Section grammar). Show diff (`git diff --no-index <old> <new>` formatted prose). Ask `Write? [Y/n]`. On `Y`: write atomically (whole-file rewrite via Read → mutate → Write), then print the next-steps report from section 10.
 
-**On (2) Change a configured section:** show currently filled sections only. Walk that section's sub-interview pre-filled with current values; user accepts or overrides each value. Show diff; confirm; write.
+**On (2) Change a configured section:** show currently filled sections only. Walk that section's sub-interview pre-filled with current values; user accepts or overrides each value. Show diff; confirm; write, then print the next-steps report from section 10.
 
 **On (3) Remove a configured section:** show currently filled sections only. On selection, check section-dependency rules and prompt for auto-clean:
 
@@ -268,7 +283,7 @@ Walk the chosen section's sub-interview (asking one Y/N or value at a time). Com
 - Removing `pr_review_source` while `pr_review_update` is set → warn that update can only be used after pasted PR feedback; ask whether to remove update too (default Y)
 - Removing `pr_review_update` while `pr_review_source` is set → allowed; review-response will print PR reply/re-request instructions manually
 
-Show diff; confirm; write.
+Show diff; confirm; write, then print the next-steps report from section 10.
 
 **On (4) Reset and regenerate from scratch:**
 
@@ -276,7 +291,7 @@ Show diff; confirm; write.
 2. Run the full first-run interview (sections 3–8) in memory.
 3. Show full diff of the regenerated file vs the original.
 4. Ask `Write? [Y/n]`.
-5. On `Y`: write atomically.
+5. On `Y`: write atomically, then print the next-steps report from section 10.
 
 **On (5) I'm done:** exit cleanly with no writes.
 
