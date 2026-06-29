@@ -425,6 +425,234 @@ def command_resume(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_dashboard(args: argparse.Namespace) -> int:
+    repo = repo_root(Path.cwd())
+    allowed = VALID_STATUSES if args.all else (INCOMPLETE_STATUSES | {"active"})
+    runs: list[dict[str, Any]] = []
+
+    flow_filter = normalize_flow(args.flow) if args.flow else None
+
+    for root in candidate_roots(repo, args.flow):
+        for run_file in sorted(root.glob("*/run.json")) if root.exists() else []:
+            try:
+                run = read_json(run_file)
+            except (OSError, json.JSONDecodeError):
+                continue
+            if run.get("status") not in allowed:
+                continue
+            if flow_filter and normalize_flow(run.get("flow", "run")) != flow_filter:
+                continue
+            run["_dir"] = str(run_file.parent)
+            runs.append(run)
+
+    if not runs:
+        if args.json:
+            print(json.dumps({"runs": [], "total": 0}, sort_keys=True))
+            return 0
+        print("No matching runs found.")
+        return 0
+
+    runs.sort(key=lambda r: r.get("updated_at") or r.get("started_at") or "", reverse=True)
+
+    if args.json:
+        result = []
+        for run in runs:
+            entry = _dashboard_run_entry(run, args.limit)
+            result.append(entry)
+        print(json.dumps({"runs": result, "total": len(result)}, indent=2, sort_keys=True))
+        return 0
+
+    _print_text_dashboard(runs, args.limit)
+    return 0
+
+
+def _dashboard_run_entry(run: dict[str, Any], gate_limit: int) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "run_id": run.get("run_id"),
+        "flow": run.get("flow"),
+        "status": run.get("status"),
+        "started_at": run.get("started_at"),
+        "updated_at": run.get("updated_at"),
+        "ticket": run.get("ticket") or {"id": run.get("ticket_id", "none")},
+        "branch": run.get("branch"),
+    }
+    if run.get("latest_checkpoint"):
+        cp = run["latest_checkpoint"]
+        entry["latest_checkpoint"] = {"name": cp.get("name"), "timestamp": cp.get("timestamp")}
+    if run.get("resume_hint"):
+        entry["resume_hint"] = run["resume_hint"]
+    if run.get("interruption"):
+        entry["interruption"] = {
+            "reason": run["interruption"].get("reason"),
+            "timestamp": run["interruption"].get("timestamp"),
+        }
+    if run.get("finalized_at"):
+        entry["finalized_at"] = run["finalized_at"]
+    if run.get("paths"):
+        entry["run_dir"] = run["paths"].get("run_dir")
+        report_path = run["paths"].get("final_report")
+        if run.get("finalized_at") and report_path and Path(report_path).is_file():
+            entry["final_report"] = report_path
+
+    gates = _collect_gate_history(run, gate_limit)
+    if gates:
+        entry["gates"] = gates
+
+    return entry
+
+
+def _collect_gate_history(run: dict[str, Any], limit: int) -> list[dict[str, Any]]:
+    run_dir = Path(run.get("_dir") or run.get("paths", {}).get("run_dir", ""))
+    if not run_dir or not run_dir.exists():
+        return []
+
+    gates_root = run_dir / "artifacts" / "gates"
+    if not gates_root.exists():
+        return []
+
+    gate_entries: list[tuple[str, dict[str, Any]]] = []
+    for scope_dir in sorted(gates_root.iterdir()):
+        if not scope_dir.is_dir():
+            continue
+        for name_dir in sorted(scope_dir.iterdir()):
+            if not name_dir.is_dir():
+                continue
+            for attempt_dir in sorted(name_dir.iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0, reverse=True):
+                if not attempt_dir.is_dir():
+                    continue
+                envelope_path = attempt_dir / "envelope.json"
+                if not envelope_path.is_file():
+                    continue
+                try:
+                    envelope = read_json(envelope_path)
+                except (OSError, json.JSONDecodeError):
+                    continue
+                gate_status = envelope.get("status", "unknown")
+                env_failure = envelope.get("environment_failure", False)
+                if gate_status == "fail" and env_failure:
+                    classification = "environment_failure"
+                elif gate_status == "fail":
+                    classification = envelope.get("classification", "code_failure")
+                else:
+                    classification = None
+                entry = {
+                    "name": envelope.get("gate", {}).get("name") or attempt_dir.parent.name,
+                    "scope": scope_dir.name,
+                    "attempt": int(attempt_dir.name) if attempt_dir.name.isdigit() else attempt_dir.name,
+                    "status": gate_status,
+                    "path": str(envelope_path),
+                }
+                if classification:
+                    entry["classification"] = classification
+                gate_entries.append((envelope.get("gate", {}).get("timestamp", ""), entry))
+                break
+
+    gate_entries.sort(key=lambda x: x[0], reverse=True)
+    return [entry for _, entry in gate_entries[:limit]]
+
+
+def _status_indicator(status: str) -> str:
+    symbols = {
+        "running": "●",
+        "interrupted": "◐",
+        "failed": "✗",
+        "completed": "✓",
+        "active": "○",
+    }
+    return symbols.get(status, "?")
+
+
+def _print_text_dashboard(runs: list[dict[str, Any]], gate_limit: int) -> None:
+    print(f"\n{'='*72}")
+    print(f"  Beislið Run Dashboard")
+    print(f"{'='*72}")
+    total_completed = sum(1 for r in runs if r.get("status") == "completed")
+    interrupted_count = sum(1 for r in runs if r.get("status") == "interrupted")
+    running_count = sum(1 for r in runs if r.get("status") == "running")
+    failed_count = sum(1 for r in runs if r.get("status") == "failed")
+    active_count = sum(1 for r in runs if r.get("status") == "active")
+    print(f"  {len(runs)} run(s)")
+    parts = []
+    if running_count:
+        parts.append(f"{running_count} running")
+    if interrupted_count:
+        parts.append(f"{interrupted_count} interrupted")
+    if failed_count:
+        parts.append(f"{failed_count} failed")
+    if active_count:
+        parts.append(f"{active_count} active")
+    if total_completed:
+        parts.append(f"{total_completed} completed")
+    if parts:
+        print(f"  {'  '.join(parts)}")
+    print()
+
+    for i, run in enumerate(runs):
+        status = run.get("status", "unknown")
+        indicator = _status_indicator(status)
+        run_id = run.get("run_id", "?")
+        flow = run.get("flow", "?")
+        ticket = run.get("ticket") or {}
+        ticket_id = ticket.get("id") or run.get("ticket_id", "-")
+        ticket_title = ticket.get("title", "")
+        branch = run.get("branch", "-")
+        started = run.get("started_at", "-")
+        updated = run.get("updated_at", "-")
+
+        print(f"  {indicator} [{status.upper()}] {run_id}")
+        print(f"     Flow:        {flow}")
+        if ticket_id and ticket_id != "none":
+            print(f"     Ticket:      {ticket_id}" + (f" — {ticket_title}" if ticket_title else ""))
+        print(f"     Branch:      {branch}")
+        print(f"     Started:     {started}")
+        print(f"     Updated:     {updated}")
+
+        if run.get("interruption"):
+            ir = run["interruption"]
+            print(f"     Interrupted: {ir.get('timestamp', '-')}")
+            reason = ir.get("reason", "")
+            if reason:
+                print(f"     Reason:      {reason}")
+
+        if run.get("latest_checkpoint"):
+            cp = run["latest_checkpoint"]
+            print(f"     Checkpoint:  {cp.get('name', '-')} ({cp.get('timestamp', '-')})")
+
+        if run.get("resume_hint"):
+            print(f"     Resume hint: {run['resume_hint']}")
+
+        report_path = (run.get("paths") or {}).get("final_report")
+        if run.get("finalized_at") and report_path and Path(report_path).is_file():
+            print(f"     Report:      {report_path}")
+
+        gates = _collect_gate_history(run, gate_limit)
+        if gates:
+            print(f"     Gates ({len(gates)} recent):")
+            for gate in gates:
+                gs = gate["status"]
+                gname = f"{gate['scope']}/{gate['name']}"
+                attempt = gate.get("attempt", "?")
+                status_mark = {"pass": "✓", "fail": "✗", "skip": "—", "error": "!"}.get(gs, "?")
+                class_note = ""
+                if gate.get("classification") == "environment_failure":
+                    class_note = " [ENV]"
+                elif gate.get("classification") == "code_failure":
+                    class_note = " [CODE]"
+                print(f"       {status_mark} {gs:<6} {gname} (attempt {attempt}){class_note}")
+                if gs in ("fail", "error"):
+                    print(f"         artifact: {gate['path']}")
+        else:
+            print(f"     Gates:       none recorded")
+
+        if run.get("paths") and run["paths"].get("run_dir"):
+            print(f"     Dir:         {run['paths']['run_dir']}")
+
+        if i < len(runs) - 1:
+            print()
+
+    print(f"{'='*72}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
@@ -484,6 +712,13 @@ def build_parser() -> argparse.ArgumentParser:
     resume_p.add_argument("--branch")
     resume_p.add_argument("--include-completed", action="store_true")
     resume_p.set_defaults(func=command_resume)
+
+    dashboard_p = sub.add_parser("dashboard")
+    dashboard_p.add_argument("--flow", help="Filter by flow name")
+    dashboard_p.add_argument("--all", action="store_true", help="Include completed runs")
+    dashboard_p.add_argument("--limit", type=int, default=5, help="Max gates per run (default: 5)")
+    dashboard_p.add_argument("--json", action="store_true", help="Output as JSON")
+    dashboard_p.set_defaults(func=command_dashboard)
 
     return parser
 
