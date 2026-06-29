@@ -93,7 +93,7 @@ def verify(run_dir: Path) -> list[str]:
         if not re.search(pattern, body, re.IGNORECASE):
             fail(errors, "verifier", f"ticket update body missing {label} content")
 
-    host_text = collect_agent_output(run_dir, skip_names={"gh.log", "ticket-comment.log"})
+    host_text = collect_agent_output(run_dir, skip_names={"gh.log", "ticket-comment.log"}, strip_tokens=True)
     require_stamp_sequence(
         errors,
         text=host_text,

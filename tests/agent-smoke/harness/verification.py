@@ -91,10 +91,11 @@ def collect_agent_output(
         text = read_text(path)
         if text.startswith("$ ") and OUTPUT_SENTINEL not in text:
             continue
+        is_codex = "OpenAI Codex" in text
         text = strip_output_sentinel(text)
         if strip_tokens:
             text = strip_token_footer(text)
-        if strip_exec and "OpenAI Codex" in text:
+        if strip_exec and is_codex:
             text = strip_codex_exec_blocks(text)
         chunks.append(text)
     return "\n".join(chunks)

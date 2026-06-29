@@ -72,7 +72,7 @@ def self_test() -> int:
         bundle_id = "wid-7-wid-8-widget-suite"
         bundle_dir = repo / ".beislid" / "exports" / bundle_id
         slices_dir = bundle_dir / "slices"
-        prompt = "\n".join([f"## {section}" for section in PROMPT_SECTIONS])
+        prompt = "\n".join(PROMPT_SECTIONS)
         bundle = {
             "kind": "approved-slice-plan-export-v0",
             "version": 1,

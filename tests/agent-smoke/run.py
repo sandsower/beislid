@@ -94,7 +94,7 @@ def run_suite_gate(scenarios: list[str], hosts: list[str], timeout: int, serial:
     failures: list[tuple[str, str, int, str]] = []
 
     for scenario in scenarios:
-        def run_one(host: str) -> tuple[str, int, str]:
+        def run_one(host: str, scenario: str = scenario) -> tuple[str, int, str]:
             try:
                 rc = run_host(
                     argparse.Namespace(
@@ -428,8 +428,8 @@ def gate(args: argparse.Namespace) -> int:
 
     if args.suite:
         suite = load_suite(args.suite)
-        if args.scenario and args.scenario != args.suite:
-            raise SystemExit(f"scenario {args.scenario!r} does not match requested suite {args.suite!r}")
+        if args.scenario:
+            raise SystemExit("gate accepts either a scenario name or --suite, not both")
         scenarios = [str(s) for s in suite["scenarios"]]
         gate_label = f"suite {args.suite}"
     else:
