@@ -1088,7 +1088,7 @@ _project_copy_skill_dir() {
   local src="$1" dst="$2" label="$3" project="$4" host="$5" skill="$6" action="$7" fingerprint
   rm -rf "$dst"
   mkdir -p "$dst"
-  cp -R "$src/." "$dst/"
+  cp -R -L "$src/." "$dst/"
   fingerprint="$(_project_dir_fingerprint "$dst")" || fingerprint=""
   _write_project_copy_marker "$dst" "$project" "$host" "$skill" "$src" "$fingerprint"
   _project_record_owned_copy "$host" "$skill" "$fingerprint"

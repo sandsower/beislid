@@ -90,6 +90,7 @@ Policy-check `pr.review.rerequest`, then run configured command with `{json_file
 - pushed branch status
 - replies posted or printed
 - gate envelopes/status, selection model, selected/skipped reasons, skipped-by-stage/skipped-by-execution rich gates, and any accepted skips
+- feedback response log using the `artifact-templates.md` shape
 - review re-request status if warranted
 - policy envelopes and `ask` outcomes
 - probe/cache entries to write back

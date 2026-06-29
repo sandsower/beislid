@@ -2,6 +2,10 @@
 
 Beislið skills compose into workflows. Use this as the routing reference once you know the basics from [How to use Beislið](./how-to-use.md). For guidance on configuring workflows for your team, see [Workflow authoring](./workflow-authoring.md).
 
+## Lifecycle artifacts and reports
+
+Beislið standardizes lifecycle records in [`.beislid/artifact-templates.md`](../.beislid/artifact-templates.md): spec, blueprint, implementation plan, verification report, review report, fresh-eyes report, ship summary, and feedback response log. The default is local/chat artifacts for planning, verification, and review evidence; public ticket/PR surfaces get terse summaries or approved replies unless workflow config or explicit instructions require the full artifact.
+
 ## Mainline feature flow
 
 Use this when an idea starts as product work and needs to become code.

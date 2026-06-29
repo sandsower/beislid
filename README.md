@@ -160,6 +160,8 @@ Repo-level routing is configured separately with `beislid:visual_surfaces` in `.
 
 ## Core workflows
 
+Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.md`](./.beislid/artifact-templates.md): spec, blueprint, implementation plan, verification report, review report, fresh-eyes report, ship summary, and feedback response log. Planning/proof/review records stay local or in chat by default; ticket/PR surfaces get concise summaries or configured replies.
+
 - **Shape work:** `spec`, `break-spec`, `blueprint`, `poke-holes`
 - **Execute safely:** `implement`, `debug`, `handoff`
 - **Check evidence:** `verify`, `review`, `fresh-eyes`, `rinse`, `show-me`

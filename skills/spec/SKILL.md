@@ -103,7 +103,7 @@ Decisions already resolved during the interview, with rationale.
 What this spec explicitly does not cover.
 </spec-template>
 
-The approved spec text is the source for any artifact. Do not add implementation details while writing an artifact.
+The approved spec text is the source for any artifact. Use the Spec artifact shape from `artifact-templates.md` when writing or summarizing it. Do not add implementation details while writing an artifact.
 
 When the next workflow needs stable requirements, finalize a `work-contract-v1` section in or alongside the spec.
 

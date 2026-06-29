@@ -1,0 +1,1 @@
+../../.beislid/artifact-templates.md
