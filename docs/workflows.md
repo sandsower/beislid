@@ -42,7 +42,7 @@ Routing rules:
 - When configured, `break-spec`, `spec`, and `blueprint` write local planning artifacts after approval through lifecycle actions; `spec` can also post the approved spec body back into the ticket body through the configured tracker action. Default `plans/` paths feed downstream skills.
 - Use `verify` before any done/fixed/passing claim.
 - Use `rinse` when you want an approved review/fix/verify loop before PR handoff.
-- Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, push, and PR creation.
+- Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, ship-time planning-artifact narration, push, and PR creation.
 
 ## Ticket flow
 

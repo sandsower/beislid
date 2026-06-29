@@ -186,6 +186,10 @@ surface: auto
 artifact_root: .beislid/clean-eval
 ```
 
+```beislid:ship_time_artifacts
+mode: remind
+```
+
 ## Turn this into your own config
 
 1. Replace the `id_pattern` and Linear URL with your team's workspace.
@@ -194,8 +198,11 @@ artifact_root: .beislid/clean-eval
    names; pick the models your team trusts for each tier.
 4. Set `babysit.closeout.merge.mode` to `auto` if you want automatic merge
    after approval (requires green CI and no open review threads).
-5. Remove `clean_eval` or set its mode to `off` if you don't need clean-
+5. Set `ship_time_artifacts.mode` to `include` if you want ready-for-review
+   to call out approved planning artifacts at handoff; leave it at `remind`
+   (or omit the block) for the default reminder-only behavior.
+6. Remove `clean_eval` or set its mode to `off` if you don't need clean-
    worktree verification before PR creation.
-6. If you use GitHub Actions or another CI system for required checks, you
+7. If you use GitHub Actions or another CI system for required checks, you
    may want `closeout.merge.method: repo-default` to follow branch protection
    rules.

@@ -292,6 +292,12 @@ events:
 - `approval: auto` runs without prompting; `approval: prompt` asks first.
 - `on_failure` is optional and defaults to `prompt`, preserving the retry / skip-this-session / abort flow. Use `continue` for best-effort side effects that should only warn, or `abort` for mandatory side effects that must stop the workflow on failure.
 
+`ready-for-review` can layer on `ship_time_artifacts` to summarize generated planning artifacts at handoff. The policy is narration-only in v1; it does not auto-commit or auto-delete files.
+
+```beislid:ship_time_artifacts
+mode: remind
+```
+
 ### Other sections
 
 | Section | Purpose |

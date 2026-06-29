@@ -530,6 +530,18 @@ reason: '<reason>'
 
 Never create duplicate `beislid:fresh_eyes` blocks; update or remove the existing one.
 
+### Ship-time planning-artifact handling
+
+Configure ship-time planning-artifact narration? (remind / include / skip / clean)
+
+Explain that `ship_time_artifacts` only changes how ready-for-review summarizes generated planning artifacts during handoff. It consults configured planning-artifact lifecycle actions and does not auto-commit or auto-delete files in v1.
+
+```beislid:ship_time_artifacts
+mode: remind
+```
+
+For `skip`, remove any existing block.
+
 ### Ticket updates
 
 Configure the canonical `ticket_update` block. This is shared by kickoff and review-response: kickoff uses only the comment channel to post the approved implementation plan; review-response uses the comment channel for QA/ticket replies and the issue channel for out-of-scope child tickets.

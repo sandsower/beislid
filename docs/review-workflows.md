@@ -38,7 +38,7 @@ This boundary is intentional. Findings should be safe to ask for even when you a
 - `pr-patrol` reviews someone else's PR and posts only comments you approve.
 - `review-response` handles feedback already left on your work.
 - `babysit` requires goal mode and keeps rechecking an open PR, delegating feedback fixes/replies to `review-response`, running configured gates, and performing configured closeout steps when safe.
-- `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates. It can also require a clean worktree/container evaluator before handoff when workflow policy says so.
+- `ready-for-review` runs the final PR handoff path for new PRs and the fast path for existing PR updates. It can also summarize configured ship-time planning artifacts and require a clean worktree/container evaluator before handoff when workflow policy says so.
 
 ## CodeRabbit deferred-review evidence
 
