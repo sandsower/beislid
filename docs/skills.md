@@ -1,6 +1,6 @@
 # Beislið skills
 
-This is the full skill catalog. For first-run guidance, start with [How to use Beislið](./how-to-use.md). For lifecycle diagrams, see [Workflows](./workflows.md).
+This is the full skill catalog. For first-run guidance, start with [How to use Beislið](./how-to-use.md). For lifecycle diagrams, see [Workflows](./workflows.md). For guidance on writing your own portable custom skills, see [Skill authoring](./skill-authoring.md).
 
 ## Plan
 

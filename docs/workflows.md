@@ -1,6 +1,6 @@
 # Beislið workflows
 
-Beislið skills compose into workflows. Use this as the routing reference once you know the basics from [How to use Beislið](./how-to-use.md).
+Beislið skills compose into workflows. Use this as the routing reference once you know the basics from [How to use Beislið](./how-to-use.md). For guidance on configuring workflows for your team, see [Workflow authoring](./workflow-authoring.md).
 
 ## Mainline feature flow
 
