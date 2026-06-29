@@ -348,6 +348,24 @@ test_cli_dispatch() {
   assert_contains_json_text "$out" '"action": "git.push"'
 }
 
+test_cli_dispatch_requires_python3() {
+  local path_dir err status
+  path_dir="$TMP/no-python"
+  mkdir -p "$path_dir"
+  ln -s "$(command -v bash)" "$path_dir/bash"
+  ln -s "$(command -v dirname)" "$path_dir/dirname"
+  ln -s "$(command -v readlink)" "$path_dir/readlink"
+  err="$TMP/err.txt"
+  if PATH="$path_dir" BEISLID_HOME="$REPO_DIR" "$CLI" action-policy evaluate --mode supervised-auto --action git.push >"$TMP/out.txt" 2>"$err"; then
+    note_fail "expected action-policy dispatch to fail without python3"
+    return 1
+  else
+    status=$?
+  fi
+  [[ "$status" == "1" ]] || { note_fail "expected exit status 1, got $status"; return 1; }
+  grep -qF 'error: beislid action-policy requires python3' "$err" || { note_fail "expected python3 guard error"; return 1; }
+}
+
 run_test "supervised read allows" test_supervised_read_allows
 run_test "git status is read-only" test_git_status_is_read_only
 run_test "strictest class wins" test_strictest_class_wins
@@ -369,6 +387,7 @@ run_test "validate valid policy summary" test_validate_valid_policy_summary
 run_test "validate rejects malformed mode policy" test_validate_rejects_malformed_mode_policy
 run_test "validate rejects invalid policy" test_validate_rejects_invalid_policy
 run_test "CLI dispatch" test_cli_dispatch
+run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
 
 if (( fail > 0 )); then
   echo "$fail action policy test(s) failed:" >&2
