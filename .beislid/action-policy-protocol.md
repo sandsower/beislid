@@ -29,7 +29,7 @@ beislid action-policy evaluate \
   [--default-branch] [--uncommitted-changes]
 ```
 
-Stable action ids should be specific enough for summaries, e.g. `git.merge`, `git.commit`, `git.push`, `gh.pr.create`, `ticket.comment`, `pr.review.reply`, `gate.autofix`, `dependency.install`, or `lifecycle.<event>.<name>`.
+Stable action ids should be specific enough for summaries, e.g. `git.merge`, `git.commit`, `git.push`, `gh.pr.create`, `ticket.comment`, `ticket.update`, `pr.review.reply`, `gate.autofix`, `dependency.install`, or `lifecycle.<event>.<name>`.
 
 ## Decision handling
 

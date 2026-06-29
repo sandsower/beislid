@@ -5,7 +5,7 @@ This is the full skill catalog. For first-run guidance, start with [How to use B
 ## Plan
 
 - `kickoff`: fetch a ticket and route to the right workflow; may derive a Work Contract and write a configured context checkpoint.
-- `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract and write approved spec artifacts when configured.
+- `spec`: brainstorm and shape lightweight product specs; may finalize a Work Contract, write approved spec artifacts when configured, and optionally post the approved spec body back into the tracker body.
 - `break-spec`: break large specs into vertical implementation phases.
 - `blueprint`: design before implementation from clear requirements or an approved Work Contract; may write approved design artifacts when configured.
 - `envelope`: author, approve, and export execution envelopes for AFK slices as validated `.beislid/exports/` bundles; explicit trigger only. Re-feeding a manifest with pause/review feedback self-detects revision mode and re-exports a superseding version in place.

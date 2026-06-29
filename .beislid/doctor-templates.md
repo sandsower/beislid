@@ -108,6 +108,20 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_kind": "artifact",
       "value": "(prompted artifact at runtime)"
     },
+    "lifecycle_actions.spec_approved": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(prompted artifact + tracker body post via ticket_update issue channel)"
+    },
+    "lifecycle_actions.blueprint_approved": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "artifact",
+      "value": "(auto artifact at runtime)"
+    },
     "lifecycle_actions.kickoff_context_ready": {
       "status": "ok",
       "probe_supported": true,
@@ -134,7 +148,7 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
-      "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 10"
+      "value": "modes: supervised-auto, unattended-auto; unattended sandbox: non-default-branch; known actions: 11"
     },
     "clean_eval": {
       "status": "ok",
@@ -206,10 +220,13 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 — knowledge_store    not configured
 ✓ pr_review_source cli:gh                                  ok (probed <ISO-8601>)
 ✓ pr_review_update manual                                  ok (manual at runtime)
+✓ lifecycle_actions.break_spec_approved artifact            ok (prompted artifact at runtime)
+✓ lifecycle_actions.spec_approved artifact/tracker          ok (prompted artifact + tracker body post via ticket_update issue channel)
+✓ lifecycle_actions.blueprint_approved artifact             ok (auto artifact at runtime)
 ✓ lifecycle_actions.kickoff_context_ready artifact          ok (prompted artifact at runtime)
 ✓ lifecycle_actions.implementation_plan_created artifact    ok (auto artifact at runtime)
 ✓ lifecycle_actions.review_feedback_loaded artifact         ok (reserved; not executed by P0 skills)
-✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 10)
+✓ action_policy validation                                  ok (unattended sandbox: non-default-branch; known actions: 11)
 ✓ clean_eval validation                                     ok (mode: require; surface: auto; artifact_root: .beislid/clean-eval)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
 ✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)

@@ -35,7 +35,7 @@ Routing rules:
 - Skip to `blueprint` only when the desired behavior is known and implementation design is the remaining question; an approved Work Contract counts as that requirements input.
 - Use Work Contract `scope_classification` for routing: `atomic`/`single_pr` go to `blueprint`, `multi_slice` goes to `break-spec`, and `project` starts with spec refinement before slice planning.
 - Use `implement` after the design is approved. It creates the file-level execution plan and task list.
-- When configured, `break-spec`, `spec`, and `blueprint` write local planning artifacts after approval through lifecycle actions; default `plans/` paths feed downstream skills.
+- When configured, `break-spec`, `spec`, and `blueprint` write local planning artifacts after approval through lifecycle actions; `spec` can also post the approved spec body back into the ticket body through the configured tracker action. Default `plans/` paths feed downstream skills.
 - Use `verify` before any done/fixed/passing claim.
 - Use `rinse` when you want an approved review/fix/verify loop before PR handoff.
 - Use `ready-for-review` when a branch is ready to go through quality gates, review, the configured final check, push, and PR creation.

@@ -37,7 +37,7 @@ Tell Beislið how to fetch tickets. This is needed for `kickoff` and `review-res
 
 ```beislid:ticket_source
 type: mcp
-tool: mcp__plugin_linear_linear__get_issue
+tool: mcp__linear__get_issue
 id_pattern: '^[A-Z]{2,4}-\d+$'
 link_template: 'https://linear.app/myteam/issue/{id}'
 ```
@@ -56,12 +56,13 @@ Three source types are supported:
 
 The `id_pattern` is a regex that validates extracted ticket IDs. `branch_pattern` extracts ticket IDs from branch names: the first capture group is the ID. If your branches use names like `vic/bei-43-fix-thing`, the pattern `^[^/]+/([a-z]+-\d+)` captures `bei-43`.
 
-Also add `ticket_update` to let orchestrators post plan comments and status updates:
+Also add `ticket_update` to let orchestrators post plan comments and status updates; its issue channel is also reused by `spec_approved` tracker actions that update the ticket body:
 
 ````markdown
 ```beislid:ticket_update
 type: mcp
-comment_tool: mcp__plugin_linear_linear__save_comment
+comment_tool: mcp__linear__save_comment
+issue_tool: mcp__linear__save_issue
 ```
 ````
 
@@ -272,6 +273,9 @@ events:
         type: artifact
         approval: prompt
         path: 'plans/{feature}-spec.md'
+      - name: post-spec-body-to-tracker
+        type: tracker
+        approval: prompt
   blueprint_approved:
     actions:
       - name: write-design-artifact
@@ -283,6 +287,7 @@ events:
 
 - `type: cli` actions run a command with `{ticket_id}`, `{branch}`, and `{event}` placeholders.
 - `type: artifact` actions write a local Markdown file after approval.
+- `type: tracker` actions post the approved spec body into the current ticket body through the configured `ticket_update` issue channel and are gated by `ticket.update` policy.
 - `approval: auto` runs without prompting; `approval: prompt` asks first.
 
 ### Other sections
@@ -409,6 +414,7 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 ```beislid:ticket_update
 type: mcp
 comment_tool: mcp__linear__save_comment
+issue_tool: mcp__linear__save_issue
 ```
 
 ## PR reviews
