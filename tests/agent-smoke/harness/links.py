@@ -37,6 +37,16 @@ def _lock_path(skills_dir: Path) -> Path:
     return skills_dir / LOCK
 
 
+def _canonical_run_dir(run_dir: Path) -> str:
+    return str(run_dir.resolve())
+
+
+def _canonical_run_dir_text(run_dir: str | Path | None) -> str:
+    if run_dir is None:
+        return ""
+    return str(Path(run_dir).resolve())
+
+
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -47,7 +57,7 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def _acquire_lock(host_name: str, skills_dir: Path, run_dir: Path, worktree: Path) -> None:
     lock_path = _lock_path(skills_dir)
-    payload = {"host": host_name, "run_dir": str(run_dir), "worktree": str(worktree)}
+    payload = {"host": host_name, "run_dir": _canonical_run_dir(run_dir), "worktree": str(worktree)}
     fd, temp_name = tempfile.mkstemp(prefix=f".{LOCK}.", dir=str(skills_dir))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -62,7 +72,7 @@ def _acquire_lock(host_name: str, skills_dir: Path, run_dir: Path, worktree: Pat
                 lock = _read_json(lock_path)
             except Exception as exc:
                 raise SystemExit(f"could not read lock {lock_path}: {exc}") from exc
-            if lock.get("run_dir") != str(run_dir):
+            if _canonical_run_dir_text(lock.get("run_dir")) != _canonical_run_dir(run_dir):
                 raise SystemExit(
                     f"{host_name} skills are already locked by another smoke run: {lock.get('run_dir')}. "
                     f"Run cleanup for that run before starting another {host_name} smoke."
@@ -84,7 +94,7 @@ def _release_lock(skills_dir: Path, run_dir: Path, warnings: list[str]) -> None:
     except Exception as exc:
         warnings.append(f"could not read lock {lock_path}: {exc}")
         return
-    if lock.get("run_dir") == str(run_dir):
+    if _canonical_run_dir_text(lock.get("run_dir")) == _canonical_run_dir(run_dir):
         lock_path.unlink()
     else:
         warnings.append(f"left lock for another run in place: {lock_path}")
