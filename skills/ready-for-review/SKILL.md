@@ -1,16 +1,18 @@
 ---
 name: ready-for-review
 description: >
-  Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when completed work is explicitly ready for PR review handoff. Bookend to kickoff: gates, review, final check, and PR handoff. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
+  Use when the user says "ready-for-review", "ready for review", "prepare for review", or "finalize for review", or when work is ready for PR review handoff. Bookend to kickoff: gates, review, final check, and PR handoff. Do NOT use for mid-implementation commits or unfinished work. Reads workflow.md and probes capabilities lazily.
 ---
 
 # Ready for Review
 
-Take a completed branch through gates, clean evaluator, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small new PRs use fast-path: preload aux, parallel safe gates, combined review/final-check.
+Take a branch through gates, review, final check, and PR creation. Existing PR updates: gates, push, report URL. Small new PRs use fast-path: preload aux, parallel-safe gates, combined review/final-check.
 
 **Don't use this for:** mid-implementation commits, experimental branches without tickets, or work that isn't ready for review.
 
-Project config: `<repo>/.beislid/workflow.md` (format: `workflow-md-format.md`). Probe lazily. Use `action-policy-protocol.md` before side effects. Output follows `output-templates.md` and `ready-for-review-templates.md`.
+Project config: `<repo>/.beislid/workflow.md`. Use `action-policy-protocol.md` before side effects. Output follows `output-templates.md` and `ready-for-review-templates.md`.
+
+Honor `../lifecycle-hooks.md` before and after this phase.
 
 ---
 

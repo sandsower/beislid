@@ -11,6 +11,8 @@ Address post-submission feedback: PR review threads, PR comments, QA ticket comm
 
 Project config lives at `<repo>/.beislid/workflow.md` (typed-key fenced YAML blocks; format reference at `workflow-md-format.md`). Capabilities are probed lazily on first need per `probe-semantics.md`. Action-risk decisions follow `action-policy-protocol.md`. Output prose follows `output-templates.md` and `review-response-templates.md`.
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after review-response.
+
 ---
 
 ## Read workflow.md

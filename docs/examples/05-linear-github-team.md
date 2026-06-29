@@ -104,6 +104,32 @@ events:
         path: 'plans/{feature}-design.md'
 ```
 
+## Lifecycle hooks
+
+Run repo-owned checks around phase boundaries without turning them into gates.
+
+```beislid:lifecycle_hooks
+phases:
+  implement:
+    before:
+      actions:
+        - name: consistency-check
+          type: cli
+          command: 'python3 scripts/check_break_spec_artifact_consistency.py'
+          approval: auto
+          when:
+            paths: ['docs/**', 'plans/**']
+  ready_for_review:
+    after:
+      actions:
+        - name: workflow-signal-check
+          type: cli
+          command: 'python3 scripts/check_workflow_signals_consistency.py'
+          approval: prompt
+          when:
+            paths: ['skills/**', '.beislid/**']
+```
+
 ## Model routing
 
 Use frontier models for design work (`spec`, `blueprint`, `poke-holes`) and

@@ -15,6 +15,8 @@ Use this for:
 - Reviewing a supplied patch/diff
 - A reusable review contract for `fresh-eyes`, `rinse`, and `pr-patrol` workflows
 
+If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after review.
+
 Do not use this for:
 - A final whole-diff pass after iterative fixes — use `fresh-eyes`
 - Interactive walkthroughs of your own diff — use `walk-the-diff`

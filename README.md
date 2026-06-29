@@ -53,7 +53,7 @@ It installs portable Markdown skills, but the skills act only as the interface. 
 spec → blueprint → implement → verify → review → ready-for-review
 ```
 
-Project workflow lives in `.beislid/workflow.md`, so a repo can declare its own ticket sources, branch patterns, quality gates, PR review sources, and PR handoff rules.
+Project workflow lives in `.beislid/workflow.md`, so a repo can declare its own ticket sources, branch patterns, quality gates, lifecycle actions, lifecycle hooks, PR review sources, and PR handoff rules.
 
 ## Who it is for
 
@@ -279,7 +279,7 @@ When installed as a Pi package, Beislið includes a Pi extension that registers 
 - [How to use](./docs/how-to-use.md): first-run guide and common paths.
 - [Workflows](./docs/workflows.md): lifecycle diagrams and routing rules.
 - [Skills](./docs/skills.md): full skill catalog.
-- [Configuration](./docs/configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, and probe cache.
+- [Configuration](./docs/configuration.md): `setup`, `doctor`, `.beislid/workflow.md`, scopes, gates, lifecycle hooks, and probe cache.
 - [Workflow authoring](./docs/workflow-authoring.md): how to write and test `.beislid/workflow.md` for your team.
 - [Team rollout](./docs/team-rollout.md): minimum viable repo config, strictness layers, and the `AGENTS.md` block for Beislið-ready repos.
 - [Example team workflow configurations](./docs/examples/README.md): seven complete drop-in configs for common team shapes.
