@@ -73,6 +73,60 @@ def load_scenario(name: str) -> tuple[Path, dict]:
     return path, config
 
 
+def suite_dir(name: str) -> Path:
+    path = HARNESS_ROOT / "suites" / f"{name}.json"
+    if not path.exists():
+        known = ", ".join(sorted(p.stem for p in (HARNESS_ROOT / "suites").glob("*.json")))
+        raise SystemExit(f"unknown suite {name!r}; known suites: {known}")
+    return path
+
+
+def load_suite(name: str) -> dict:
+    path = suite_dir(name)
+    config = read_json(path)
+    scenarios = config.get("scenarios")
+    if not isinstance(scenarios, list) or not scenarios or not all(isinstance(s, str) and s.strip() for s in scenarios):
+        raise SystemExit(f"suite {name!r} must define a non-empty list of scenarios")
+    return config
+
+
+def run_suite_gate(scenarios: list[str], hosts: list[str], timeout: int, serial: bool) -> list[tuple[str, str, int, str]]:
+    failures: list[tuple[str, str, int, str]] = []
+
+    for scenario in scenarios:
+        def run_one(host: str, scenario: str = scenario) -> tuple[str, int, str]:
+            try:
+                rc = run_host(
+                    argparse.Namespace(
+                        scenario=scenario,
+                        host=host,
+                        timeout=timeout,
+                        no_verify=False,
+                        no_cleanup=False,
+                    )
+                )
+                return host, rc, ""
+            except SystemExit as exc:
+                rc, detail = system_exit_result(exc)
+                return host, rc, detail
+
+        if serial or len(hosts) == 1:
+            results = [run_one(host) for host in hosts]
+        else:
+            results = []
+            with ThreadPoolExecutor(max_workers=len(hosts)) as executor:
+                futures = {executor.submit(run_one, host): host for host in hosts}
+                for future in as_completed(futures):
+                    results.append(future.result())
+
+        scenario_failures = [(scenario, host, rc, detail) for host, rc, detail in results if rc != 0]
+        failures.extend(scenario_failures)
+        if scenario_failures:
+            break
+
+    return failures
+
+
 def run_setup(path: Path, run_dir: Path, config: dict) -> dict:
     setup = path / config.get("setup", "setup.py")
     result = subprocess.run(
@@ -376,43 +430,27 @@ def gate(args: argparse.Namespace) -> int:
         print("ok: agent smoke skipped; no Beislið skill/smoke files changed")
         return 0
 
-    hosts = [host.strip() for host in args.hosts.split(",") if host.strip()]
-    failures: list[tuple[str, int, str]] = []
-
-    def run_one(host: str) -> tuple[str, int, str]:
-        try:
-            rc = run_host(
-                argparse.Namespace(
-                    scenario=args.scenario,
-                    host=host,
-                    timeout=args.timeout,
-                    no_verify=False,
-                    no_cleanup=False,
-                )
-            )
-            return host, rc, ""
-        except SystemExit as exc:
-            rc, detail = system_exit_result(exc)
-            return host, rc, detail
-
-    if args.serial or len(hosts) == 1:
-        results = [run_one(host) for host in hosts]
+    if args.suite:
+        suite = load_suite(args.suite)
+        if args.scenario:
+            raise SystemExit("gate accepts either a scenario name or --suite, not both")
+        scenarios = [str(s) for s in suite["scenarios"]]
+        gate_label = f"suite {args.suite}"
     else:
-        results = []
-        with ThreadPoolExecutor(max_workers=len(hosts)) as executor:
-            futures = {executor.submit(run_one, host): host for host in hosts}
-            for future in as_completed(futures):
-                results.append(future.result())
+        if not args.scenario:
+            raise SystemExit("gate requires either a scenario name or --suite")
+        scenarios = [args.scenario]
+        gate_label = args.scenario
 
-    for host, rc, detail in results:
-        if rc != 0:
-            failures.append((host, rc, detail))
+    hosts = [host.strip() for host in args.hosts.split(",") if host.strip()]
+    failures = run_suite_gate(scenarios, hosts, args.timeout, args.serial)
+
     if failures:
-        for host, rc, detail in failures:
+        for scenario, host, rc, detail in failures:
             suffix = f": {detail}" if detail else ""
-            print(f"failed: {host} rc={rc}{suffix}", file=sys.stderr)
+            print(f"failed: {scenario}/{host} rc={rc}{suffix}", file=sys.stderr)
         return 1
-    print(f"ok: {args.scenario} agent smoke passed on {', '.join(hosts)}")
+    print(f"ok: {gate_label} agent smoke passed on {', '.join(hosts)}")
     return 0
 
 
@@ -435,8 +473,9 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--no-cleanup", action="store_true")
     run_p.set_defaults(func=run_host)
 
-    gate_p = sub.add_parser("gate", help="Run a scenario across hosts non-interactively")
-    gate_p.add_argument("scenario")
+    gate_p = sub.add_parser("gate", help="Run a scenario or suite across hosts non-interactively")
+    gate_p.add_argument("scenario", nargs="?")
+    gate_p.add_argument("--suite")
     gate_p.add_argument("--hosts", default="codex")
     gate_p.add_argument("--timeout", type=int, default=900)
     gate_p.add_argument("--changed-only", action="store_true", help="Skip unless skill/smoke files changed")

@@ -11,6 +11,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.verification import collect_agent_output, fail, require_stamp_sequence
+
 REQUIRED_STAMPS = [
     "✓ kickoff/step-1-ticket v1 loaded",
     "✓ kickoff/step-2-context v1 loaded",
@@ -44,27 +48,6 @@ def load_metadata(run_dir: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
-
-
-OUTPUT_SENTINEL = "=== BEISLID_AGENT_SMOKE_OUTPUT ==="
-
-
-def agent_output_text(run_dir: Path) -> str:
-    chunks: list[str] = []
-    for path in sorted(run_dir.glob("*.log")):
-        if path.name in {"gh.log", "ticket-comment.log"}:
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if text.startswith("$ "):
-            if OUTPUT_SENTINEL not in text:
-                continue
-            text = text.split(OUTPUT_SENTINEL, 1)[1]
-        chunks.append(text)
-    return "\n".join(chunks)
-
-
 def verify(run_dir: Path) -> list[str]:
     errors: list[str] = []
     metadata = load_metadata(run_dir)
@@ -76,22 +59,22 @@ def verify(run_dir: Path) -> list[str]:
 
     gh_text = gh_log.read_text(encoding="utf-8", errors="replace") if gh_log.exists() else ""
     if "gh issue view 123" not in gh_text:
-        fail(errors, "mock gh did not record `gh issue view 123`")
+        fail(errors, "product", "mock gh did not record `gh issue view 123`")
     if gh_text and f"cwd={repo}" not in gh_text:
-        fail(errors, "mock gh did not run from fixture repo cwd")
+        fail(errors, "artifact", "mock gh did not run from fixture repo cwd")
 
     comment_text = comment_log.read_text(encoding="utf-8", errors="replace") if comment_log.exists() else ""
     if "ticket-comment 123" not in comment_text:
-        fail(errors, "mock ticket-comment did not post update for ticket 123")
+        fail(errors, "product", "mock ticket-comment did not post update for ticket 123")
 
     lifecycle_text = lifecycle_action_log.read_text(encoding="utf-8", errors="replace") if lifecycle_action_log.exists() else ""
     if "lifecycle-action 123 123 123-kickoff-smoke kickoff_start" not in lifecycle_text:
-        fail(errors, "mock lifecycle action did not run with ticket, branch, and event placeholders")
+        fail(errors, "product", "mock lifecycle action did not run with ticket, branch, and event placeholders")
     if lifecycle_text and f"cwd={repo}" not in lifecycle_text:
-        fail(errors, "mock lifecycle action did not run from fixture repo cwd")
+        fail(errors, "artifact", "mock lifecycle action did not run from fixture repo cwd")
 
     if not comment_body.exists():
-        fail(errors, f"ticket update body copy missing: {comment_body}")
+        fail(errors, "artifact", f"ticket update body copy missing: {comment_body}")
         body = ""
     else:
         body = comment_body.read_text(encoding="utf-8", errors="replace")
@@ -108,18 +91,21 @@ def verify(run_dir: Path) -> list[str]:
         ("split field", r"requires_split:\s*false|requires split:\s*false"),
     ]:
         if not re.search(pattern, body, re.IGNORECASE):
-            fail(errors, f"ticket update body missing {label} content")
+            fail(errors, "verifier", f"ticket update body missing {label} content")
 
-    host_text = agent_output_text(run_dir)
-    stamp_lines = [line.strip() for line in host_text.splitlines() if line.strip().startswith("✓ kickoff/step-")]
-    stamp_chunks = [stamp_lines[i:i + len(REQUIRED_STAMPS)] for i in range(0, len(stamp_lines), len(REQUIRED_STAMPS))]
-    if not stamp_lines or any(chunk != REQUIRED_STAMPS for chunk in stamp_chunks):
-        fail(errors, f"agent output must contain the expected aux load stamps in order: {stamp_lines!r}")
+    host_text = collect_agent_output(run_dir, skip_names={"gh.log", "ticket-comment.log"}, strip_tokens=True)
+    require_stamp_sequence(
+        errors,
+        text=host_text,
+        stamps=REQUIRED_STAMPS,
+        label="agent output",
+        kind="verifier",
+    )
 
     combined_text = "\n".join([host_text, body, gh_text, comment_text, lifecycle_text])
     for label, pattern in REQUIRED_PATTERNS:
         if not re.search(pattern, combined_text, re.IGNORECASE):
-            fail(errors, f"smoke evidence missing marker: {label}")
+            fail(errors, "product", f"smoke evidence missing marker: {label}")
 
     return errors
 
@@ -138,7 +124,7 @@ def self_test() -> int:
         }
         write(run_dir / "metadata.json", json.dumps(metadata))
         write(run_dir / "gh.log", f"2026-01-01T00:00:00Z\tcwd={repo}\tgh issue view 123 --json number,title,body,state,labels\n")
-        write(run_dir / "ticket-comment.log", f"2026-01-01T00:00:01Z\tcwd={repo}\tticket-comment 123 /tmp/body.md\n")
+        write(run_dir / "ticket-comment-log".replace("-log", ".log"), f"2026-01-01T00:00:01Z\tcwd={repo}\tticket-comment 123 /tmp/body.md\n")
         write(run_dir / "lifecycle-action.log", f"2026-01-01T00:00:01Z\tcwd={repo}\tlifecycle-action 123 123 123-kickoff-smoke kickoff_start\n")
         write(run_dir / "ticket-comment-body.md", "Approach summary\nskill-only-context-token-44\nscope_classification:\n  kind: single_pr\n  recommended_route: blueprint\n  requires_human_approval: false\n  requires_split: false\nFiles: src/summary.py and tests/test_summary.py\nTests: pytest\nRisks: none\n")
         prompt_only = "\n".join(REQUIRED_STAMPS)
@@ -150,7 +136,7 @@ def self_test() -> int:
         (run_dir / "prompt-only.log").unlink()
 
         write(run_dir / "duplicate.log", "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             REQUIRED_STAMPS[-1],
             "Add activity summary filters",
@@ -167,7 +153,7 @@ def self_test() -> int:
         (run_dir / "duplicate.log").unlink()
 
         write(run_dir / "codex.log", "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             "Add activity summary filters",
             "src/summary.py tests/test_summary.py",

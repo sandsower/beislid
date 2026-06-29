@@ -11,13 +11,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.verification import collect_agent_output, fail, require_repo_snapshot, require_stamp_sequence
+
 REQUIRED_STAMPS = [
     "✓ review-response/phase-1-detect v1 loaded",
     "✓ review-response/phase-2-fix v1 loaded",
     "✓ review-response/phase-3-push v1 loaded",
 ]
-
-OUTPUT_SENTINEL = "=== BEISLID_AGENT_SMOKE_OUTPUT ==="
 
 
 def write(path: Path, text: str) -> None:
@@ -39,40 +41,6 @@ def load_metadata(run_dir: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
-
-
-def agent_output_text(run_dir: Path) -> str:
-    chunks: list[str] = []
-    for path in sorted(run_dir.glob("*.log")):
-        if path.name in {"gh.log", "pr-review-source.log", "pr-review-update.log"}:
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if text.startswith("$ "):
-            if OUTPUT_SENTINEL not in text:
-                continue
-            text = text.split(OUTPUT_SENTINEL, 1)[1]
-        # Codex logs may repeat the final assistant answer after a `tokens used`
-        # footer. Ignore that host-rendered duplicate, but keep earlier duplicate
-        # stamp groups visible so real protocol double-emission still fails.
-        text = text.split("\ntokens used\n", 1)[0]
-        chunks.append(text)
-    return "\n".join(chunks)
-
-
-def strip_markdown_fences(text: str) -> str:
-    lines: list[str] = []
-    in_fence = False
-    for line in text.splitlines():
-        if line.strip().startswith("```"):
-            in_fence = not in_fence
-            continue
-        if not in_fence:
-            lines.append(line)
-    return "\n".join(lines)
-
-
 def verify(run_dir: Path) -> list[str]:
     errors: list[str] = []
     metadata = load_metadata(run_dir)
@@ -87,65 +55,62 @@ def verify(run_dir: Path) -> list[str]:
 
     gh_text = gh_log.read_text(encoding="utf-8", errors="replace") if gh_log.exists() else ""
     if "gh pr view" not in gh_text:
-        fail(errors, "mock gh did not record PR detection")
+        fail(errors, "product", "mock gh did not record PR detection")
     if gh_text and f"cwd={repo}" not in gh_text:
-        fail(errors, "mock gh did not run from fixture repo cwd")
+        fail(errors, "artifact", "mock gh did not run from fixture repo cwd")
 
     source_text = source_log.read_text(encoding="utf-8", errors="replace") if source_log.exists() else ""
     expected_pr_args = "sandsower review-response-smoke 7 https://example.invalid/sandsower/review-response-smoke/pull/7"
     if f"pr-review-source summary {expected_pr_args}" not in source_text:
-        fail(errors, "mock PR review source summary was not called with expected PR identity")
+        fail(errors, "product", "mock PR review source summary was not called with expected PR identity")
     if f"pr-review-source threads {expected_pr_args}" not in source_text:
-        fail(errors, "mock PR review source threads command was not called with expected PR identity")
+        fail(errors, "product", "mock PR review source threads command was not called with expected PR identity")
     if source_text and f"cwd={repo}" not in source_text:
-        fail(errors, "mock PR review source did not run from fixture repo cwd")
+        fail(errors, "artifact", "mock PR review source did not run from fixture repo cwd")
 
     update_text = update_log.read_text(encoding="utf-8", errors="replace") if update_log.exists() else ""
     if "pr-review-update reply" not in update_text:
-        fail(errors, "mock PR review update reply was not called")
+        fail(errors, "product", "mock PR review update reply was not called")
     if update_text and f"cwd={repo}" not in update_text:
-        fail(errors, "mock PR review update did not run from fixture repo cwd")
+        fail(errors, "artifact", "mock PR review update did not run from fixture repo cwd")
     if not update_payload.exists():
-        fail(errors, f"PR review update payload copy missing: {update_payload}")
+        fail(errors, "artifact", f"PR review update payload copy missing: {update_payload}")
         payload = {}
     else:
         try:
             payload = json.loads(update_payload.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            fail(errors, f"PR review update payload is not valid JSON: {exc}")
+            fail(errors, "verifier", f"PR review update payload is not valid JSON: {exc}")
             payload = {}
     body = str(payload.get("body", ""))
     if not re.search(r"fixed|addressed|hello reviewer", body, re.IGNORECASE):
-        fail(errors, "PR review reply body does not mention the fix")
+        fail(errors, "product", "PR review reply body does not mention the fix")
     if str(payload.get("in_reply_to", "")) != "7001":
-        fail(errors, "PR review reply payload missing in_reply_to=7001")
+        fail(errors, "verifier", "PR review reply payload missing in_reply_to=7001")
 
     source_file = repo / "src" / "reply.py"
     source = source_file.read_text(encoding="utf-8", errors="replace") if source_file.exists() else ""
     if "return 'hello reviewer'" not in source and 'return "hello reviewer"' not in source:
-        fail(errors, "fixture source was not fixed to return hello reviewer")
+        fail(errors, "product", "fixture source was not fixed to return hello reviewer")
     if not gate_marker.exists():
-        fail(errors, f"gate marker missing; validate-fixture did not prove execution: {gate_marker}")
+        fail(errors, "artifact", f"gate marker missing; validate-fixture did not prove execution: {gate_marker}")
 
     try:
         count = int(run(["git", "rev-list", "--count", "HEAD"], cwd=repo))
         if count < 2:
-            fail(errors, "no feedback-fix commit was created")
+            fail(errors, "artifact", "no feedback-fix commit was created")
     except Exception as exc:
-        fail(errors, f"could not inspect local commit count: {exc}")
+        fail(errors, "verifier", f"could not inspect local commit count: {exc}")
     try:
         local = run(["git", "rev-parse", "HEAD"], cwd=repo)
         remote = run(["git", f"--git-dir={origin}", "rev-parse", f"refs/heads/{branch}"])
         if local != remote:
-            fail(errors, "fixture branch HEAD was not pushed to origin")
+            fail(errors, "artifact", "fixture branch HEAD was not pushed to origin")
     except Exception as exc:
-        fail(errors, f"could not verify pushed branch: {exc}")
+        fail(errors, "verifier", f"could not verify pushed branch: {exc}")
 
-    host_text = agent_output_text(run_dir)
-    stamp_text = strip_markdown_fences(host_text)
-    stamp_lines = [line.strip().rstrip() for line in stamp_text.splitlines() if line.strip().startswith("✓ review-response/phase-")]
-    if stamp_lines != REQUIRED_STAMPS:
-        fail(errors, f"agent output must contain exactly the expected aux load stamps in order: {stamp_lines!r}")
+    host_text = collect_agent_output(run_dir, strip_tokens=True)
+    require_stamp_sequence(errors, text=host_text, stamps=REQUIRED_STAMPS, label="agent output", kind="verifier")
 
     combined_text = "\n".join([host_text, update_text, source_text, gh_text, body])
     for label, pattern in [
@@ -154,7 +119,9 @@ def verify(run_dir: Path) -> list[str]:
         ("reply evidence", r"reply|posted|Fixed in|addressed"),
     ]:
         if not re.search(pattern, combined_text, re.IGNORECASE):
-            fail(errors, f"smoke evidence missing marker: {label}")
+            fail(errors, "product", f"smoke evidence missing marker: {label}")
+
+    require_repo_snapshot(errors, repo=repo, expected_head=None, kind="artifact")
 
     return errors
 
@@ -201,7 +168,7 @@ def self_test() -> int:
         gate_marker = run_dir / "validate-fixture.marker"
         gate_marker.unlink()
         write(missing_gate, "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             "categorized as clear fix",
             "validate-fixture gate passed",
@@ -224,7 +191,7 @@ def self_test() -> int:
         (run_dir / "prompt-only.log").unlink()
 
         write(run_dir / "duplicate.log", "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             REQUIRED_STAMPS[-1],
             "categorized as clear fix",
@@ -233,13 +200,13 @@ def self_test() -> int:
             "",
         ]))
         duplicate_errors = verify(run_dir)
-        if not any("exactly the expected aux load stamps" in error for error in duplicate_errors):
+        if not any("expected aux load stamps" in error for error in duplicate_errors):
             print("self-test failed: duplicate aux stamps should fail", file=sys.stderr)
             return 1
         (run_dir / "duplicate.log").unlink()
 
         write(run_dir / "codex.log", "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             "categorized as clear fix",
             "validate-fixture gate passed",
@@ -261,7 +228,7 @@ def self_test() -> int:
         (run_dir / "codex.log").unlink()
 
         write(run_dir / "claude.log", "\n".join([
-            OUTPUT_SENTINEL,
+            "=== BEISLID_AGENT_SMOKE_OUTPUT ===",
             *REQUIRED_STAMPS,
             "categorized as clear fix",
             "validate-fixture gate passed",
