@@ -68,8 +68,8 @@ _usage() {
 Beislið CLI
 
 Usage:
-  beislid install user [--with-security-hooks] [--force]
-  beislid install project [path] [--copy] [--write-gitignore] [--force]
+  beislid install user [--with-security-hooks] [--force] [--strict]
+  beislid install project [path] [--copy] [--write-gitignore] [--force] [--strict]
   beislid status [project [path]]
   beislid plugin <enable|disable|status> lavish [--check]
   beislid workflow-signal <emit|status> [...]
@@ -107,6 +107,7 @@ _parse_user_install_flags() {
     case "$1" in
       --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
       --force|--repoint) FORCE=1 ;;
+      --strict) STRICT=1 ;;
       -h|--help)
         _usage
         exit 0
@@ -129,6 +130,7 @@ _parse_project_install_flags() {
   while (($#)); do
     case "$1" in
       --force|--repoint) FORCE=1 ;;
+      --strict) STRICT=1 ;;
       --copy) PROJECT_MODE="copy" ;;
       --write-gitignore) PROJECT_WRITE_GITIGNORE=1 ;;
       -h|--help)
