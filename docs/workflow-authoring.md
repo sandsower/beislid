@@ -185,6 +185,24 @@ reply_command: 'gh api repos/{owner}/{repo}/pulls/{number}/comments --method POS
 
 The `{owner}`, `{repo}`, `{number}`, `{json_file}` placeholders are substituted at runtime. Reply bodies are written to temp files first — never interpolated into shell commands.
 
+### Review feedback prompt profiles
+
+Use this when PR review comments already contain agent-ready instructions but you want `review-response` to prefer the extracted prompt instead of the whole comment body. Profiles are ordered, first match wins, and they only enrich loaded feedback — they do not add a new review backend or mode.
+
+````markdown
+```beislid:review_feedback_profiles
+- name: coderabbit
+  match:
+    source: pr_review
+    author_regex: '^coderabbit(ai)?$'
+  extract:
+    prompt_regex: '(?s)### Agent prompt\n(?P<agent_prompt>.+)$'
+    prompt_format: coderabbit
+```
+````
+
+Use this for already-posted GitHub review comments. CodeRabbit CLI or "run a new review now" workflows stay out of scope here.
+
 ### PR target
 
 If your default base is not `main`, or you use a non-`origin` remote:

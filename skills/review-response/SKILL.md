@@ -1,6 +1,6 @@
 ---
 name: review-response
-description: Use when the user says "review-response", "respond to review", "review comments are back", or "QA sent feedback", or when existing PR review comments or QA feedback need a response. This is the post-review response skill — if someone already reviewed or tested the user's code and left comments, use it. Do NOT use when the user wants to write reviews, start new work (use kickoff), or create a PR (use ready-for-review). Reads project config from `<repo>/.beislid/workflow.md` and probes capabilities lazily as needed.
+description: Use when the user says "review-response", "respond to review", "review comments are back", or "QA sent feedback", or when existing PR review comments or QA feedback need a response. This is the post-review response skill. Do NOT use when the user wants to write reviews, start new work (use kickoff), or create a PR (use ready-for-review). Reads `<repo>/.beislid/workflow.md` and probes lazily. Supports prompt profiles for agent-ready review comments.
 ---
 
 # Review Response

@@ -18,7 +18,7 @@ For each item, assign one category:
 - **Out-of-scope** — valid but belongs in a separate ticket.
 - **Clarification needed** — feedback is ambiguous.
 
-Present the categorized list with proposed action for each item. User may reclassify before fixes begin. Deferred-review items should stay as evidence unless paired with additional actionable feedback.
+Present the categorized list with proposed action for each item. User may reclassify before fixes begin. Deferred-review items should stay as evidence unless paired with additional actionable feedback. When `agent_prompt` is present, use it as the primary working instruction for the fix while keeping the original body available for context, quoting, and replies.
 
 ## 2b. Fast-path check
 

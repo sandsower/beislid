@@ -39,6 +39,7 @@ Use this when the team already uses Linear for tickets and GitHub for PRs:
 - `ticket_source` via Linear MCP
 - `ticket_update` for kickoff notes and review-response replies
 - `pr_review_source` / `pr_review_update` for review comments
+- optional `review_feedback_profiles` when review comments already include agent-ready prompts
 - gates for lint/test/typecheck/build
 - `action_policy` and `babysit` once the team trusts the loop
 
@@ -68,6 +69,7 @@ Starter intent:
 Use this when the team wants the workflow to keep a PR green with minimal drift:
 
 - `pr_review_source` and `pr_review_update`
+- optional `review_feedback_profiles` for prompt-profile enrichment on already-posted comments
 - `clean_eval` for review handoff
 - `babysit` with gates before push
 - optional `memento` / `retro` closeout policy

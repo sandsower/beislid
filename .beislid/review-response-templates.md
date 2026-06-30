@@ -70,6 +70,8 @@ Missing `threads_command`:
 Paste the full source, including unresolved threads, author/source, status, file/line if relevant, and links if available.
 ```
 
+💭 Prompt profiles can enrich loaded review items with `agent_prompt`; the raw body stays available for context and replies.
+
 ## PR review update notes
 
 Manual update:

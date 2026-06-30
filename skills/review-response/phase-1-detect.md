@@ -82,21 +82,21 @@ Fetch based on `ticket_source.type`:
 
 ## 1g. Normalize feedback queue
 
-Normalize PR review, QA/ticket, and pasted feedback into one queue:
+Normalize PR review, QA/ticket and pasted feedback into one queue. Matching `review_feedback_profiles` entries add `agent_prompt` and `prompt_format`; keep `body`/metadata and use first-match-wins.
 
 ```yaml
 source: pr_review | ticket_qa | pasted
-source_url: optional
 author: optional
 body: string
+agent_prompt: optional
+prompt_format: optional
 status: optional
 file: optional
 line: optional
 comment_id: optional
-reviewer: optional
 ```
 
-If a PR review item is from CodeRabbit and the body says `Review skipped`, `Review limit reached`, `rate limited`, or `draft detected`, set `status: deferred_review` and keep it as evidence, not actionable review feedback. Preserve the bot comment text and source metadata so babysit and release summaries can surface the gap. Do not route deferred-review items into Phase 2 fixes unless the body also contains an actual actionable request.
+If a prompt-profiled bot says `Review skipped`, `Review limit reached`, `rate limited`, or `draft detected`, set `status: deferred_review` and keep it as evidence. Preserve bot text and metadata so babysit/release summaries can surface the gap. Do not route deferred-review items into Phase 2 unless the body also contains an actionable request.
 
 If mode is both, categorize one combined queue so duplicate requests across sources are fixed once. Preserve `source` metadata so replies go back to the right place.
 
