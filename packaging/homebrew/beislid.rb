@@ -26,6 +26,7 @@ class Beislid < Formula
     (libexec/"scripts").install "scripts/action_policy.py"
     (libexec/"scripts").install "scripts/validate_export.py"
     (libexec/"scripts").install "scripts/visual_feedback.py"
+    (libexec/"scripts").install "scripts/workflow_normalizer.py"
 
     bin.install_symlink libexec/"bin/beislid" => "beislid"
   end

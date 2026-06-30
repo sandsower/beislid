@@ -25,6 +25,7 @@ if [[ -n "${BEISLID_HOME:-}" ]] && \
      [[ ! -f "$BEISLID_ROOT/scripts/action_policy.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/validate_export.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/visual_feedback.py" ]] || \
+     [[ ! -f "$BEISLID_ROOT/scripts/workflow_normalizer.py" ]] || \
      [[ ! -d "$BEISLID_ROOT/skills" ]] || \
      [[ ! -f "$BEISLID_ROOT/install.sh" ]]; }; then
   if [[ -d "$BEISLID_HOME" ]]; then
@@ -45,6 +46,7 @@ _validate_runtime_layout() {
   [[ -f "$root/scripts/action_policy.py" ]] || missing+=("scripts/action_policy.py")
   [[ -f "$root/scripts/validate_export.py" ]] || missing+=("scripts/validate_export.py")
   [[ -f "$root/scripts/visual_feedback.py" ]] || missing+=("scripts/visual_feedback.py")
+  [[ -f "$root/scripts/workflow_normalizer.py" ]] || missing+=("scripts/workflow_normalizer.py")
 
   if (( ${#missing[@]} > 0 )); then
     echo "error: Beislið runtime layout is incomplete at $root" >&2
@@ -74,6 +76,7 @@ Usage:
   beislid repair project [path] [--force] [--strict]
   beislid status [project [path]]
   beislid plugin <enable|disable|status> lavish [--check]
+  beislid workflow normalize --json
   beislid workflow-signal <emit|status> [...]
   beislid update [--force]
   beislid migrate v0.2 [--with-security-hooks] [--force]
@@ -326,6 +329,34 @@ case "$cmd" in
         ;;
       *)
         echo "Unknown visual-feedback subcommand: $subcmd" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  workflow)
+    shift
+    subcmd="${1:-}"
+    case "$subcmd" in
+      normalize)
+        shift
+        if [[ "${1:-}" != "--json" ]] || (( $# != 1 )); then
+          echo "Usage: beislid workflow normalize --json" >&2
+          exit 2
+        fi
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "error: beislid workflow normalize requires python3" >&2
+          exit 1
+        fi
+        python3 "$BEISLID_ROOT/scripts/workflow_normalizer.py" --json
+        ;;
+      "")
+        echo "Missing workflow subcommand." >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        echo "Unknown workflow subcommand: $subcmd" >&2
         _usage >&2
         exit 2
         ;;
