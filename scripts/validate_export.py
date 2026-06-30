@@ -41,6 +41,7 @@ ALLOWED_SLICE_SCHEMAS = frozenset({"approved-slice-v1", "rondo-execution-request
 REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 KNOWN_TIERS = frozenset({"light", "standard", "heavy", "frontier"})
+KNOWN_BOUNDARIES = frozenset({"planning", "implementation", "review_fix", "gate_repair"})
 ALLOWED_ROUTING_MODES = frozenset({"prefer", "require"})
 
 
@@ -175,8 +176,43 @@ def _validate_parallel_groups(
                     )
 
 
+def _validate_boundary_routing(name: str, routing: object, errors: list[str]) -> None:
+    prefix = f"{name}: runner_extensions.model_routing.routing"
+    if routing is None:
+        return
+    if not isinstance(routing, list) or not routing:
+        errors.append(f"{prefix} must be a non-empty list of boundary rules")
+        return
+
+    for idx, rule in enumerate(routing):
+        rule_prefix = f"{prefix}[{idx}]"
+        if not isinstance(rule, dict):
+            errors.append(f"{rule_prefix} must be an object")
+            continue
+
+        boundary = rule.get("boundary")
+        if boundary not in KNOWN_BOUNDARIES:
+            errors.append(f"{rule_prefix}.boundary must be one of {sorted(KNOWN_BOUNDARIES)}, got {boundary!r}")
+
+        tier = rule.get("tier")
+        if tier not in KNOWN_TIERS:
+            errors.append(f"{rule_prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
+
+        mode = rule.get("mode")
+        if mode not in ALLOWED_ROUTING_MODES:
+            errors.append(f"{rule_prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
+
+        reason = rule.get("reason")
+        if reason is not None and not _nonempty_string(reason):
+            errors.append(f"{rule_prefix}.reason must be a non-empty string when present")
+
+        source = rule.get("source")
+        if source is not None and not isinstance(source, dict):
+            errors.append(f"{rule_prefix}.source must be an object when present")
+
+
 def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> None:
-    """Validate optional runner_extensions.model_routing tier hints; absent is valid."""
+    """Validate optional runner_extensions.model_routing hints; absent is valid."""
     extensions = manifest.get("runner_extensions")
     if not isinstance(extensions, dict):
         return
@@ -187,6 +223,7 @@ def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> Non
     if not isinstance(routing, dict):
         errors.append(f"{prefix} must be an object with tier, mode, candidates")
         return
+    _validate_boundary_routing(name, routing.get("routing"), errors)
     tier = routing.get("tier")
     if tier not in KNOWN_TIERS:
         errors.append(f"{prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
