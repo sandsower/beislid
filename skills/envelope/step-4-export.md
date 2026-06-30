@@ -15,7 +15,7 @@ Print the Step 4 entry one-liner from `envelope-templates.md`.
 Evaluate action policy for `export.bundle.write` (`workspace-write`). Re-check the collision tripwire (non-revision; revision mode rewrites in place), then write `.beislid/exports/<bundle-id>/` per `docs/configuration.md`:
 
 - `bundle.json` — `approved-slice-plan-export-v0`: `kind`, `version` (1 first export; prior+1 revision), `status: approved`, `supersedes` (`null` first export; prior bundle sha for revisions), `generated_from`, `source_work_contract`, `slice_plan` (incl. Step 2 `parallel_groups`), approved `children` with `source_ticket` when known, `dependency_graph` across exported batch slices, `proof_requirements`, `guides_and_gates`, `approval`, `runner_extensions`, `validation` (`schema_version`, judged `rubric_version`, default `afk-rubric-v1`, `notes`), `ownership`.
-- `slices/<slice-id>.json` — `approved-slice-v1`: `schema`, `slice_id`, `prompt`, `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo`, `allowed_actions`, `process_provider`, and when tiered, `runner_extensions.model_routing: {tier, rationale, mode, candidates}` resolved from `model_routing.tiers`.
+- `slices/<slice-id>.json` — `approved-slice-v1`: `schema`, `slice_id`, `prompt`, `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo`, `allowed_actions`, `process_provider`, and when tiered, `runner_extensions.model_routing` exports a generic boundary list under `routing` (`planning`, `implementation`, `review_fix`, `gate_repair`) plus the collapsed compatibility projection `tier`, `mode`, and `candidates` resolved from `model_routing.tiers`.
 - `slices/<slice-id>.md` — human summary: source/approval, objective, scope, autonomy, proof, pause conditions, delivery, ownership.
 
 ### Validate (fail-closed)
@@ -29,6 +29,8 @@ Evaluate action policy for `checkpoint.envelope_exported` with class `workspace-
 ### Commit
 
 Exports are repo-committed by default so provenance travels with the code. Evaluate action policy for `git.commit` (local git mutation); on `ask`, show the file list and proposed message (`Export envelope bundle <bundle-id> (<ticket-id>)`). On approval, stage only the bundle directory and commit. The checkpoint pointer stays local (gitignored per-machine state); the committed bundle carries the durable boundary payload. On decline or `deny`, print the exact `git add`/`git commit` commands for manual use. Push and PR creation are out of scope.
+
+Generic boundary rules are the runtime contract; the compatibility projection only exists for runners that still need a single collapsed route.
 
 ### Hand off
 

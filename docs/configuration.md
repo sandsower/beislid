@@ -608,11 +608,40 @@ Revision mode is self-detecting: re-running `/envelope` with an exported manifes
 
 `bundle.json` carries the BEI-17 required fields: `kind` (`approved-slice-plan-export-v0`), `version`, `status`, `generated_from`, `source_work_contract`, `slice_plan` (which may carry `parallel_groups`: a list of lists of slice ids that can run concurrently — every id must be a known child, each slice appears in at most one group, and no group may contain two slices where one depends transitively on the other), `children` (entries `{id, source_ticket}`; `source_ticket` is optional but must be a non-empty string when present), `dependency_graph` (adjacency map of slice id → dependency ids spanning all slices from all tickets in the bundle; must be acyclic, and a slice absent from the map implicitly has no dependencies), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by` from git identity after an explicit per-envelope verdict), `runner_extensions`, `validation`, and `ownership`, plus an explicit `supersedes` key (`null` for a first export, the prior `bundle.json` sha256 for revisions). Only `status: approved` bundles are exportable — draft, paused, or superseded plans fail validation (fail-closed). Per-envelope verdicts isolate failures: rejecting or demoting one slice drops it and its edges from the exported graph, slices that depend (directly or transitively) on a dropped slice are themselves demoted to HITL, and export proceeds with the remainder.
 
-Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. When a slice carries a capability tier, `runner_extensions.model_routing` is `{tier, rationale, mode, candidates}`: `tier` is one of `light|standard|heavy|frontier` with the authoring rationale, `mode` is `prefer|require` (default `prefer`), and `candidates` is the ordered provider list resolved at export from the `model_routing` `tiers` table (repo override, else the shipped defaults — see Model routing). Rondo consumes the hint at run time; absent `model_routing` is valid. All machine files are JSON; YAML remains a human approval rendering.
+Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. Exported routing is generic and boundary-based, not skill-name-based:
+
+- `runner_extensions.model_routing.routing` is the portable phase-aware contract. Each rule names a generic `boundary` (`planning`, `implementation`, `review_fix`, or `gate_repair`), a provider-neutral `tier` (`light`, `standard`, `heavy`, or `frontier`), a `mode` (`prefer` or `require`), a human `reason`, and optional `source` metadata for observability only. The approved execution envelope / source contract is the authoritative input to this export; Rondo and other runners route on `boundary` + `tier` + `mode`, and may record the source fields, but they must not need Beislið skill names to decide the route.
+- `runner_extensions.model_routing.tier` / `mode` / `candidates` remains the collapsed compatibility projection for runners that only understand one route. When present, it should reflect the broadest applicable boundary rule; when absent, boundary-aware runners can still consume `routing` directly.
+- Example:
+
+```yaml
+runner_extensions:
+  model_routing:
+    routing:
+      - boundary: planning
+        tier: frontier
+        mode: prefer
+        reason: approved process contract requires stronger planning
+        source:
+          skill: spec
+          phase: planning
+      - boundary: implementation
+        tier: standard
+        mode: prefer
+        reason: ordinary execution should stay on the repo default
+        source:
+          skill: implement
+          phase: execution
+    tier: frontier
+    mode: prefer
+    candidates: [openai-codex/gpt-5.4-mini, openrouter/deepseek/deepseek-v4-pro]
+```
+- Precedence: explicit runner/native config may further constrain a matching boundary, but it must not weaken an exported `require` rule. If both a runner config and an exported rule exist for the same boundary, use the stricter route or fail closed when they are incompatible. Without a boundary-aware consumer, non-Beislið runners may fall back to the compatibility projection or their own broad defaults.
+All machine files are JSON; YAML remains a human approval rendering.
 
 AFK eligibility is judged against a versioned rubric: the current default lives at `skills/envelope/afk-rubric.md` (`afk-rubric-v1`), a repo may override it via `rubric_path` in the `beislid:envelope` workflow.md block (repo-override-first resolution), and whichever rubric was judged against is recorded as `validation.rubric_version` in `bundle.json` — the validator rejects versions it does not know.
 
-`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, `source_ticket` shape, `parallel_groups` consistency (known ids, one group per slice, no dependent pairs in a group), known slice schemas and rubric versions, repo pinning, approval metadata, version/supersedes pairing, and optional `runner_extensions.model_routing` tier/mode/candidate shape. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
+`beislid export validate <bundle-dir>` (backed by stdlib-only `scripts/validate_export.py`) is the model-free gate: required fields, approved status, acyclic graph, children ↔ slice-file cross-check, `source_ticket` shape, `parallel_groups` consistency (known ids, one group per slice, no dependent pairs in a group), known slice schemas and rubric versions, repo pinning, approval metadata, version/supersedes pairing, and optional `runner_extensions.model_routing` boundary rules plus the collapsed tier/mode/candidate compatibility shape. The validator is strictly read-only; the `validation` block in `bundle.json` records static declarations (`schema_version`, `rubric_version`, `notes`), and the proof that validation ran is the validator's exit code in the run ledger plus the commit that only happens after a passing run. On export, the skill records the `envelope_exported` boundary in `.beislid/checkpoints/latest.json` — the export manifest doubles as the checkpoint payload.
 
 ## Proof Requirement v1
 

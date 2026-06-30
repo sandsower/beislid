@@ -393,6 +393,18 @@ test_nonlist_parallel_groups_rejected() {
   expect_invalid "$TMP/bundle" "parallel_groups"
 }
 
+test_model_routing_generic_boundaries_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "frontier", "mode": "prefer", "candidates": ["openai-codex/gpt-5.4-mini"], "routing": [{"boundary": "planning", "tier": "frontier", "mode": "prefer", "reason": "approved process contract requires stronger planning", "source": {"skill": "spec", "phase": "planning"}}, {"boundary": "implementation", "tier": "standard", "mode": "prefer", "reason": "ordinary execution should stay on the repo default", "source": {"skill": "implement", "phase": "execution"}}]}'
+  expect_valid "$TMP/bundle"
+}
+
+test_model_routing_unknown_boundary_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "mode": "prefer", "candidates": ["claude:sonnet"], "routing": [{"boundary": "scoping", "tier": "standard", "mode": "prefer"}]}'
+  expect_invalid "$TMP/bundle" "model_routing.routing"
+}
+
 test_model_routing_valid_tier_accepted() {
   write_valid_bundle "$TMP/bundle"
   mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"tier": "standard", "rationale": "single-module code+tests", "mode": "prefer", "candidates": ["claude:sonnet"]}'
@@ -475,6 +487,8 @@ run_test "parallel group with transitive dependents rejected" test_parallel_grou
 run_test "parallel group with unknown slice rejected" test_parallel_group_unknown_slice_rejected
 run_test "slice in two parallel groups rejected" test_slice_in_two_parallel_groups_rejected
 run_test "non-list parallel_groups rejected" test_nonlist_parallel_groups_rejected
+run_test "model_routing generic boundaries accepted" test_model_routing_generic_boundaries_accepted
+run_test "model_routing unknown boundary rejected" test_model_routing_unknown_boundary_rejected
 run_test "model_routing valid tier accepted" test_model_routing_valid_tier_accepted
 run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_rejected
 run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
