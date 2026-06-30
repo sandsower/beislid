@@ -11,6 +11,7 @@ tracker:
   active_states:
     - Todo
     - In Progress
+    - In Review
   terminal_states:
     - Done
     - Closed
@@ -63,15 +64,19 @@ model_routing:
       - adapter: pi
         model: openrouter/deepseek/deepseek-chat
     standard:
+      # Subscription tier has been upgraded; prefer Codex for primary workflow
+      # execution and retain OpenRouter only as fallback capacity.
       - adapter: pi
         model: openai-codex/gpt-5.4-mini
       - adapter: pi
-        model: openrouter/moonshotai/kimi-k2.7-code
+        model: openrouter/deepseek/deepseek-v4-pro
     heavy:
       - adapter: pi
-        model: openrouter/z-ai/glm-5.2
+        model: openai-codex/gpt-5.5
       - adapter: pi
         model: openrouter/deepseek/deepseek-v4-pro
+      - adapter: pi
+        model: openrouter/z-ai/glm-5.2
     frontier:
       - adapter: pi
         model: openai-codex/gpt-5.5
@@ -153,9 +158,9 @@ Instructions:
 Model routing posture: this workflow intentionally dogfoods the `pi` adapter and
 provider-prefixed model routing instead of Claude model aliases. Keep unattended
 runs on real non-Claude routes unless a ticket explicitly requires otherwise:
-default work uses GPT through the Pi subscription (`openai-codex/...`), while
-Kimi, GLM, and DeepSeek coverage runs through OpenRouter (`openrouter/...`). Do
-not replace these with `opus`/`sonnet`/`haiku` aliases when tuning this workflow.
+default work now prefers Codex (`openai-codex/gpt-5.4-mini`), with OpenRouter
+DeepSeek retained only as fallback coverage. Do not replace these with
+`opus`/`sonnet`/`haiku` aliases when tuning this workflow.
 
 1. This is an unattended orchestration session. Never ask a human to perform
    follow-up actions; only stop for a true blocker (missing auth/permissions).
@@ -169,3 +174,14 @@ not replace these with `opus`/`sonnet`/`haiku` aliases when tuning this workflow
 6. Out-of-scope discoveries become new Linear issues in the same project,
    linked `related`, never scope expansion.
 7. Final message reports completed actions and blockers only.
+
+## In Review babysit loop
+
+When the ticket status is `In Review`, do not start new feature work. Treat the run as a review/babysit loop:
+
+1. Find the linked/open PR for the issue branch; if none exists, move the ticket back to `In Progress`, update the workpad with the missing review artifact, and stop.
+2. Read top-level PR comments, inline review comments, reviews, CI/check status, mergeability, and branch freshness.
+3. Treat every actionable human/bot comment as blocking until it is fixed and replied to, or an explicit justified pushback is posted.
+4. Run the configured workflow gates before every babysit-owned push or merge boundary.
+5. Only leave the ticket in `In Review` when the PR is reviewable, checks are green or legitimately pending human review, and unresolved actionable feedback is recorded in the workpad. If changes are required, move the ticket to `In Progress` and execute the fixes end-to-end.
+6. Never merge automatically from this prompt-level fallback unless the workflow has native release-loop support and action policy permits it.
