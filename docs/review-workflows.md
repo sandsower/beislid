@@ -56,6 +56,12 @@ Observed shapes from recent managed repos:
 
 Babysit and merge logic should treat this as live evidence that the PR has not been fully reviewed yet. The path must wait/retry, ask for guidance, or create a follow-up issue per policy before merge.
 
+## Prompt profiles for already-posted review comments
+
+`review-response` can optionally use prompt profiles to extract an explicit `agent_prompt` from loaded PR review comments. That enrichment applies only to feedback that is already posted; it does not create a separate CodeRabbit backend or a new-review workflow.
+
+Keep `pr_review_source` and `pr_review_update` as the source/update path. Use prompt profiles when the comment body already carries an agent-ready instruction, and leave CodeRabbit CLI / "review now" actions to the workflows that actually run a fresh review.
+
 ## Pre-PR hardening
 
 Use this when you want a branch hardened before PR creation:
