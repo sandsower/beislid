@@ -112,31 +112,24 @@ You are taking over the <slice> slice of this work in a separate session/worktre
 - Do not rely on the parent session transcript being available.
 - <Any project-specific constraints surfaced by the parent session>
 
+## Required proof and command gates
+- <Tests, gates, or evidence the receiver must produce>
+
+## Expected deliverable
+- <What the receiver should return or leave behind>
+
+## Stop condition and open questions
+- <Stop conditions>
+- <Questions the receiver should resolve before proceeding, or "None known.">
+
 ## Suggested first steps
 1. Inspect the local repo/worktree state.
 2. Read relevant plans/specs/docs named in this handoff.
 3. Verify assumptions before editing.
 4. Implement only the assigned slice.
-
-## Open questions
-- <Questions the receiver should resolve before proceeding, or "None known.">
 ```
 
-Scale the payload to the work. Small handoffs can be short, but keep the section headings so the receiver can scan quickly.
-
-### Implementation handoff payload
-
-When the receiving agent is implementing a slice, use the same canonical headings as `implement`:
-- Goal
-- Parent workspace state
-- Assigned scope
-- Explicit decisions so far
-- Constraints / do not touch
-- Required proof and command gates
-- Expected deliverable
-- Stop condition and open questions
-
-Keep these headings stable so the parent can reconcile returned diffs and evidence quickly.
+Scale the payload to the work. Small handoffs can be short, but keep the section headings so the receiver can scan quickly. When the receiver is implementing a slice, fill the proof, deliverable, and stop-condition sections below.
 
 ### 5. Preview and copy
 

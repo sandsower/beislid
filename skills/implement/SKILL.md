@@ -80,7 +80,7 @@ Treat this payload as the contract for both subagent work and same-session hando
 
 ### Batch Independent Tasks
 
-Group tasks that have no dependencies on each other into batches. Within a batch, tasks can be dispatched to parallel subagents.
+Group tasks that have no dependencies on each other into batches. Within a batch, tasks can be dispatched to parallel subagents only when the controlled-delegation criteria still hold.
 
 Mark dependencies explicitly:
 ```
