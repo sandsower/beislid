@@ -19,6 +19,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Issue tracker`
 - `PR target`
 - `PR reviews`
+- `Review policy`
 - `Scopes`
 - `Quality gates`
 - `Gate sets`
@@ -85,6 +86,9 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `pr_review_source` — fields: `type` (`cli` / `paste`); for `type: cli`, `summary_command` is required and `threads_command` is optional. Placeholders: `{owner}`, `{repo}`, `{number}`, `{url}`. Missing `threads_command` means review-response can read PR-level comments but may miss inline review threads.
 - `pr_review_update` — fields: `type` (`cli` / `manual`); for `type: cli`, `reply_command` is required and `rerequest_command` is optional. Commands receive a temp JSON payload via `{json_file}`. Placeholders: `{owner}`, `{repo}`, `{number}`, `{json_file}`. MCP PR review providers are intentionally deferred.
 - `review_feedback_profiles` — ordered list of profile objects that enrich already-loaded PR review items during normalization. Each profile has `name` (required), optional `match` (`source`, `author`, `author_regex`, `body_contains`, `body_regex`), and optional `extract` (`prompt_regex`, optional `prompt_format`). First match wins; the normalized item gains `agent_prompt` and `prompt_format` while `pr_review_source` / `pr_review_update` stay unchanged.
+
+**Review policy:**
+- `review_policy` — optional final-review resource policy. In v1, `agentic_reviewer.mode: opt_in_final_review` tells ready-for-review/babysit that the AgenticReviewer role is opt-in only; optional `agentic_reviewer.provider` names the concrete reviewer such as `coderabbit`. `agentic_reviewer.label` is the preferred PR label trigger; `agentic_reviewer.description_keyword` is an explicit-approval fallback for PR body mutation. `risk.max_auto_closeout_risk` is `low`, `medium`, or `high`; PRs with risk greater than that threshold need AgenticReviewer before closeout. `risk.high_risk_paths` and `risk.low_risk_paths` are git-style glob lists; high-risk matches win. `risk.high_risk_file_count`, `risk.high_risk_total_changes`, `risk.low_risk_file_count`, and `risk.low_risk_total_changes` are positive integer thresholds used with changed file counts and additions+deletions.
 
 **Scopes and gates:**
 - `scopes` — list of scope objects, each with `name`, `paths` (glob list), optional `cwd`, optional `setup` (string command that runs once before any gates in the scope), and `gates` (list of gate objects; see **Gate object shape** below). `setup` is a prerequisite, not a quality gate: if it fails, the scope gates do not run.

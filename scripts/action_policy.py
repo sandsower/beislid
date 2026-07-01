@@ -54,6 +54,7 @@ KNOWN_ACTIONS: dict[str, dict[str, Any]] = {
     "gh.issue.view": {"classes": ["network-read"], "description": "Read an issue through gh"},
     "ticket.update": {"classes": ["network-read", "git-remote"], "description": "Update a ticket body through tracker APIs"},
     "gh.pr.create": {"classes": ["git-remote"], "description": "Create a pull request"},
+    "gh.pr.edit.label": {"classes": ["git-remote"], "description": "Add or remove a pull request label"},
     "pr.review.reply": {"classes": ["git-remote"], "description": "Post a PR review reply"},
     "dependency.install": {"classes": ["workspace-write", "dependency-install", "network-read"], "description": "Install dependencies"},
     "shell.rm": {"classes": ["workspace-write", "destructive"], "description": "Delete files"},

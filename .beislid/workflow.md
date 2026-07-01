@@ -70,6 +70,39 @@ reply_command: 'gh api repos/{owner}/{repo}/pulls/{number}/comments --method POS
 rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewers --method POST --input {json_file}'
 ```
 
+AgenticReviewer is a scarce final-review role; CodeRabbit is this repo's current provider. Do not trigger it for WIP or routine iteration; run local gates and Beislið review first, then opt in by adding the configured label or PR body keyword.
+
+```beislid:review_policy
+agentic_reviewer:
+  mode: opt_in_final_review
+  provider: coderabbit
+  label: coderabbit-ready
+  description_keyword: coderabbit:review
+risk:
+  max_auto_closeout_risk: low
+  high_risk_paths:
+    - '**/config/**'
+    - '**/.github/workflows/**'
+    - 'bin/**'
+    - 'packaging/**'
+    - 'scripts/test_install.sh'
+    - 'scripts/install*.sh'
+    - 'skills/**/SKILL.md'
+    - 'tests/agent-smoke/**'
+    - '.beislid/**'
+  low_risk_paths:
+    - 'docs/**'
+    - '**/*.md'
+    - '**/*.markdown'
+    - '**/*.mdx'
+    - 'README*'
+    - 'CHANGELOG.md'
+  high_risk_file_count: 12
+  high_risk_total_changes: 500
+  low_risk_file_count: 3
+  low_risk_total_changes: 120
+```
+
 ## Quality gates
 
 The repo has no scope separation (single markdown distribution). Top-level gates run install integration, skill validation, and artifact/workflow/planning-lifecycle consistency checks from the repo root.
@@ -214,6 +247,7 @@ modes:
       pr.review.reply: allow
       git.push: allow
       gh.pr.create: allow
+      gh.pr.edit.label: allow
       gh.pr.merge: allow
       pr.merge: allow
       memento.capture: allow

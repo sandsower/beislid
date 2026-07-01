@@ -203,6 +203,30 @@ Use this when PR review comments already contain agent-ready instructions but yo
 
 Use this for already-posted GitHub review comments. CodeRabbit CLI or "run a new review now" workflows stay out of scope here.
 
+### AgenticReviewer opt-in policy
+
+Use `review_policy` when an AI reviewer is a scarce final-review resource. AgenticReviewer is the role; `provider` can name CodeRabbit or another concrete service.
+
+````markdown
+```beislid:review_policy
+agentic_reviewer:
+  mode: opt_in_final_review
+  provider: coderabbit
+  label: coderabbit-ready
+  description_keyword: coderabbit:review
+risk:
+  max_auto_closeout_risk: low
+  high_risk_paths: ['.github/workflows/**', 'config/**']
+  low_risk_paths: ['docs/**', '**/*.md']
+  high_risk_file_count: 12
+  high_risk_total_changes: 500
+  low_risk_file_count: 3
+  low_risk_total_changes: 120
+```
+````
+
+`ready-for-review` adds the configured label only for PRs whose risk is above the closeout threshold. `babysit` blocks closeout for those PRs until a real provider review exists; skipped/rate-limited/deferred comments do not count.
+
 ### PR target
 
 If your default base is not `main`, or you use a non-`origin` remote:

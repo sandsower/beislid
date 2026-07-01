@@ -105,6 +105,10 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 
 `beislid:ship_time_artifacts` is validated as a ready-for-review ship-time narration policy for generated planning artifacts. Doctor checks shape only: optional `mode` must be `remind`, `include`, `skip`, or `clean`; absent mode defaults to `remind` when the block is present. It should record `probe_kind: validation` and summarize the mode and whether planning-artifact lifecycle actions are configured. Missing `ship_time_artifacts` is valid and means no extra ship-time narration is configured.
 
+### review_policy validation
+
+`beislid:review_policy` is validated, not probed. Doctor checks shape only: `agentic_reviewer.mode` must be `opt_in_final_review`; optional `provider`, `label`, and `description_keyword` must be non-empty strings when present; `risk.max_auto_closeout_risk` must be `low`, `medium`, or `high`; path lists must be lists of strings; file/change thresholds must be positive integers. Missing `review_policy` preserves old behavior. A legacy `coderabbit` object may be reported as provider-specific legacy config, but new configs should use `agentic_reviewer`.
+
 ### action_policy validation
 
 `beislid:action_policy` is validated, not probed as an external dependency. Doctor should use `beislid action-policy validate` or the same deterministic evaluator contract to validate overrides and derive the effective policy summary.

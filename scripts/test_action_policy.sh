@@ -132,6 +132,14 @@ JSON
   assert_contains_json_text "$out" '"known_action": true'
 }
 
+test_pr_label_edit_is_known_git_remote() {
+  local out
+  out="$(python3 "$POLICY" evaluate --mode supervised-auto --action gh.pr.edit.label)"
+  assert_decision "$out" ask
+  assert_contains_json_text "$out" '"known_action": true'
+  assert_contains_json_text "$out" '"class": "git-remote"'
+}
+
 test_policy_override_can_deny_workspace_write() {
   local override out
   override="$TMP/policy.json"
@@ -391,6 +399,7 @@ run_test "strictest class wins" test_strictest_class_wins
 run_test "unknown unattended asks" test_unknown_unattended_defaults_to_ask
 run_test "action override allows PR reply" test_action_override_can_allow_pr_reply
 run_test "action override allows ticket update" test_action_override_can_allow_ticket_update
+run_test "PR label edit is git remote" test_pr_label_edit_is_known_git_remote
 run_test "policy override denies workspace write" test_policy_override_can_deny_workspace_write
 run_test "unattended requires non-default branch" test_unattended_requires_non_default_branch_by_default
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline

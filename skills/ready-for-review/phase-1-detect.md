@@ -4,13 +4,11 @@ Loaded just in time at Phase 1 entry. If unreadable, hard-fail instead of runnin
 
 ## Entry / exit output
 
-Print Phase 1 entry/exit one-liners; emit workflow-signal `working` on entry. In verbose mode, append aux-load/transcript boundaries and ensure transcript is initialized or warning recorded before exit.
+Print entry/exit one-liners; emit workflow-signal `working`; verbose appends aux/transcript stamps.
 
 ## Phase outputs
 
-Populate run context: ticket/branch/base/PR, diff files/stats, gate model (`gate_sets`/scopes/repo-root) with selected/skipped reasons, optional triggers, freshness/merge state, clean-eval, fast-path, warnings/risks.
-
-Expose `existing_pr_fast_path` early enough for orientation output to append the fast-path clause.
+Populate run context: ticket/branch/base/PR, diff files/stats, gate model, optional triggers, freshness/merge state, AgenticReviewer risk/opt-in decision, clean-eval, fast-path, warnings/risks. Expose `existing_pr_fast_path` early enough for orientation output.
 
 ## Procedure
 
@@ -27,9 +25,9 @@ Ticket association is explicit-only:
 
 Determine `base` from `pr_base.default` when configured, otherwise `main`; if a stacked/non-default base is likely, ask.
 
-If `branch == base` or the configured default branch and local changes exist, emit workflow-signal `blocked`, then stop before gates/push. Show concise `git status --short`, explain direct PR handoff from base is unsafe, then ask for branch name and include set (`all`, selected paths, or abort). Selected paths require exact confirmation and a commit message; untracked files are excluded unless named. Create the branch and commit only approved paths before continuing. If there are no local changes and no branch diff, stop: nothing to prepare for review.
+If `branch == base` or default branch with local changes, emit `blocked`, stop before gates/push, show `git status --short`, explain direct PR handoff from base is unsafe, then ask for branch name and include set (`all`, selected paths, or abort). Selected paths require exact confirmation and commit message; untracked files are excluded unless named. If no local changes/diff, stop: nothing to review.
 
-If on a feature branch with committed diff plus uncommitted files, warn uncommitted files are excluded unless committed. If the branch has changes but no commits, warn tree uncommitted; implement skipped commits.
+On feature branches, warn uncommitted files are excluded unless committed; if there are changes but no commits, warn tree uncommitted.
 
 ### 1b. Check for existing PR
 
@@ -52,6 +50,8 @@ git diff <base>...HEAD --shortstat
 
 Store files/stats. If the diff touches `skills/**` or `.beislid/**`, emit the skill-change warning.
 
+If `review_policy.agentic_reviewer.mode: opt_in_final_review`, classify risk: `high` for high path/threshold match; `low` only when every file is low-risk and low thresholds hold; else `medium` (unknown stats cannot be low). Store `agentic_reviewer_required = risk > max_auto_closeout_risk` using `low < medium < high`. Missing policy preserves old behavior.
+
 If `gate_sets` exists, match selectors to changed files, apply `exclude`, union deterministically, de-dupe by gate identity, and record selected/skipped reasons. Else mark touched scopes; else create repo-root scope for top-level `gates`; else no gate scopes.
 
 ### 1d. Apply split policy
@@ -71,7 +71,7 @@ git fetch origin <base>
 git rev-list --count HEAD..origin/<base>
 ```
 
-Do not infer freshness from session context. If fetch/check fails, ask retry / proceed with freshness unknown / abort. If proceeding, set `freshness = unknown`, `needs_merge = false`, and carry a warning. If behind count is greater than zero, set `freshness = behind`, `needs_merge = true`, and warn that missing base commits can inflate the PR diff; Phase 2 owns merge/rebase handling. If zero, set `freshness = fresh`, `needs_merge = false`.
+Do not infer freshness from session context. If fetch/check fails, ask retry / proceed unknown / abort. Unknown sets `freshness=unknown`, `needs_merge=false`, and carries a warning. Behind count >0 sets `freshness=behind`, `needs_merge=true`, and warns Phase 2 owns merge/rebase. Zero means `fresh`.
 
 ### 1g. Fast-path eligibility
 
