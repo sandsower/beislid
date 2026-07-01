@@ -180,4 +180,4 @@ When the ticket status is `In Review`, do not start new feature work. Treat the 
 3. Treat every actionable human/bot comment as blocking until it is fixed and replied to, or an explicit justified pushback is posted.
 4. Run the configured workflow gates before every babysit-owned push or merge boundary.
 5. Only leave the ticket in `In Review` when the PR is reviewable, checks are green or legitimately pending human review, and unresolved actionable feedback is recorded in the workpad. If changes are required, move the ticket to `In Progress` and execute the fixes end-to-end.
-6. Never trigger CodeRabbit on WIP/routine iteration. Request CodeRabbit only for final high-risk review by applying the configured `coderabbit-ready` label or `coderabbit:review` PR body keyword.
+6. Never trigger AgenticReviewer on WIP/routine iteration. Request the configured provider only for final high-risk review by applying the configured opt-in label or approved PR body keyword.
