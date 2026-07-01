@@ -100,6 +100,16 @@ Equivalent host-adapter aliases are fine for MCP-backed sources: the probe shoul
 
 Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-md-format.md).
 
+### Read-only workflow normalization
+
+Use the normalizer command when a tool needs typed derived state without making JSON a second source of truth:
+
+```bash
+beislid workflow normalize --json
+```
+
+The command reads the current repo's `.beislid/workflow.md`, requires the v1 version stamp, and prints a versioned JSON envelope with `source.workflow_hash`, normalized sections for gates, gate sets, lifecycle actions, review feedback profiles, clean eval, visual surfaces, model routing, plus warning/error diagnostics. It is read-only; existing skills and orchestrators continue to use `workflow.md` directly unless a later migration explicitly changes them.
+
 ## Scopes and quality gates
 
 Scopes let Beislið run the gates that match the files touched by a branch. For newer workflows that need reusable named gate groups and explicit selected/skipped explanations, prefer `gate_sets`. Legacy scopes can also declare an optional `setup` command that runs once before any gates in that scope for generated code, installs, or other prerequisites; `setup` is a prerequisite, not proof.
@@ -1315,7 +1325,7 @@ Release process:
 3. Publish the tap/release that serves the updated formula.
 4. Users then update with `brew upgrade beislid`.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `scripts/workflow_normalizer.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 
@@ -1327,6 +1337,7 @@ beislid repair user [--force] [--strict]
 beislid repair project [path] [--force] [--strict]
 beislid status
 beislid status project [path]
+beislid workflow normalize --json
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
 beislid update

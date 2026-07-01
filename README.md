@@ -198,6 +198,7 @@ beislid status project [path]
 beislid plugin enable lavish [--command COMMAND] [--artifact-root PATH]
 beislid plugin disable lavish
 beislid plugin status lavish [--check]
+beislid workflow normalize --json
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
 beislid visual-feedback normalize [feedback-file]
