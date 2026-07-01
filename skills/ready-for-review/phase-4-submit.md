@@ -61,7 +61,7 @@ Narration only; no auto-commit/delete/rewrite. Skip when no planning-artifact li
 
 ## 4c. Push and create PR
 
-Policy-check push/PR/label/draft as `git-remote`; record outcomes. If GitHub/`gh` and `.github/workflows/` changed, preflight `workflow`; warn on missing scope. Skip for non-gh providers.
+Policy-check push/PR create/draft-ready/label edits as `git-remote`; record outcomes. If GitHub/`gh` and `.github/workflows/` changed, preflight `workflow`; warn on missing scope. Skip for non-gh providers.
 
 Run from repo cwd with `--head <branch>`; never rely on `gh` upstream inference.
 
