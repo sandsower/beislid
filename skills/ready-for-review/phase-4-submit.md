@@ -72,7 +72,7 @@ git push -u origin HEAD
 gh pr create --head "<branch>" --title "<title>" --base "<base>" --body "<description>" [--label "<configured-agentic-reviewer-label>"]
 ```
 
-Add the AgenticReviewer opt-in label only when required and configured. If direct label creation is unsupported, create the PR then `gh pr edit <pr> --add-label <label>`. If label add fails, stop/ask; use `description_keyword` only after explicit approval. Draft path adds `--draft`; readying later uses provider command such as `gh pr ready` only after second approval.
+Add AgenticReviewer label only when required; `label` is required for automatic opt-in. If needed, create PR then `gh pr edit <pr> --add-label <label>`. If label missing/add fails, stop/ask; use `description_keyword` only after explicit approval. Draft adds `--draft`; readying uses provider command after second approval.
 
 On network/sandbox failure, emit `blocked`, surface retry/escalation/abort. Never re-draft or change approved title/body.
 

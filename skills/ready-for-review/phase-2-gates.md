@@ -1,14 +1,14 @@
 # ready-for-review phase 2 gates v1
 
-Loaded just in time after Phase 1. If this file cannot be read, hard-fail; do not reconstruct Phase 2 from memory.
+Loaded after Phase 1. If unreadable, hard-fail; do not reconstruct from memory.
 
 ## Inputs / outputs
 
 Inputs: base/branch/ticket/PR, merge/diff state, gate model, configured gates, optional triggers, notes/warnings.
 
-Outputs: gate envelopes, clean-eval proof status + `clean_eval.surface`, logs/artifacts, skips, decisions, warnings, and resume route.
+Outputs: gate envelopes, clean-eval proof + surface, logs/artifacts, skips, decisions, warnings, resume route.
 
-Print Phase 2 entry/exit. Emit workflow-signal `verify` at Phase 2 entry. Verbose mode emits aux/probe/gate summaries.
+Print entry/exit. Emit workflow-signal `verify`. Verbose emits aux/probe/gate summaries.
 
 ## 2a. Merge base if stale
 
@@ -18,7 +18,7 @@ If `needs_merge`, policy-check `git.merge` (`workspace-write`, `git-local`) and 
 git merge origin/<base>
 ```
 
-If conflicts occur, emit workflow-signal `blocked`, then stop and ask the user for help. After resolution, continue Phase 2 and run gates that apply to touched files; merged code may violate current rules.
+If conflicts occur, emit `blocked`, stop, and ask. After resolution, continue Phase 2 and run gates that apply to touched files.
 
 ## 2b. Run scoped or top-level gates
 
@@ -33,7 +33,7 @@ Selection:
 
 Flat `name`+`command` = pre-pr sensor. Execute legacy + rich gates where stage is absent/`pre-pr`, kind is absent/`sensor`, command exists, execution is absent/`computational`. Other stages → `skipped-by-stage`; non-computational/non-sensor pre-pr → `skipped-by-execution`. Rich `output`/`failure` as prompt context.
 
-Probe each selected gate once (`probe(gate_sets.sets.<set>.gates[<gate>].command)`, scope, or top-level equivalent), plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
+Probe each selected gate once, plus `required_tools[]` via `command -v`. On failure, use the Phase 2b prompt.
 
 Execution:
 
@@ -46,7 +46,7 @@ Execution:
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state. Plain git checks are not probe-cache entries.
 
-Track envelopes, skips/reasons, proof status, gate model, duration, autofix, probes, metadata, exceptions. Phase exits only after required proof is satisfied or handled by `failure_policy`.
+Track envelopes, skips/reasons, proof status, gate model, duration, autofix, probes, metadata, exceptions. Exit only after proof is satisfied or handled by `failure_policy`.
 
 ## 2c. Translation sync
 
@@ -91,7 +91,7 @@ If the user skips, print the skipped line. If accepted, invoke `walk-the-diff`; 
 Resume behavior:
 
 - Normal new-PR path: continue to Phase 3.
-- Existing-PR fast path: do not enter Phase 3; push and report the existing PR URL.
+- Existing-PR fast path: skip Phase 3. Push, then if AgenticReviewer is required policy-check `gh pr edit <pr> --add-label <label>`; if no label or add fails, stop/ask before `description_keyword`. Report URL after opt-in succeeds or is explicitly skipped.
 
 If the user explicitly asks for a durable visual proof/review artifact, suggest `show-me` and wait for direct request. Do not auto-run `show-me`.
 

@@ -225,7 +225,7 @@ risk:
 ```
 ````
 
-`ready-for-review` adds the configured label only for PRs whose risk is above the closeout threshold. `babysit` blocks closeout for those PRs until a real provider review exists; skipped/rate-limited/deferred comments do not count.
+`ready-for-review` adds the configured label only for PRs whose risk is above the closeout threshold; `label` is required for automatic opt-in. `babysit` blocks closeout for those PRs until a real provider review exists; skipped/rate-limited/deferred comments do not count.
 
 ### PR target
 

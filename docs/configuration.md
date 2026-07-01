@@ -26,7 +26,6 @@ setup
 - default PR base
 - PR host
 - PR review source and update path
-- AgenticReviewer opt-in/final-review policy
 - ticket update path
 - PR babysitting and closeout automation policy
 - lifecycle actions such as assigning/moving a ticket when kickoff starts
@@ -237,7 +236,7 @@ risk:
 ```
 ````
 
-`ready-for-review` classifies changed files as low/medium/high. PRs with `risk > max_auto_closeout_risk` get the configured opt-in label during handoff. `babysit` requires a real AgenticReviewer review before closeout for those PRs and treats skipped, rate-limited, or draft-deferred provider comments as not reviewed. Missing `review_policy` preserves existing behavior.
+`ready-for-review` classifies changed files as low/medium/high. PRs with `risk > max_auto_closeout_risk` get the configured opt-in label during handoff; `label` is required for automatic opt-in. `babysit` requires a real AgenticReviewer review before closeout for those PRs and treats skipped, rate-limited, or draft-deferred provider comments as not reviewed. Missing `review_policy` preserves existing behavior.
 
 ## Babysit
 

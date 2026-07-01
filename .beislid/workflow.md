@@ -234,7 +234,7 @@ closeout:
 
 ## Action policy
 
-This repo auto-allows PR review reply posting in supervised review-response runs while keeping other remote git/PR actions on the built-in approval path.
+This repo auto-allows supervised PR handoff and closeout actions, including review replies, pushes, PR creation, AgenticReviewer label edits, and merge/retro/memento closeout.
 
 ```beislid:action_policy
 modes:

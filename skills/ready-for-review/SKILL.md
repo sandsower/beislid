@@ -108,7 +108,7 @@ Required outputs:
 - reviewer warnings carried forward
 - ledger gate artifact paths, if active
 
-Exit: print the Phase 2 exit one-liner from `ready-for-review-templates.md`. If this is the existing-PR fast path, push to the PR branch, print the fast-path success line, then proceed to run-end cache/memory handling.
+Exit: print the Phase 2 exit one-liner. Existing-PR fast path: push, apply required AgenticReviewer opt-in label after policy, report URL, then run-end cache/memory.
 
 ## Phase 3: Review
 

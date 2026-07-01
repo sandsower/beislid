@@ -107,7 +107,7 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 
 ### review_policy validation
 
-`beislid:review_policy` is validated, not probed. Doctor checks shape only: `agentic_reviewer.mode` must be `opt_in_final_review`; optional `provider`, `label`, and `description_keyword` must be non-empty strings when present; `risk.max_auto_closeout_risk` must be `low`, `medium`, or `high`; path lists must be lists of strings; file/change thresholds must be positive integers. Missing `review_policy` preserves old behavior. A legacy `coderabbit` object may be reported as provider-specific legacy config, but new configs should use `agentic_reviewer`.
+`beislid:review_policy` is validated, not probed. Doctor checks shape only: `agentic_reviewer.mode` must be `opt_in_final_review`; `agentic_reviewer.label` is required for automatic opt-in; optional `provider` and `description_keyword` must be non-empty strings when present; `risk.max_auto_closeout_risk` must be `low`, `medium`, or `high`; path lists must be string lists; thresholds must be positive integers. Missing `review_policy` preserves old behavior. A legacy `coderabbit` object may be reported as provider-specific legacy config, but new configs should use `agentic_reviewer`.
 
 ### action_policy validation
 
