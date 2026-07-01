@@ -67,6 +67,7 @@ Doctor checks:
 - disabled vs missing capabilities
 - whether configured commands/tools are reachable in the current host session
 - validation-only config such as action policy, model routing, and visual surfaces
+- validation-only review policy for AgenticReviewer opt-in
 - probe cache freshness
 
 Doctor reports gaps in prose. It is an audit tool, not a fixer.
@@ -212,6 +213,30 @@ When orchestrators run gates, they summarize each result as an agent-readable en
 ```
 
 Generic text output and pytest-style output have built-in parser guidance in the shared output templates; `output.parser: generic-text` or `output.parser: pytest` metadata can guide parser selection where supported.
+
+## Review policy
+
+`review_policy` lets repos treat an AI reviewer as a scarce final-review role instead of an always-on bot. Beislið calls the role **AgenticReviewer**; CodeRabbit or another service can be the provider behind it.
+
+````markdown
+```beislid:review_policy
+agentic_reviewer:
+  mode: opt_in_final_review
+  provider: coderabbit
+  label: coderabbit-ready
+  description_keyword: coderabbit:review
+risk:
+  max_auto_closeout_risk: low
+  high_risk_paths: ['.github/workflows/**', 'config/**']
+  low_risk_paths: ['docs/**', '**/*.md']
+  high_risk_file_count: 12
+  high_risk_total_changes: 500
+  low_risk_file_count: 3
+  low_risk_total_changes: 120
+```
+````
+
+`ready-for-review` classifies changed files as low/medium/high. PRs with `risk > max_auto_closeout_risk` get the configured opt-in label during handoff; `label` is required for automatic opt-in. `babysit` requires a real AgenticReviewer review before closeout for those PRs and treats skipped, rate-limited, or draft-deferred provider comments as not reviewed. Missing `review_policy` preserves existing behavior.
 
 ## Babysit
 

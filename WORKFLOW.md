@@ -11,6 +11,7 @@ tracker:
   active_states:
     - Todo
     - In Progress
+    - In Review
   terminal_states:
     - Done
     - Closed
@@ -169,3 +170,14 @@ not replace these with `opus`/`sonnet`/`haiku` aliases when tuning this workflow
 6. Out-of-scope discoveries become new Linear issues in the same project,
    linked `related`, never scope expansion.
 7. Final message reports completed actions and blockers only.
+
+## In Review babysit loop
+
+When the ticket status is `In Review`, do not start new feature work. Treat the run as a review/babysit loop:
+
+1. Find the linked/open PR for the issue branch; if none exists, move the ticket back to `In Progress`, update the workpad with the missing review artifact, and stop.
+2. Read top-level PR comments, inline review comments, reviews, CI/check status, mergeability, and branch freshness.
+3. Treat every actionable human/bot comment as blocking until it is fixed and replied to, or an explicit justified pushback is posted.
+4. Run the configured workflow gates before every babysit-owned push or merge boundary.
+5. Only leave the ticket in `In Review` when the PR is reviewable, checks are green or legitimately pending human review, and unresolved actionable feedback is recorded in the workpad. If changes are required, move the ticket to `In Progress` and execute the fixes end-to-end.
+6. Never trigger AgenticReviewer on WIP/routine iteration. Request the configured provider only for final high-risk review by applying the configured opt-in label or approved PR body keyword.

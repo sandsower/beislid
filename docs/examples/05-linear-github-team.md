@@ -58,6 +58,24 @@ reply_command: 'gh api repos/{owner}/{repo}/pulls/{number}/comments --method POS
 rerequest_command: 'gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewers --method POST --input {json_file}'
 ```
 
+## Review policy
+
+```beislid:review_policy
+agentic_reviewer:
+  mode: opt_in_final_review
+  provider: coderabbit
+  label: coderabbit-ready
+  description_keyword: coderabbit:review
+risk:
+  max_auto_closeout_risk: low
+  high_risk_paths: ['.github/workflows/**', 'config/**']
+  low_risk_paths: ['docs/**', '**/*.md']
+  high_risk_file_count: 12
+  high_risk_total_changes: 500
+  low_risk_file_count: 3
+  low_risk_total_changes: 120
+```
+
 ## Quality gates
 
 ```beislid:gates
