@@ -1,0 +1,75 @@
+{
+  "schema": "approved-slice-v1",
+  "slice_id": "bei-130-install-traps",
+  "source_ticket": "BEI-130",
+  "prompt": "## Objective\nMake the installer interrupt-safe: scripts/install_lib.sh has zero trap handlers in ~1,900 lines, and an interrupt mid skill-copy leaves a copy without an owner marker that is then treated as user-owned forever (defect sites install_lib.sh:1028-1049, :1096-1154). NOTE: the ticket references install_lib.sh at the repo root; the actual probed path is scripts/install_lib.sh.\n\n## Design summary\nPre-decided: stage each skill copy into a temp dir WITH its owner marker, then move into place atomically (mv within the same filesystem); traps on INT/TERM/ERR remove the staging dir only - they must never half-clean installed state. The installer stays bash (spec decision 8 - porting is explicitly out of scope).\n\n## File scope\nInclude: scripts/install_lib.sh, scripts/test_install.sh.\nExclude: installer structural rewrite, ownership semantics changes, everything else.\n\n## Constraints\nNo git push or PR creation - local branch/diff only. Work repro-first: a scripted repro that kills the installer mid-copy and asserts no ownerless skill dir exists, before adding traps + staging. If ambiguous, pause and ask.\n\n## Verification\nFrom the repo root:\n1. bash scripts/test_install.sh (end to end, green)\n2. the interrupted-install repro shows no ownerless copies\n3. git diff --check origin/main...HEAD",
+  "boundaries": {
+    "include": ["scripts/install_lib.sh", "scripts/test_install.sh"],
+    "exclude": ["installer structural rewrite", "ownership semantics changes", "porting off bash (spec decision 8)", "all other files"]
+  },
+  "dependencies": [
+    "scripts/install_lib.sh and scripts/test_install.sh present at pinned base (probed; note corrected path vs ticket)",
+    "bash (probed)"
+  ],
+  "proof_requirements": [
+    {
+      "kind": "proof-requirement-v1",
+      "id": "bei-130-gates",
+      "type": "command_gate",
+      "stage": "pre-pr",
+      "status": "required",
+      "success_criteria": [
+        "bash scripts/test_install.sh exits 0",
+        "interrupted-install repro produces zero ownerless skill copies",
+        "git diff --check origin/main...HEAD exits 0"
+      ],
+      "failure_policy": {"on_missing": "block", "on_failure": "block", "retryable": true},
+      "expected_artifact": {"kind": "gate_envelope", "reference": "gate transcript in run evidence"}
+    }
+  ],
+  "output_expectations": {
+    "summary": "Trap coverage added, the staging/atomic-move flow, and the repro evidence.",
+    "artifacts": ["changed_files", "proof_results"],
+    "next_step": "ready-for-review handoff; human reviews and opens the PR"
+  },
+  "parent_contract": {
+    "work_contract": "Teotl unification P0 integrity batch (approved 2026-07-02)",
+    "source": "~/Personal/teotl/plans/2026-07-02-debt-audit-p0-integrity-batch.md (BEI 4, finding B10)",
+    "ticket": "BEI-130"
+  },
+  "repo": {
+    "url": "git@github.com:sandsower/beislid.git",
+    "base_ref": "main",
+    "base_sha": "db52c3863e48703a9b2ad57c1e581b307f483894"
+  },
+  "allowed_actions": {
+    "run_mode": "supervised-auto",
+    "allow": [
+      "Edit scripts/install_lib.sh and scripts/test_install.sh",
+      "Run the slice verification commands incl. the kill-mid-copy repro against a temp install target",
+      "Create/commit on a local work branch (vic/bei-130-*)"
+    ],
+    "ask": [
+      "Any edit outside the include scope",
+      "Changing what counts as user-owned vs beislid-owned"
+    ],
+    "deny": [
+      "git push, PR creation, or any remote write",
+      "Porting the installer off bash",
+      "Running the installer against the real user skills directory (use a temp target)"
+    ]
+  },
+  "process_provider": {"name": "claude_code"},
+  "runner_extensions": {
+    "model_routing": {
+      "routing": [
+        {"boundary": "implementation", "tier": "standard", "mode": "prefer", "reason": "staging + trap convention pre-decided; repro is the gate"},
+        {"boundary": "review_fix", "tier": "standard", "mode": "prefer", "reason": "default"},
+        {"boundary": "gate_repair", "tier": "standard", "mode": "prefer", "reason": "exact commands given"}
+      ],
+      "tier": "standard",
+      "mode": "prefer",
+      "candidates": ["sonnet"]
+    }
+  }
+}
