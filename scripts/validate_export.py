@@ -7,6 +7,16 @@ Validates `.beislid/exports/<bundle-id>/` directories produced by the
 writes; proof that validation ran is its exit code plus the run
 ledger / commit that follows a passing run.
 
+Shape (required fields, types, enums) is declared in
+schemas/approved-slice-plan-export-v0.schema.json and
+schemas/execution-envelope-v0.schema.json, and enforced here by the
+stdlib-only interpreter in schema_check.py (BEI-134). Semantics the
+declarative subset cannot express - cycle detection, parallel-group
+transitive closure, supersedes/version pairing, slice_id-matches-filename,
+the prompt-or-body fallback, non-empty-list checks, and child/slice-file
+cross-referencing - stay here as code. See each schema's `$comment` header
+for the exact boundary.
+
 Usage: validate_export.py <bundle-dir>
 Exit codes: 0 valid, 1 invalid (line-itemized errors on stderr), 2 usage.
 """
@@ -17,6 +27,12 @@ import json
 import pathlib
 import re
 import sys
+
+import schema_check
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+BUNDLE_SCHEMA_PATH = ROOT / "schemas" / "approved-slice-plan-export-v0.schema.json"
+SLICE_SCHEMA_PATH = ROOT / "schemas" / "execution-envelope-v0.schema.json"
 
 BUNDLE_KIND = "approved-slice-plan-export-v0"
 REQUIRED_BUNDLE_FIELDS = (
@@ -35,14 +51,15 @@ REQUIRED_BUNDLE_FIELDS = (
     "validation",
     "ownership",
 )
-REQUIRED_APPROVAL_FIELDS = ("approved_at", "approved_by")
-KNOWN_RUBRIC_VERSIONS = frozenset({"afk-rubric-v0", "afk-rubric-v1"})
-ALLOWED_SLICE_SCHEMAS = frozenset({"approved-slice-v1", "rondo-execution-request-v1"})
-REQUIRED_REPO_FIELDS = ("url", "base_ref", "base_sha")
 SUPERSEDES_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-KNOWN_TIERS = frozenset({"light", "standard", "heavy", "frontier"})
-KNOWN_BOUNDARIES = frozenset({"planning", "implementation", "review_fix", "gate_repair"})
-ALLOWED_ROUTING_MODES = frozenset({"prefer", "require"})
+
+
+def _load_schema(path: pathlib.Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+BUNDLE_SCHEMA = _load_schema(BUNDLE_SCHEMA_PATH)
+SLICE_SCHEMA = _load_schema(SLICE_SCHEMA_PATH)
 
 
 def _nonempty_string(value: object) -> bool:
@@ -176,67 +193,30 @@ def _validate_parallel_groups(
                     )
 
 
-def _validate_boundary_routing(name: str, routing: object, errors: list[str]) -> None:
-    prefix = f"{name}: runner_extensions.model_routing.routing"
-    if routing is None:
-        return
-    if not isinstance(routing, list) or not routing:
-        errors.append(f"{prefix} must be a non-empty list of boundary rules")
-        return
+def _validate_model_routing_list_semantics(name: str, manifest: dict, errors: list[str]) -> None:
+    """Non-empty-list checks the schema subset can't express (no minItems).
 
-    for idx, rule in enumerate(routing):
-        rule_prefix = f"{prefix}[{idx}]"
-        if not isinstance(rule, dict):
-            errors.append(f"{rule_prefix} must be an object")
-            continue
-
-        boundary = rule.get("boundary")
-        if boundary not in KNOWN_BOUNDARIES:
-            errors.append(f"{rule_prefix}.boundary must be one of {sorted(KNOWN_BOUNDARIES)}, got {boundary!r}")
-
-        tier = rule.get("tier")
-        if tier not in KNOWN_TIERS:
-            errors.append(f"{rule_prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
-
-        mode = rule.get("mode")
-        if mode not in ALLOWED_ROUTING_MODES:
-            errors.append(f"{rule_prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
-
-        reason = rule.get("reason")
-        if reason is not None and not _nonempty_string(reason):
-            errors.append(f"{rule_prefix}.reason must be a non-empty string when present")
-
-        source = rule.get("source")
-        if source is not None and not isinstance(source, dict):
-            errors.append(f"{rule_prefix}.source must be an object when present")
-
-
-def _validate_model_routing(name: str, manifest: dict, errors: list[str]) -> None:
-    """Validate optional runner_extensions.model_routing hints; absent is valid."""
+    Everything else about runner_extensions.model_routing shape (required
+    keys, enums, item shape) is enforced by SLICE_SCHEMA.
+    """
     extensions = manifest.get("runner_extensions")
     if not isinstance(extensions, dict):
         return
     routing = extensions.get("model_routing")
-    if routing is None:
-        return
-    prefix = f"{name}: runner_extensions.model_routing"
     if not isinstance(routing, dict):
-        errors.append(f"{prefix} must be an object with tier, mode, candidates")
         return
-    _validate_boundary_routing(name, routing.get("routing"), errors)
-    tier = routing.get("tier")
-    if tier not in KNOWN_TIERS:
-        errors.append(f"{prefix}.tier must be one of {sorted(KNOWN_TIERS)}, got {tier!r}")
-    mode = routing.get("mode")
-    if mode not in ALLOWED_ROUTING_MODES:
-        errors.append(f"{prefix}.mode must be one of {sorted(ALLOWED_ROUTING_MODES)}, got {mode!r}")
+
     candidates = routing.get("candidates")
-    if (
-        not isinstance(candidates, list)
-        or not candidates
-        or not all(_nonempty_string(c) for c in candidates)
-    ):
-        errors.append(f"{prefix}.candidates must be a non-empty list of non-empty strings")
+    if isinstance(candidates, list) and not candidates:
+        errors.append(
+            f"{name}: runner_extensions.model_routing.candidates must be a non-empty list of non-empty strings"
+        )
+
+    boundary_rules = routing.get("routing")
+    if isinstance(boundary_rules, list) and not boundary_rules:
+        errors.append(
+            f"{name}: runner_extensions.model_routing.routing must be a non-empty list of boundary rules"
+        )
 
 
 def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> None:
@@ -244,29 +224,18 @@ def _validate_slice(path: pathlib.Path, expected_id: str, errors: list[str]) -> 
     if manifest is None:
         return
 
-    schema = manifest.get("schema")
-    if schema not in ALLOWED_SLICE_SCHEMAS:
-        errors.append(f"{path.name}: schema must be one of {sorted(ALLOWED_SLICE_SCHEMAS)}, got {schema!r}")
+    errors.extend(schema_check.validate(manifest, SLICE_SCHEMA, root_label=path.name))
 
+    # Semantics the declarative schema subset cannot express:
     slice_id = manifest.get("slice_id")
-    if not _nonempty_string(slice_id):
-        errors.append(f"{path.name}: slice_id must be a non-empty string")
-    elif slice_id != expected_id:
+    if _nonempty_string(slice_id) and slice_id != expected_id:
         errors.append(f"{path.name}: slice_id '{slice_id}' does not match filename slice id '{expected_id}'")
 
     prompt = manifest.get("prompt") or manifest.get("body")
     if not _nonempty_string(prompt):
         errors.append(f"{path.name}: prompt (or body) must be a non-empty string")
 
-    repo = manifest.get("repo")
-    if not isinstance(repo, dict):
-        errors.append(f"{path.name}: repo must be an object with {', '.join(REQUIRED_REPO_FIELDS)}")
-    else:
-        for field in REQUIRED_REPO_FIELDS:
-            if not _nonempty_string(repo.get(field)):
-                errors.append(f"{path.name}: repo.{field} must be a non-empty string")
-
-    _validate_model_routing(path.name, manifest, errors)
+    _validate_model_routing_list_semantics(path.name, manifest, errors)
 
 
 def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
@@ -286,19 +255,17 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
     if errors:
         return errors
 
-    if bundle["kind"] != BUNDLE_KIND:
-        errors.append(f"bundle.json: kind must be '{BUNDLE_KIND}', got {bundle['kind']!r}")
+    errors.extend(schema_check.validate(bundle, BUNDLE_SCHEMA, root_label="bundle.json"))
 
-    if bundle["status"] != "approved":
-        errors.append(
-            f"bundle.json: status must be 'approved' for export (fail-closed), got {bundle['status']!r}"
-        )
-
+    # version, re-derived (not re-reported) purely to gate the supersedes
+    # pairing check below; any type/range problem was already reported by
+    # the schema check above.
     version = bundle["version"]
-    if not isinstance(version, int) or version < 1:
-        errors.append("bundle.json: version must be a positive integer")
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
         version = None
 
+    # supersedes: presence + null-vs-sha256 + version pairing is a cross-field
+    # conditional outside the schema subset (see schema $comment) - stays here.
     if "supersedes" not in bundle:
         errors.append("bundle.json: missing required field 'supersedes' (null for first export)")
     else:
@@ -316,43 +283,16 @@ def validate_bundle(bundle_dir: pathlib.Path) -> list[str]:
                 "bundle.json: supersedes must be the prior bundle.json sha256 for version >= 2 (revision)"
             )
 
-    approval = bundle["approval"]
-    if not isinstance(approval, dict):
-        errors.append("bundle.json: approval must be an object")
-    else:
-        for field in REQUIRED_APPROVAL_FIELDS:
-            if not _nonempty_string(approval.get(field)):
-                errors.append(f"bundle.json: approval.{field} must be a non-empty string")
-
-    validation = bundle["validation"]
-    if not isinstance(validation, dict):
-        errors.append("bundle.json: validation must be an object")
-    else:
-        if validation.get("schema_version") != BUNDLE_KIND:
-            errors.append(f"bundle.json: validation.schema_version must be '{BUNDLE_KIND}'")
-        rubric = validation.get("rubric_version")
-        if not _nonempty_string(rubric):
-            errors.append("bundle.json: validation.rubric_version must be a non-empty string")
-        elif rubric not in KNOWN_RUBRIC_VERSIONS:
-            errors.append(
-                f"bundle.json: unknown rubric_version {rubric!r}; known: {sorted(KNOWN_RUBRIC_VERSIONS)}"
-            )
-
     children = bundle["children"]
     child_ids: list[str] = []
     if not isinstance(children, list) or not children:
         errors.append("bundle.json: children must be a non-empty list of slice references")
     else:
-        for idx, child in enumerate(children):
-            child_id = child.get("id") if isinstance(child, dict) else None
-            if not _nonempty_string(child_id):
-                errors.append(f"bundle.json: children[{idx}] must have a non-empty string 'id'")
-                continue
-            child_ids.append(child_id)
-            if "source_ticket" in child and not _nonempty_string(child["source_ticket"]):
-                errors.append(
-                    f"bundle.json: children[{idx}].source_ticket must be a non-empty string when present"
-                )
+        for child in children:
+            if isinstance(child, dict):
+                cid = child.get("id")
+                if isinstance(cid, str) and cid.strip():
+                    child_ids.append(cid)
         duplicates = {cid for cid in child_ids if child_ids.count(cid) > 1}
         for dup in sorted(duplicates):
             errors.append(f"bundle.json: duplicate slice id '{dup}' in children")

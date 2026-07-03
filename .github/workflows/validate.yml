@@ -147,6 +147,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 scripts/check_artifact_templates_consistency.py
+      - run: python3 scripts/check_contract_schema_consistency.py
       - run: python3 scripts/check_lifecycle_hooks_consistency.py
       - run: python3 scripts/check_model_routing_step_hints_consistency.py
       - run: python3 scripts/check_planning_lifecycle_consistency.py

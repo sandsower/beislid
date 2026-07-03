@@ -435,6 +435,43 @@ test_model_routing_absent_accepted() {
   expect_valid "$TMP/bundle"
 }
 
+# BEI-134: schema_check.py interpreter coverage. These exercise the
+# declarative schema's `required` and `enum` keywords directly, as distinct
+# from the semantic (graph/supersedes/OR-fallback) checks that stay in code.
+test_schema_required_field_missing_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["runner_extensions"]["model_routing"] = {"mode": "prefer", "candidates": ["claude:sonnet"]}'
+  expect_invalid "$TMP/bundle" "model_routing.tier"
+}
+
+test_schema_enum_violation_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_bundle "$TMP/bundle/bundle.json" 'bundle["validation"]["schema_version"] = "wrong-schema-v9"'
+  expect_invalid "$TMP/bundle" "schema_version"
+}
+
+# BEI-134: schema-driven validation must not change the verdict on any
+# committed bundle - same exit code, same "valid: <dir>" stdout.
+test_committed_export_bundles_still_valid() {
+  local status=0 dir out rc
+  for dir in "$REPO_DIR"/.beislid/exports/*/; do
+    [[ -d "$dir" ]] || continue
+    dir="${dir%/}"
+    rc=0
+    out="$(python3 "$VALIDATOR" "$dir" 2>&1)" || rc=$?
+    if [[ "$rc" -ne 0 ]]; then
+      note_fail "expected exit 0 for committed bundle $dir, got $rc: $out"
+      status=1
+      continue
+    fi
+    if [[ "$out" != "valid: $dir" ]]; then
+      note_fail "expected unchanged 'valid: $dir' output for $dir, got: $out"
+      status=1
+    fi
+  done
+  return "$status"
+}
+
 test_cli_dispatch_valid() {
   write_valid_bundle "$TMP/bundle"
   "$CLI" export validate "$TMP/bundle" || { note_fail "beislid export validate failed on valid bundle"; return 1; }
@@ -494,6 +531,9 @@ run_test "model_routing unknown tier rejected" test_model_routing_unknown_tier_r
 run_test "model_routing bad mode rejected" test_model_routing_bad_mode_rejected
 run_test "model_routing empty candidates rejected" test_model_routing_empty_candidates_rejected
 run_test "model_routing absent accepted" test_model_routing_absent_accepted
+run_test "schema-driven required field missing rejected" test_schema_required_field_missing_rejected
+run_test "schema-driven enum violation rejected" test_schema_enum_violation_rejected
+run_test "committed export bundles still valid, output unchanged" test_committed_export_bundles_still_valid
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
 

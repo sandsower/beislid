@@ -21,10 +21,12 @@ class Beislid < Formula
     libexec.install "skills"
     libexec.install "hooks"
     libexec.install "extensions"
+    libexec.install "schemas"
     (libexec/"scripts").install "scripts/install_lib.sh"
     (libexec/"scripts").install "scripts/run_ledger.py"
     (libexec/"scripts").install "scripts/action_policy.py"
     (libexec/"scripts").install "scripts/validate_export.py"
+    (libexec/"scripts").install "scripts/schema_check.py"
     (libexec/"scripts").install "scripts/visual_feedback.py"
     (libexec/"scripts").install "scripts/workflow_normalizer.py"
 
