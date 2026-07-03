@@ -3,50 +3,30 @@
 
 from __future__ import annotations
 
-import argparse
-import json
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.fixtures import commit_and_push, commit_only, init_fixture_repo, install_static_mock_bin, run, setup_main, write, write_workflow
 
 SCENARIO_DIR = Path(__file__).resolve().parent
-
-
-def run(args: list[str], cwd: Path | None = None) -> str:
-    result = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(args)}\n{result.stderr}")
-    return result.stdout.strip()
-
-
-def write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
 
 
 def create_fixture(run_dir: Path) -> dict[str, object]:
     state_dir = run_dir / "state"
     mock_bin = run_dir / "mock-bin"
     gh_log = run_dir / "gh.log"
-    origin = run_dir / "origin.git"
-    repo = run_dir / "repo"
 
-    mock_src = SCENARIO_DIR / "mock-bin" / "gh"
-    mock_bin.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(mock_src, mock_bin / "gh")
-    os.chmod(mock_bin / "gh", 0o755)
+    # This gh fake does dynamic --flag parsing and a side-effect file write for
+    # `pr create`, which doesn't fit the declarative route tables cleanly - kept
+    # as a static mock-bin script (see scenarios/ready-for-review/mock-bin/gh).
+    install_static_mock_bin(SCENARIO_DIR, mock_bin, ["gh"])
 
-    run(["git", "init", "--bare", str(origin)])
-    run(["git", "clone", str(origin), str(repo)])
-    run(["git", "config", "user.email", "agent-smoke@example.invalid"], cwd=repo)
-    run(["git", "config", "user.name", "Beislid Agent Smoke"], cwd=repo)
+    origin, repo = init_fixture_repo(run_dir, name="Beislid Agent Smoke", email="agent-smoke@example.invalid")
 
-    write(repo / ".beislid" / "workflow.md", """<!-- beislid-workflow: v1 -->
+    write_workflow(repo, """<!-- beislid-workflow: v1 -->
 
 # Agent smoke workflow
 
@@ -148,10 +128,7 @@ description: Fixture skill for changed-file gate-set smoke.
 
 Initial text.
 """)
-    run(["git", "add", "."], cwd=repo)
-    run(["git", "commit", "-m", "Initial smoke fixture"], cwd=repo)
-    run(["git", "branch", "-M", "main"], cwd=repo)
-    run(["git", "push", "-u", "origin", "main"], cwd=repo)
+    commit_and_push(repo, "Initial smoke fixture")
 
     branch = "agent-smoke/no-ticket-verbose"
     run(["git", "checkout", "-b", branch], cwd=repo)
@@ -179,11 +156,10 @@ jobs:
     steps:
       - run: echo 'fixture workflow change on branch'
 """)
-    run(["git", "add", "docs/smoke.md", "skills/example/SKILL.md", ".github/workflows/validate.yml"], cwd=repo)
-    run(["git", "commit", "-m", "Update smoke fixture docs, skills, and workflows"], cwd=repo)
+    commit_only(repo, "Update smoke fixture docs, skills, and workflows", paths=["docs/smoke.md", "skills/example/SKILL.md", ".github/workflows/validate.yml"])
 
     evidence_helper = SCENARIO_DIR / "evidence_helper.py"
-    metadata: dict[str, object] = {
+    return {
         "run_dir": str(run_dir),
         "repo": str(repo),
         "state_dir": str(state_dir),
@@ -205,29 +181,11 @@ jobs:
         },
         "path_prepend": [str(mock_bin)],
     }
-    write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
-    return metadata
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", help="Run directory created by the generic harness")
-    args = parser.parse_args()
-
-    if args.run_dir:
-        run_dir = Path(args.run_dir).resolve()
-        run_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        run_dir = Path(tempfile.mkdtemp(prefix=f"beislid-ready-for-review-smoke-{stamp}-"))
-    metadata = create_fixture(run_dir)
-    print(json.dumps(metadata, indent=2))
-    return 0
+    return setup_main(create_fixture, prefix="beislid-ready-for-review-smoke")
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"setup failed: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(main())

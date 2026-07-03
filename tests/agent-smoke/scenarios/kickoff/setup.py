@@ -3,29 +3,22 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import os
-import shutil
-import subprocess
 import sys
-import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 
-SCENARIO_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-
-def run(args: list[str], cwd: Path | None = None) -> str:
-    result = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(args)}\n{result.stderr}")
-    return result.stdout.strip()
-
-
-def write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+from harness.fixtures import (
+    commit_and_push,
+    init_fixture_repo,
+    run,
+    setup_main,
+    write,
+    write_gh_mock,
+    write_lifecycle_action_mock,
+    write_file_relay_mock,
+    write_workflow,
+)
 
 
 def create_fixture(run_dir: Path) -> dict[str, object]:
@@ -36,10 +29,7 @@ def create_fixture(run_dir: Path) -> dict[str, object]:
     comment_log = run_dir / "ticket-comment.log"
     comment_body = run_dir / "ticket-comment-body.md"
     lifecycle_action_log = run_dir / "lifecycle-action.log"
-    origin = run_dir / "origin.git"
-    repo = run_dir / "repo"
 
-    mock_bin.mkdir(parents=True, exist_ok=True)
     write(skills_dir / "kickoff-smoke-explorer" / "SKILL.md", """---
 name: kickoff-smoke-explorer
 description: Smoke-only kickoff explore enhancer.
@@ -50,22 +40,50 @@ description: Smoke-only kickoff explore enhancer.
 Return this exact context marker when used: skill-only-context-token-44.
 Confirm the fixture remains a single PR.
 """)
-    for name in ["gh", "ticket-comment", "lifecycle-action"]:
-        shutil.copy2(SCENARIO_DIR / "mock-bin" / name, mock_bin / name)
-        os.chmod(mock_bin / name, 0o755)
 
-    run(["git", "init", "--bare", str(origin)])
-    run(["git", "clone", str(origin), str(repo)])
-    run(["git", "config", "user.email", "kickoff-smoke@example.invalid"], cwd=repo)
-    run(["git", "config", "user.name", "Beislid Kickoff Smoke"], cwd=repo)
+    write_gh_mock(mock_bin / "gh", routes=[
+        {
+            "match": "issue view",
+            "validate": (
+                '  id=${3:-}\n'
+                '  if [[ "$id" != "123" && "$id" != "#123" ]]; then\n'
+                '    echo "mock gh: expected issue 123, got $id" >&2\n'
+                '    exit 44\n'
+                '  fi'
+            ),
+            "response": (
+                '{"number":123,"title":"Add activity summary filters",'
+                '"body":"Users need a small filter control on the activity summary so they can switch '
+                'between all, open, and archived items. Acceptance criteria: reuse the existing summary '
+                'renderer; add tests for filter behavior; keep the change in one PR.",'
+                '"state":"OPEN","labels":[{"name":"enhancement"},{"name":"frontend"}]}'
+            ),
+        },
+    ])
+    write_lifecycle_action_mock(
+        mock_bin / "lifecycle-action",
+        expected_args=["123", "123", "123-kickoff-smoke", "kickoff_start"],
+        usage="<ticket_id> <id_alias> <branch> <event>",
+        success_message="ok: lifecycle action ran",
+    )
+    write_file_relay_mock(
+        mock_bin / "ticket-comment",
+        log_env="TICKET_COMMENT_LOG",
+        out_env="TICKET_COMMENT_BODY_COPY",
+        expected_leading_args=["123"],
+        success_message="ok: ticket comment posted for 123",
+        command_name="ticket-comment",
+    )
 
-    write(repo / ".beislid" / "workflow.md", f"""<!-- beislid-workflow: v1 -->
+    origin, repo = init_fixture_repo(run_dir, name="Beislid Kickoff Smoke", email="kickoff-smoke@example.invalid")
+
+    write_workflow(repo, """<!-- beislid-workflow: v1 -->
 
 # Kickoff smoke workflow
 
 ```beislid:ticket_source
 type: cli
-command: 'gh issue view {{id}} --json number,title,body,state,labels'
+command: 'gh issue view {id} --json number,title,body,state,labels'
 id_pattern: '^#?\\d+$'
 ```
 
@@ -75,7 +93,7 @@ id_pattern: '^#?\\d+$'
 
 ```beislid:ticket_update
 type: cli
-comment_command: 'ticket-comment {{id}} {{body_file}}'
+comment_command: 'ticket-comment {id} {body_file}'
 ```
 
 ```beislid:lifecycle_actions
@@ -84,7 +102,7 @@ events:
     actions:
       - name: smoke-start-work
         type: cli
-        command: 'lifecycle-action {{ticket_id}} {{id}} {{branch}} {{event}}'
+        command: 'lifecycle-action {ticket_id} {id} {branch} {event}'
         approval: auto
 ```
 
@@ -110,10 +128,7 @@ def test_filter_items_open():
     assert filter_items(items, 'open') == [{'status': 'open'}]
 """)
     write(repo / "README.md", "# Kickoff smoke fixture\n\nActivity summary code lives in `src/summary.py`.\n")
-    run(["git", "add", "."], cwd=repo)
-    run(["git", "commit", "-m", "Initial kickoff smoke fixture"], cwd=repo)
-    run(["git", "branch", "-M", "main"], cwd=repo)
-    run(["git", "push", "-u", "origin", "main"], cwd=repo)
+    commit_and_push(repo, "Initial kickoff smoke fixture")
     run(["git", "checkout", "-b", "123-kickoff-smoke"], cwd=repo)
 
     metadata: dict[str, object] = {
@@ -138,27 +153,12 @@ def test_filter_items_open():
         },
         "path_prepend": [str(mock_bin)],
     }
-    write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
     return metadata
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir")
-    args = parser.parse_args()
-    if args.run_dir:
-        run_dir = Path(args.run_dir).resolve()
-        run_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        run_dir = Path(tempfile.mkdtemp(prefix=f"beislid-kickoff-smoke-{stamp}-"))
-    print(json.dumps(create_fixture(run_dir), indent=2))
-    return 0
+    return setup_main(create_fixture, prefix="beislid-kickoff-smoke")
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"setup failed: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(main())

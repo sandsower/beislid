@@ -3,29 +3,12 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import os
-import shutil
-import subprocess
 import sys
-import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 
-SCENARIO_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-
-def run(args: list[str], cwd: Path | None = None) -> str:
-    result = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        raise RuntimeError(f"command failed ({result.returncode}): {' '.join(args)}\n{result.stderr}")
-    return result.stdout.strip()
-
-
-def write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+from harness.fixtures import commit_and_push, init_fixture_repo, run, setup_main, write, write_gh_mock, write_workflow, write_mock_script
 
 
 def create_fixture(run_dir: Path) -> dict[str, object]:
@@ -36,20 +19,83 @@ def create_fixture(run_dir: Path) -> dict[str, object]:
     update_log = run_dir / "pr-review-update.log"
     update_payload = run_dir / "pr-review-update-payload.json"
     gate_marker = run_dir / "validate-fixture.marker"
-    origin = run_dir / "origin.git"
-    repo = run_dir / "repo"
 
-    mock_bin.mkdir(parents=True, exist_ok=True)
-    for name in ["gh", "pr-review-source", "pr-review-update"]:
-        shutil.copy2(SCENARIO_DIR / "mock-bin" / name, mock_bin / name)
-        os.chmod(mock_bin / name, 0o755)
+    write_gh_mock(mock_bin / "gh", routes=[
+        {
+            "match": "pr view",
+            "response": (
+                '{"url":"https://example.invalid/sandsower/review-response-smoke/pull/7",'
+                '"number":7,"baseRefName":"main","headRefName":"123-review-response-review"}'
+            ),
+        },
+    ])
 
-    run(["git", "init", "--bare", str(origin)])
-    run(["git", "clone", str(origin), str(repo)])
-    run(["git", "config", "user.email", "review-response-smoke@example.invalid"], cwd=repo)
-    run(["git", "config", "user.name", "Beislid Review Response Smoke"], cwd=repo)
+    pr_review_source_body = """cmd=${1:-}
+expected_owner=sandsower
+expected_repo=review-response-smoke
+expected_number=7
+expected_url=https://example.invalid/sandsower/review-response-smoke/pull/7
+if [[ $# -ne 5 || "${2:-}" != "$expected_owner" || "${3:-}" != "$expected_repo" || "${4:-}" != "$expected_number" || "${5:-}" != "$expected_url" ]]; then
+  echo "mock pr-review-source: expected <summary|threads> $expected_owner $expected_repo $expected_number $expected_url, got: $*" >&2
+  exit 46
+fi
+case "$cmd" in
+  summary)
+    cat <<'JSON'
+{"url":"https://example.invalid/sandsower/review-response-smoke/pull/7","number":7,"reviewDecision":"CHANGES_REQUESTED","comments":[],"reviews":[{"author":{"login":"review-responder"},"state":"CHANGES_REQUESTED","body":"One inline thread is unresolved."}]}
+JSON
+    ;;
+  threads)
+    cat <<'JSON'
+[
+  {
+    "id": 7001,
+    "path": "src/reply.py",
+    "line": 2,
+    "body": "Please return `hello reviewer` instead of the casual `heya reviewer`.",
+    "user": {"login": "review-responder"},
+    "html_url": "https://example.invalid/sandsower/review-response-smoke/pull/7#discussion_r7001"
+  }
+]
+JSON
+    ;;
+  *)
+    echo "mock pr-review-source: unsupported command: $*" >&2
+    exit 45
+    ;;
+esac
+"""
+    write_mock_script(mock_bin / "pr-review-source", log_env="PR_REVIEW_SOURCE_LOG", command_name="pr-review-source", body=pr_review_source_body)
 
-    write(repo / ".beislid" / "workflow.md", """<!-- beislid-workflow: v1 -->
+    pr_review_update_body = """out=${PR_REVIEW_UPDATE_PAYLOAD_COPY:-}
+if [[ -z "$out" ]]; then
+  echo "PR_REVIEW_UPDATE_PAYLOAD_COPY must be set" >&2
+  exit 98
+fi
+mkdir -p "$(dirname "$out")"
+if [[ $# -ne 2 || "${1:-}" != "reply" ]]; then
+  echo "pr-review-update requires exactly: reply <json_file>" >&2
+  exit 40
+fi
+json_file=$2
+if [[ ! -f "$json_file" ]]; then
+  echo "pr-review-update expected a real json_file path, got $json_file" >&2
+  exit 42
+fi
+case "$json_file" in
+  *$'\\n'*)
+    echo "pr-review-update got raw-looking JSON instead of path" >&2
+    exit 43
+    ;;
+esac
+cp "$json_file" "$out"
+echo "ok: PR review reply posted"
+"""
+    write_mock_script(mock_bin / "pr-review-update", log_env="PR_REVIEW_UPDATE_LOG", command_name="pr-review-update", body=pr_review_update_body)
+
+    origin, repo = init_fixture_repo(run_dir, name="Beislid Review Response Smoke", email="review-response-smoke@example.invalid")
+
+    write_workflow(repo, """<!-- beislid-workflow: v1 -->
 
 # Review-response smoke workflow
 
@@ -113,14 +159,11 @@ if marker_value:
 print('ok: validate-fixture passed')
 """)
     write(repo / "README.md", "# Review-response smoke fixture\n\nReview feedback targets `src/reply.py`.\n")
-    run(["git", "add", "."], cwd=repo)
-    run(["git", "commit", "-m", "Initial review-response smoke fixture"], cwd=repo)
-    run(["git", "branch", "-M", "main"], cwd=repo)
-    run(["git", "push", "-u", "origin", "main"], cwd=repo)
+    commit_and_push(repo, "Initial review-response smoke fixture")
     run(["git", "checkout", "-b", "123-review-response-review"], cwd=repo)
     run(["git", "push", "-u", "origin", "123-review-response-review"], cwd=repo)
 
-    metadata: dict[str, object] = {
+    return {
         "run_dir": str(run_dir),
         "repo": str(repo),
         "state_dir": str(state_dir),
@@ -144,27 +187,11 @@ print('ok: validate-fixture passed')
         },
         "path_prepend": [str(mock_bin)],
     }
-    write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
-    return metadata
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir")
-    args = parser.parse_args()
-    if args.run_dir:
-        run_dir = Path(args.run_dir).resolve()
-        run_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        run_dir = Path(tempfile.mkdtemp(prefix=f"beislid-review-response-smoke-{stamp}-"))
-    print(json.dumps(create_fixture(run_dir), indent=2))
-    return 0
+    return setup_main(create_fixture, prefix="beislid-review-response-smoke")
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"setup failed: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(main())

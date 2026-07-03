@@ -52,47 +52,6 @@ def fail(errors: list[str], message: str) -> None:
     errors.append(f"verifier: {message}")
 
 
-def strip_codex_exec_blocks(text: str) -> str:
-    lines: list[str] = []
-    skipping_exec = False
-    for line in text.splitlines():
-        if line.strip() == "exec":
-            skipping_exec = True
-            continue
-        if skipping_exec and line.strip() in {"codex", "user"}:
-            skipping_exec = False
-        if not skipping_exec:
-            lines.append(line)
-    return "\n".join(lines)
-
-
-def agent_output_text(run_dir: Path) -> str:
-    chunks: list[str] = []
-    for path in sorted(run_dir.glob("*.log")):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if text.startswith("$ "):
-            if OUTPUT_SENTINEL not in text:
-                continue
-            text = text.split(OUTPUT_SENTINEL, 1)[1]
-        text = text.split("\ntokens used\n", 1)[0]
-        if "OpenAI Codex" in text:
-            text = strip_codex_exec_blocks(text)
-        chunks.append(text)
-    return "\n".join(chunks)
-
-
-def strip_markdown_fences(text: str) -> str:
-    lines: list[str] = []
-    in_fence = False
-    for line in text.splitlines():
-        if line.strip().startswith("```"):
-            in_fence = not in_fence
-            continue
-        if not in_fence:
-            lines.append(line)
-    return "\n".join(lines)
-
-
 def extract_diff_blocks(text: str) -> list[str]:
     blocks: list[str] = []
     current: list[str] = []
@@ -111,58 +70,6 @@ def extract_diff_blocks(text: str) -> list[str]:
         if in_diff:
             current.append(line)
     return blocks
-
-
-def drop_trailing_stamp_restatement(text: str, stamps: list[str]) -> str:
-    lines = text.splitlines()
-    non_empty = [line.strip() for line in lines if line.strip()]
-    if len(non_empty) < len(stamps) * 2 or non_empty[-len(stamps):] != stamps:
-        return text
-    earlier = non_empty[:-len(stamps)]
-    if not all(stamp in earlier for stamp in stamps):
-        return text
-    remove = len(stamps)
-    trimmed = list(lines)
-    while trimmed and remove:
-        line = trimmed.pop()
-        if line.strip():
-            remove -= 1
-    return "\n".join(trimmed)
-
-
-def verify_clean_repo(errors: list[str], metadata: dict) -> None:
-    repo = Path(metadata["repo"])
-    try:
-        status = run(["git", "status", "--short"], cwd=repo)
-        if status:
-            fail(errors, f"fixture repo is dirty:\n{status}")
-    except Exception as exc:
-        fail(errors, f"could not inspect git status: {exc}")
-    expected_head = metadata.get("head_sha")
-    if expected_head:
-        try:
-            actual_head = run(["git", "rev-parse", "HEAD"], cwd=repo)
-            if actual_head != expected_head:
-                fail(errors, f"fixture repo HEAD changed after smoke: expected {expected_head}, got {actual_head}")
-        except Exception as exc:
-            fail(errors, f"could not inspect HEAD: {exc}")
-
-    expected_files = sorted(metadata.get("tracked_files") or (metadata.get("tracked_hashes") or {}).keys())
-    try:
-        actual_files = sorted(run(["git", "ls-files"], cwd=repo).splitlines())
-        if actual_files != expected_files:
-            fail(errors, f"tracked file set changed after smoke: expected {expected_files!r}, got {actual_files!r}")
-    except Exception as exc:
-        fail(errors, f"could not inspect tracked files: {exc}")
-
-    for rel, expected in (metadata.get("tracked_hashes") or {}).items():
-        path = repo / rel
-        if not path.exists():
-            fail(errors, f"tracked file missing after smoke: {rel}")
-            continue
-        actual = sha256(path)
-        if actual != expected:
-            fail(errors, f"tracked file hash changed after smoke: {rel}")
 
 
 def verify_feedback_doc(errors: list[str], metadata: dict) -> str:

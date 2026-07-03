@@ -11,6 +11,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from harness.verification import collect_agent_output, require_stamp_sequence
+
 REQUIRED_STAMPS = [
     "✓ envelope/step-1-intake v1 loaded",
     "✓ envelope/step-2-author v1 loaded",
@@ -38,13 +42,6 @@ def load_json(path: Path, errors: list[str], label: str) -> dict | None:
         errors.append(f"{label}: top level must be a JSON object")
         return None
     return payload
-
-
-def agent_output_text(run_dir: Path) -> str:
-    chunks: list[str] = []
-    for path in sorted(run_dir.glob("*.log")):
-        chunks.append(path.read_text(encoding="utf-8", errors="replace"))
-    return "\n".join(chunks)
 
 
 def write(path: Path, text: str) -> None:
@@ -86,7 +83,9 @@ def self_test() -> int:
                 {"id": "wid-8-report", "source_ticket": "WID-8"},
             ],
             "dependency_graph": {"wid-7-export": [], "wid-8-report": ["wid-7-export"]},
-            "proof_requirements": {"gates": ["validate-export"]},
+            "proof_requirements": [
+                {"id": "widget-tests", "command": "python3 -m pytest tests/"},
+            ],
             "guides_and_gates": {"notes": ["self-test"]},
             "approval": {"approved_at": "2026-01-01T00:00:00Z", "approved_by": "Self Test"},
             "runner_extensions": {"notes": []},
@@ -318,10 +317,8 @@ def main() -> int:
     if tracked_checkpoints:
         errors.append(f"checkpoint pointer must stay untracked, found: {tracked_checkpoints}")
 
-    output = agent_output_text(run_dir)
-    for stamp in REQUIRED_STAMPS:
-        if stamp not in output:
-            errors.append(f"missing aux load stamp: {stamp!r}")
+    output = collect_agent_output(run_dir)
+    require_stamp_sequence(errors, text=output, stamps=REQUIRED_STAMPS, label="agent output")
     if re.search(r"src/widget_export\.py", output) is None:
         errors.append("agent output never references the fixture widget module")
 
