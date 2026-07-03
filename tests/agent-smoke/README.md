@@ -40,6 +40,38 @@ python3 tests/agent-smoke/run.py gate --suite review-response-suite --hosts code
 python3 tests/agent-smoke/run.py gate --suite walk-the-diff-suite --hosts codex --timeout 900
 ```
 
+## Nightly suite (scheduled, local only)
+
+`suites/nightly.json` covers every scenario. It needs an authenticated `codex`
+(and, once Claude gate support returns, `claude`) CLI, so it cannot run on
+GitHub-hosted runners - schedule it locally instead:
+
+```bash
+python3 tests/agent-smoke/run.py gate --suite nightly --hosts codex --timeout 900 --json > /path/to/trend/$(date -u +%Y-%m-%dT%H%M%SZ).json
+```
+
+`--json` prints a machine-readable result summary instead of the plain
+ok/failed lines: one entry per scenario/host with `ok`/`rc`/`detail`, plus an
+honest `"not run (earlier scenario in the suite failed)"` detail for any
+scenario the fail-fast gate never reached (the gate stops at the first
+scenario with a host failure rather than burning further paid model runs).
+Point the redirect at wherever your trend artifacts live; each invocation
+appends one dated JSON file, which is enough for a simple pass/fail trend
+without any additional tooling.
+
+To schedule it, use whatever local scheduler you already have - a user
+`launchd` agent on macOS or a `cron` entry on Linux both work; there is no
+Beislið-specific scheduler. Example `cron` line (needs `codex` on `PATH` and
+already authenticated in the environment cron runs jobs in):
+
+```cron
+0 3 * * * cd /path/to/beislid && python3 tests/agent-smoke/run.py gate --suite nightly --hosts codex --timeout 900 --json > "$HOME/beislid-agent-smoke-trend/$(date -u +\%Y-\%m-\%dT\%H\%M\%SZ).json" 2>&1
+```
+
+Do not wire this into `.github/workflows/` - GitHub-hosted runners have no
+authenticated `codex`/`claude` CLI, and this is a local-authenticated-model
+gate, not a CI-safe one (see Safety model below).
+
 ## Verifier review checklist
 
 - Assertions should target product behavior, not host formatting preferences.

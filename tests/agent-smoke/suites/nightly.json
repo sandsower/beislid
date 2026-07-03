@@ -1,0 +1,19 @@
+{
+  "name": "nightly",
+  "description": "Every agent-smoke scenario, for a scheduled local trend run across the full skill surface.",
+  "scenarios": [
+    "bootstrap-route",
+    "kickoff",
+    "blueprint",
+    "implement",
+    "review",
+    "rinse",
+    "ready-for-review",
+    "review-response",
+    "review-response-no-source",
+    "walk-the-diff",
+    "walk-the-diff-wrap",
+    "setup",
+    "envelope"
+  ]
+}

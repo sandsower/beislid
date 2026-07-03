@@ -91,7 +91,12 @@ def load_suite(name: str) -> dict:
 
 
 def run_suite_gate(scenarios: list[str], hosts: list[str], timeout: int, serial: bool) -> list[tuple[str, str, int, str]]:
-    failures: list[tuple[str, str, int, str]] = []
+    """Run every scenario/host combination, stopping at the first scenario with
+    any host failure (fail-fast, to avoid burning paid model runs on a suite
+    that's already broken). Returns every (scenario, host, rc, detail) tuple
+    actually attempted, in order - callers filter for rc != 0 to get failures,
+    or compare against the full `scenarios` list to see what was skipped."""
+    attempted: list[tuple[str, str, int, str]] = []
 
     for scenario in scenarios:
         def run_one(host: str, scenario: str = scenario) -> tuple[str, int, str]:
@@ -119,12 +124,12 @@ def run_suite_gate(scenarios: list[str], hosts: list[str], timeout: int, serial:
                 for future in as_completed(futures):
                     results.append(future.result())
 
-        scenario_failures = [(scenario, host, rc, detail) for host, rc, detail in results if rc != 0]
-        failures.extend(scenario_failures)
-        if scenario_failures:
+        scenario_results = [(scenario, host, rc, detail) for host, rc, detail in results]
+        attempted.extend(scenario_results)
+        if any(rc != 0 for _, _, rc, _ in scenario_results):
             break
 
-    return failures
+    return attempted
 
 
 def run_setup(path: Path, run_dir: Path, config: dict) -> dict:
@@ -426,8 +431,13 @@ def should_run_changed_only() -> bool:
 
 
 def gate(args: argparse.Namespace) -> int:
+    as_json = getattr(args, "json", False)
+
     if args.changed_only and not should_run_changed_only():
-        print("ok: agent smoke skipped; no Beislið skill/smoke files changed")
+        if as_json:
+            print(json.dumps({"skipped": True, "reason": "no Beislið skill/smoke files changed"}, indent=2))
+        else:
+            print("ok: agent smoke skipped; no Beislið skill/smoke files changed")
         return 0
 
     if args.suite:
@@ -443,7 +453,30 @@ def gate(args: argparse.Namespace) -> int:
         gate_label = args.scenario
 
     hosts = [host.strip() for host in args.hosts.split(",") if host.strip()]
-    failures = run_suite_gate(scenarios, hosts, args.timeout, args.serial)
+    attempted = run_suite_gate(scenarios, hosts, args.timeout, args.serial)
+    failures = [(scenario, host, rc, detail) for scenario, host, rc, detail in attempted if rc != 0]
+
+    if as_json:
+        attempted_scenarios = {scenario for scenario, _, _, _ in attempted}
+        results = [
+            {"scenario": scenario, "host": host, "ok": rc == 0, "rc": rc, "detail": detail or None}
+            for scenario, host, rc, detail in attempted
+        ]
+        for scenario in scenarios:
+            if scenario not in attempted_scenarios:
+                for host in hosts:
+                    results.append({"scenario": scenario, "host": host, "ok": None, "rc": None, "detail": "not run (earlier scenario in the suite failed)"})
+        payload = {
+            "gate": gate_label,
+            "suite": args.suite,
+            "scenarios": scenarios,
+            "hosts": hosts,
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "passed": not failures,
+            "results": results,
+        }
+        print(json.dumps(payload, indent=2))
+        return 1 if failures else 0
 
     if failures:
         for scenario, host, rc, detail in failures:
@@ -480,6 +513,7 @@ def build_parser() -> argparse.ArgumentParser:
     gate_p.add_argument("--timeout", type=int, default=900)
     gate_p.add_argument("--changed-only", action="store_true", help="Skip unless skill/smoke files changed")
     gate_p.add_argument("--serial", action="store_true", help="Run hosts one after another instead of in parallel")
+    gate_p.add_argument("--json", action="store_true", help="Emit a machine-readable JSON result summary (for trend artifacts)")
     gate_p.set_defaults(func=gate)
 
     verify_p = sub.add_parser("verify")
