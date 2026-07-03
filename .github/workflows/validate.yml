@@ -133,3 +133,83 @@ jobs:
             exit 1
           fi
           echo "ok: all required aux files are present symlinks"
+
+  consistency-checks:
+    name: Doc consistency checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/check_artifact_templates_consistency.py
+      - run: python3 scripts/check_lifecycle_hooks_consistency.py
+      - run: python3 scripts/check_model_routing_step_hints_consistency.py
+      - run: python3 scripts/check_planning_lifecycle_consistency.py
+      - run: python3 scripts/check_run_ledger_skill_examples_consistency.py
+      - run: python3 scripts/check_visual_surfaces_consistency.py
+      - run: python3 scripts/check_workflow_signals_consistency.py
+
+  script-tests:
+    name: Validator and helper script tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - run: bash scripts/test_validate_export.sh
+      - run: bash scripts/test_validate_skills.sh
+      - run: python3 scripts/test_workflow_normalizer.py
+      - run: python3 scripts/test_visual_feedback.py
+      # Harness self-test only: every host invocation is mocked, no live agents.
+      - run: python3 scripts/test_agent_smoke_harness.py
+
+  show-me-tests:
+    name: Show-me integrity tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - run: npm test
+
+  validate-exports:
+    name: Committed export bundles
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Validate every committed bundle under .beislid/exports
+        run: |
+          shopt -s nullglob
+          bundles=(.beislid/exports/*/)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "no committed bundles to validate"
+            exit 0
+          fi
+          status=0
+          for bundle in "${bundles[@]}"; do
+            echo "=== $bundle ==="
+            python3 scripts/validate_export.py "$bundle" || status=1
+          done
+          exit $status
