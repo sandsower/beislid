@@ -4,8 +4,17 @@
   "source_ticket": "BEI-129",
   "prompt": "## Objective\nMake run_ledger redaction at least as strict as action_policy's secret patterns: today policy flags private_key/auth_header but the ledger redactor does not (action_policy.py:41-45 vs run_ledger.py:25-33), so the ledger can persist exactly what policy would deny.\n\n## Design summary\nPre-decided: prefer a drift-failing consistency test over a shared module - both scripts must remain runnable standalone as single files (stdlib-only, hard constraint), so if sharing patterns requires a cross-script import, use the consistency-test approach instead: a test that iterates every policy secret pattern and asserts a sample matching string comes back redacted from the ledger redactor, failing on any future drift.\n\n## File scope\nInclude: scripts/action_policy.py, scripts/run_ledger.py, scripts/test_action_policy.sh, scripts/test_run_ledger.sh.\nExclude: new secret patterns beyond parity (propose separately if spotted), payload schema (bei-128 scope), everything else.\n\n## Constraints\nHARD: Python stdlib-only; single-file standalone execution preserved for both scripts. No git push or PR creation - local branch/diff only. Work test-first: the parity test fails first, then align patterns. Note: bei-128 runs before this slice and also edits action_policy.py - build on its result. If ambiguous, pause and ask.\n\n## Verification\nFrom the repo root:\n1. bash scripts/test_action_policy.sh\n2. bash scripts/test_run_ledger.sh (incl. the new parity/drift test, all green)\n3. git diff --check origin/main...HEAD",
   "boundaries": {
-    "include": ["scripts/action_policy.py", "scripts/run_ledger.py", "scripts/test_action_policy.sh", "scripts/test_run_ledger.sh"],
-    "exclude": ["new secret patterns beyond parity", "payload schema work (bei-128 scope)", "all other files"]
+    "include": [
+      "scripts/action_policy.py",
+      "scripts/run_ledger.py",
+      "scripts/test_action_policy.sh",
+      "scripts/test_run_ledger.sh"
+    ],
+    "exclude": [
+      "new secret patterns beyond parity",
+      "payload schema work (bei-128 scope)",
+      "all other files"
+    ]
   },
   "dependencies": [
     "Ordering: runs after bei-128-action-policy-schema (both edit action_policy.py; workspace serialization)",
@@ -24,13 +33,23 @@
         "bash scripts/test_run_ledger.sh exits 0 with the new drift-failing parity test",
         "git diff --check origin/main...HEAD exits 0"
       ],
-      "failure_policy": {"on_missing": "block", "on_failure": "block", "retryable": true},
-      "expected_artifact": {"kind": "gate_envelope", "reference": "gate transcript in run evidence"}
+      "failure_policy": {
+        "on_missing": "block",
+        "on_failure": "block",
+        "retryable": true
+      },
+      "expected_artifact": {
+        "kind": "gate_envelope",
+        "reference": "gate transcript in run evidence"
+      }
     }
   ],
   "output_expectations": {
     "summary": "Pattern alignment chosen (shared source vs consistency test) and why; the parity test.",
-    "artifacts": ["changed_files", "proof_results"],
+    "artifacts": [
+      "changed_files",
+      "proof_results"
+    ],
     "next_step": "ready-for-review handoff; human reviews and opens the PR"
   },
   "parent_contract": {
@@ -60,17 +79,38 @@
       "Cross-script imports that break single-file standalone execution"
     ]
   },
-  "process_provider": {"name": "claude_code"},
+  "process_provider": {
+    "name": "codex"
+  },
   "runner_extensions": {
     "model_routing": {
       "routing": [
-        {"boundary": "implementation", "tier": "standard", "mode": "prefer", "reason": "pattern parity plus a drift-failing test"},
-        {"boundary": "review_fix", "tier": "standard", "mode": "prefer", "reason": "default"},
-        {"boundary": "gate_repair", "tier": "standard", "mode": "prefer", "reason": "exact commands given"}
+        {
+          "boundary": "implementation",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "pattern parity plus a drift-failing test"
+        },
+        {
+          "boundary": "review_fix",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "default"
+        },
+        {
+          "boundary": "gate_repair",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "exact commands given"
+        }
       ],
       "tier": "standard",
       "mode": "prefer",
-      "candidates": ["sonnet"]
+      "candidates": [
+        "openai:gpt-5.1-codex",
+        "anthropic:claude-sonnet-4.6",
+        "google:gemini-2.5-pro"
+      ]
     }
   }
 }

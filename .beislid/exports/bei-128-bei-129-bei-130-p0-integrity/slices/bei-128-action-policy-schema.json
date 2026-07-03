@@ -4,8 +4,15 @@
   "source_ticket": "BEI-128",
   "prompt": "## Objective\nAdd payload schema validation to action_policy so it fails closed: today a misspelled sandbox_status key silently passes all sandbox checks (fail-open in a security gate, defect at scripts/action_policy.py:296).\n\n## Design summary\nPre-decided: the 'schema' is an explicit allowlist of expected payload keys with required/optional marking - NOT a jsonschema dependency (the script is stdlib-only, hard constraint). Unknown or missing required keys exit non-zero with a diagnostic naming the key; the decision defaults to deny (fail closed).\n\n## File scope\nInclude: scripts/action_policy.py, scripts/test_action_policy.sh (and its fixtures).\nExclude: policy semantics changes, redaction patterns (bei-129), everything else.\n\n## Constraints\nHARD: Python stdlib-only; the script must remain runnable standalone as a single file. No git push or PR creation - local branch/diff only. Work test-first: failing tests for a misspelled sandbox_status key and a missing required key before the validation. If ambiguous, pause and ask.\n\n## Verification\nFrom the repo root:\n1. bash scripts/test_action_policy.sh (incl. the new misspelled-key and missing-key cases, all green)\n2. bash scripts/test_run_ledger.sh (no cross-breakage)\n3. git diff --check origin/main...HEAD",
   "boundaries": {
-    "include": ["scripts/action_policy.py", "scripts/test_action_policy.sh"],
-    "exclude": ["new policy semantics", "redaction patterns (bei-129 scope)", "all other files"]
+    "include": [
+      "scripts/action_policy.py",
+      "scripts/test_action_policy.sh"
+    ],
+    "exclude": [
+      "new policy semantics",
+      "redaction patterns (bei-129 scope)",
+      "all other files"
+    ]
   },
   "dependencies": [
     "scripts/action_policy.py and scripts/test_action_policy.sh present at pinned base (probed)",
@@ -23,13 +30,23 @@
         "bash scripts/test_run_ledger.sh exits 0",
         "git diff --check origin/main...HEAD exits 0"
       ],
-      "failure_policy": {"on_missing": "block", "on_failure": "block", "retryable": true},
-      "expected_artifact": {"kind": "gate_envelope", "reference": "gate transcript in run evidence"}
+      "failure_policy": {
+        "on_missing": "block",
+        "on_failure": "block",
+        "retryable": true
+      },
+      "expected_artifact": {
+        "kind": "gate_envelope",
+        "reference": "gate transcript in run evidence"
+      }
     }
   ],
   "output_expectations": {
     "summary": "The key allowlist (required vs optional), the diagnostic format, and the fail-closed default.",
-    "artifacts": ["changed_files", "proof_results"],
+    "artifacts": [
+      "changed_files",
+      "proof_results"
+    ],
     "next_step": "ready-for-review handoff; human reviews and opens the PR"
   },
   "parent_contract": {
@@ -59,17 +76,38 @@
       "Breaking single-file standalone execution of the script"
     ]
   },
-  "process_provider": {"name": "claude_code"},
+  "process_provider": {
+    "name": "codex"
+  },
   "runner_extensions": {
     "model_routing": {
       "routing": [
-        {"boundary": "implementation", "tier": "standard", "mode": "prefer", "reason": "single site, allowlist validation, pre-decided conventions"},
-        {"boundary": "review_fix", "tier": "standard", "mode": "prefer", "reason": "default"},
-        {"boundary": "gate_repair", "tier": "standard", "mode": "prefer", "reason": "exact commands given"}
+        {
+          "boundary": "implementation",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "single site, allowlist validation, pre-decided conventions"
+        },
+        {
+          "boundary": "review_fix",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "default"
+        },
+        {
+          "boundary": "gate_repair",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "exact commands given"
+        }
       ],
       "tier": "standard",
       "mode": "prefer",
-      "candidates": ["sonnet"]
+      "candidates": [
+        "openai:gpt-5.1-codex",
+        "anthropic:claude-sonnet-4.6",
+        "google:gemini-2.5-pro"
+      ]
     }
   }
 }
