@@ -1,0 +1,8 @@
+{
+  "name": "review",
+  "description": "Side-effect-free review: find a real regression in the branch diff against main and return the Review Contract output without touching the repo.",
+  "prompt": "Run the installed review skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Review the local diff on this branch against `main` (`git diff main...HEAD`). There is no ticket or design doc; say so and review against general production readiness. The diff touches `src/discount.py`. Use the Review Contract output exactly: `### Review Metadata`, `### Strengths`, `### Findings` with `#### Critical`, `#### Important`, `#### Minor` subsections (write `None.` under any empty bucket), `### Caller Handoff`, and `### Verdict` with a `Ready to merge: Yes / With fixes / No` line and a `Reason:` line. Identify the regression the diff introduces in `apply_discount` (it drops the `/ 100` scaling that `tests/test_discount.py` depends on) as a Critical or Important finding with file/line evidence, why it matters, a suggested fix, and a verification suggestion. Do not edit any files, do not run fixes, do not commit, and do not invoke any other skill - `review` is a side-effect-free primitive. Do not use real network. FINAL RESPONSE REQUIREMENT: end with the Review Contract output described above, verbatim section headers.",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}
