@@ -1,0 +1,79 @@
+{
+  "kind": "approved-slice-plan-export-v0",
+  "version": 1,
+  "status": "approved",
+  "supersedes": null,
+  "generated_from": "envelope skill run 2026-07-03, BEI-131 corpus encoding after the canonical parser decisions HITL session (teotl unification program P1a)",
+  "source_work_contract": "docs/plans/2026-07-03-bei-131-canonical-parser-decisions.md (approved 2026-07-03) + ~/Personal/teotl/plans/2026-07-02-teotl-unification-core-extraction-spec.md (P1a, decision 7)",
+  "slice_plan": {
+    "phase": "P1a fix-forward conformance spec",
+    "parallel_groups": [["bei-131-normalizer-conformance"]],
+    "notes": "Single slice. Trio corpus expansion (action_policy, validate_export) is deliberately excluded: it is blocked on the bei-128-bei-129-bei-130-p0-integrity bundle executing first (B12 changes action_policy behavior). Release shipping is a separate HITL slice."
+  },
+  "children": [
+    {"id": "bei-131-normalizer-conformance", "source_ticket": "BEI-131"}
+  ],
+  "dependency_graph": {
+    "bei-131-normalizer-conformance": []
+  },
+  "proof_requirements": [
+    {
+      "kind": "proof-requirement-v1",
+      "id": "bei-131-conformance-gates",
+      "type": "command_gate",
+      "stage": "pre-pr",
+      "status": "required",
+      "description": "Normalizer unit tests extended per decision, conformance corpus runner green, whitespace gate.",
+      "success_criteria": [
+        "python3 scripts/test_workflow_normalizer.py exits 0 with >=1 new unit test per decision D1-D9b",
+        "python3 scripts/run_conformance.py exits 0 with >=1 corpus case per decision D1-D10 incl. format-doc-derived cases",
+        "git diff --check origin/main...HEAD exits 0"
+      ],
+      "failure_policy": {"on_missing": "block", "on_failure": "block", "retryable": true},
+      "expected_artifact": {"kind": "gate_envelope", "reference": "run-ledger gate path or transcript-safe summary"}
+    }
+  ],
+  "guides_and_gates": {
+    "gates": ["diff-whitespace"],
+    "gate_commands": {
+      "diff-whitespace": "git diff --check origin/main...HEAD",
+      "normalizer-unit-tests": "python3 scripts/test_workflow_normalizer.py",
+      "conformance-corpus": "python3 scripts/run_conformance.py"
+    },
+    "guides": [
+      "Scripts are Python stdlib-only and must stay standalone-runnable",
+      "The decisions record docs/plans/2026-07-03-bei-131-canonical-parser-decisions.md is the authoritative canon; the slice prompt embeds it in full",
+      "The corpus encodes DECIDED behavior, never implementation-observed behavior; conflicts pause"
+    ]
+  },
+  "approval": {
+    "approved_at": "2026-07-03T09:53:48Z",
+    "approved_by": "Vic Valenzuela <vic@sandsower.dev>",
+    "verdicts": {
+      "bei-131-normalizer-conformance": "approve"
+    }
+  },
+  "runner_extensions": {
+    "model_routing": {
+      "routing": [
+        {"boundary": "implementation", "tier": "standard", "mode": "prefer", "reason": "all design pre-resolved in the HITL session; encode-and-implement against pinned expected outputs", "source": {"skill": "envelope", "phase": "execution"}},
+        {"boundary": "review_fix", "tier": "standard", "mode": "prefer", "reason": "review-fix iterations stay on the default tier", "source": {"skill": "envelope"}},
+        {"boundary": "gate_repair", "tier": "standard", "mode": "prefer", "reason": "gate repair is mechanical against exact commands", "source": {"skill": "envelope"}}
+      ],
+      "tier": "standard",
+      "mode": "prefer",
+      "candidates": ["openai:gpt-5.1-codex", "anthropic:claude-sonnet-4.6", "google:gemini-2.5-pro"]
+    }
+  },
+  "validation": {
+    "schema_version": "approved-slice-plan-export-v0",
+    "rubric_version": "afk-rubric-v1",
+    "notes": "All include paths probed in the authoring session (parser read in full, test file test -f, validate.yml read, format-doc symlink topology verified); python3/bash/git probed with command -v; repo pinned at main db52c3863e48703a9b2ad57c1e581b307f483894 (= origin/main; the one local-ahead commit touches no in-scope file). Every disputed parser behavior was reproduced live before the decisions session. Tier is the authoritative capability declaration; candidates are the research-v1 shipped-defaults projection for tier standard (repo declares no tiers block). process_provider codex set at approval. Two open encoding details ratified at approval: unterminated_quote error, comment stripping inside inline lists."
+  },
+  "ownership": {
+    "beislid": "Defines planning, autonomy, and proof semantics of this bundle; owns the parser, corpus, and format doc being changed.",
+    "rondo": "Owns execution and run evidence produced while carrying out the envelope.",
+    "memento": "Owns durable memory and learning captured from completed work.",
+    "teotl": "Program umbrella; no runtime responsibility."
+  }
+}
