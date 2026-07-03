@@ -5,10 +5,62 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 OUTPUT_SENTINEL = "=== BEISLID_AGENT_SMOKE_OUTPUT ==="
 TOKEN_FOOTER = "\ntokens used\n"
+
+
+def run_test_functions(module_path: Path, repo_root: Path) -> list[str]:
+    """Actually execute a fixture's bare `def test_x(): assert ...` functions -
+    the pytest-free style every agent-smoke fixture ships (no pytest runtime
+    dependency for this harness or its CI). Runs in a fresh subprocess per call
+    so repeated verify() invocations against a mutated fixture (as in --self-test
+    positive/negative pairs) never see a stale sys.modules cache from a prior
+    call. Returns a list of 'test_name: error' failure strings (empty = all
+    passed); a missing module or zero discovered test_* functions is also a
+    failure, since a scenario with no real tests proves nothing."""
+    if not module_path.is_file():
+        return [f"{module_path}: test module missing"]
+    script = (
+        "import importlib.util, json, sys\n"
+        f"sys.path.insert(0, {str(repo_root)!r})\n"
+        f"spec = importlib.util.spec_from_file_location({module_path.stem!r}, {str(module_path)!r})\n"
+        "module = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(module)\n"
+        "failures = []\n"
+        "found = False\n"
+        "for name in dir(module):\n"
+        "    if not name.startswith('test_'):\n"
+        "        continue\n"
+        "    fn = getattr(module, name)\n"
+        "    if not callable(fn):\n"
+        "        continue\n"
+        "    found = True\n"
+        "    try:\n"
+        "        fn()\n"
+        "    except Exception as exc:\n"
+        "        failures.append(f'{name}: {exc}')\n"
+        "if not found:\n"
+        "    failures.append('no test_* functions found')\n"
+        "print(json.dumps(failures))\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        return [f"test runner crashed (exit {result.returncode}): {result.stdout.strip()}"]
+    output_lines = [line for line in result.stdout.splitlines() if line.strip()]
+    if not output_lines:
+        return ["test runner produced no output"]
+    try:
+        return json.loads(output_lines[-1])
+    except json.JSONDecodeError:
+        return [f"could not parse test runner output: {result.stdout.strip()}"]
 
 
 def failure(kind: str, message: str) -> str:
