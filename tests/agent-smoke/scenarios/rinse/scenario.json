@@ -1,0 +1,8 @@
+{
+  "name": "rinse",
+  "description": "Rinse loop: review the branch diff, get the user's fix boundary, apply the approved fix, run the real configured gate, rerun review clean, and summarize.",
+  "prompt": "Run the installed rinse skill protocol for this fixture in verbose mode; do not do an ad-hoc summary. Establish the diff on this branch against `main` (`git diff main...HEAD`); there is no ticket or design doc, so review against general production readiness. The diff introduces a real regression in `src/discount.py`'s `apply_discount` (it drops the `/ 100` scaling that `scripts/check_discount.py` depends on). Run the review pass and surface the Critical finding. For smoke purposes the user's fix boundary answer is '(c) All findings including Minor cleanup'. Apply the fix (restore `/ 100`), then run the configured gate for real: `python3 scripts/check_discount.py`, and require it to exit 0 - do not claim success without actually running it and seeing it pass. Rerun review and confirm it is now clean. Commit the fix with a descriptive message. Do not use real network. FINAL RESPONSE REQUIREMENT: end with the exact `### Rinse Summary` section (Input/base/head, Iterations run, Findings fixed, Findings accepted/pushed back, Verification run, Fresh-eyes run, Remaining risk, Suggested next action).",
+  "supported_hosts": ["claude", "codex"],
+  "verify": "verify.py",
+  "setup": "setup.py"
+}
