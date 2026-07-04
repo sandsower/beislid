@@ -65,6 +65,22 @@ assert_contains_json_text() {
   grep -qF -- "$needle" <<<"$payload" || { note_fail "expected JSON to contain: $needle"; return 1; }
 }
 
+assert_fails_with_stderr() {
+  local expected_status="$1" expected_text="$2"
+  shift 2
+  local err status
+  err="$TMP/err.txt"
+  if "$@" >"$TMP/out.txt" 2>"$err"; then
+    note_fail "expected command to fail: $*"
+    return 1
+  else
+    status=$?
+  fi
+  [[ "$status" == "$expected_status" ]] || { note_fail "expected exit status $expected_status, got $status"; return 1; }
+  grep -qF -- "$expected_text" "$err" || { note_fail "expected stderr to contain: $expected_text"; return 1; }
+  ! grep -qF 'Traceback' "$err" || { note_fail "unexpected traceback"; return 1; }
+}
+
 test_supervised_read_allows() {
   local out
   out="$(python3 "$POLICY" evaluate --mode supervised-auto --action file.read)"
@@ -195,6 +211,51 @@ test_secret_heuristic_adds_secret_bearing_class() {
   out="$(python3 "$POLICY" evaluate --mode unattended-auto --action gh.issue.view --command 'gh api -H "Authorization: Bearer $TOKEN"' --sandbox-baseline non-default-branch)"
   assert_decision "$out" deny
   assert_contains_json_text "$out" '"secret-bearing"'
+}
+
+test_misspelled_sandbox_status_key_is_rejected() {
+  local payload
+  payload="$TMP/payload.json"
+  cat >"$payload" <<'JSON'
+{
+  "mode": "supervised-auto",
+  "action": "file.read",
+  "sandbox_statuz": {
+    "baseline": "non-default-branch"
+  }
+}
+JSON
+  assert_fails_with_stderr 1 'unknown payload key: sandbox_statuz' python3 "$POLICY" evaluate --input-file "$payload"
+}
+
+test_missing_required_sandbox_status_key_is_rejected() {
+  local payload
+  payload="$TMP/payload.json"
+  cat >"$payload" <<'JSON'
+{
+  "mode": "supervised-auto",
+  "action": "file.read"
+}
+JSON
+  assert_fails_with_stderr 1 'missing required payload key: sandbox_status' python3 "$POLICY" evaluate --input-file "$payload"
+}
+
+test_missing_required_sandbox_status_baseline_is_rejected() {
+  assert_fails_with_stderr 1 'missing required payload key: sandbox_status.baseline' python3 - "$POLICY" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+policy_path = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("action_policy", policy_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+mod.evaluate({
+    "mode": "supervised-auto",
+    "action": "file.read",
+    "sandbox_status": {},
+})
+PY
 }
 
 test_benign_substring_is_not_secret_bearing() {
@@ -405,6 +466,9 @@ run_test "unattended requires non-default branch" test_unattended_requires_non_d
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline
 run_test "uncommitted changes override can deny" test_uncommitted_changes_can_be_denied_by_override
 run_test "secret heuristic adds class" test_secret_heuristic_adds_secret_bearing_class
+run_test "misspelled sandbox_status key is rejected" test_misspelled_sandbox_status_key_is_rejected
+run_test "missing required sandbox_status key is rejected" test_missing_required_sandbox_status_key_is_rejected
+run_test "missing required sandbox_status.baseline is rejected" test_missing_required_sandbox_status_baseline_is_rejected
 run_test "benign substring is not secret-bearing" test_benign_substring_is_not_secret_bearing
 run_test "compound secret assignment is secret-bearing" test_compound_secret_assignment_is_secret_bearing
 run_test "protected floor applies at ask level" test_protected_floor_applies_at_ask_level

@@ -34,6 +34,26 @@ PROTECTED_CLASSES = ("destructive", "secret-bearing")
 SANDBOX_BASELINES = ("none", "non-default-branch", "separate-worktree", "host-sandbox")
 BASELINE_RANK = {name: idx for idx, name in enumerate(SANDBOX_BASELINES)}
 
+PAYLOAD_SCHEMA = {
+    "mode": {"required": False},
+    "run_mode": {"required": False},
+    "action": {"required": False},
+    "action_id": {"required": False},
+    "command": {"required": False},
+    "classes": {"required": False},
+    "metadata": {"required": False, "object": True},
+    "policy": {"required": False, "object": True},
+    "sandbox_status": {
+        "required": True,
+        "object": True,
+        "schema": {
+            "baseline": {"required": True},
+            "default_branch": {"required": False},
+            "uncommitted_changes": {"required": False},
+        },
+    },
+}
+
 # Assignment-shaped only (`KEY=...` / `key: ...`): bare substrings such as
 # `tokenizer.py` must not infer secret-bearing. Compound segments around the
 # keyword (`GITHUB_TOKEN=`, `db_password:`) still match; embedded fragments
@@ -139,6 +159,33 @@ def validate_baseline(value: str, field: str) -> str:
     return value
 
 
+def _validate_schema_object(value: Any, schema: dict[str, Any], path: str = "") -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise SystemExit(f"{path or 'payload'} must be an object")
+    for key in value:
+        if key not in schema:
+            qualified = f"{path}.{key}" if path else key
+            raise SystemExit(f"unknown payload key: {qualified}")
+    for key, spec in schema.items():
+        qualified = f"{path}.{key}" if path else key
+        if spec.get("required") and key not in value:
+            raise SystemExit(f"missing required payload key: {qualified}")
+        if key in value and spec.get("object") and not isinstance(value[key], dict):
+            raise SystemExit(f"payload key {qualified} must be an object")
+    return value
+
+
+def validate_payload_schema(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise SystemExit("payload must be an object")
+    _validate_schema_object(payload, PAYLOAD_SCHEMA)
+    sandbox_status = payload["sandbox_status"]
+    _validate_schema_object(sandbox_status, PAYLOAD_SCHEMA["sandbox_status"]["schema"], "sandbox_status")
+    if "classes" in payload and not isinstance(payload["classes"], (str, list)):
+        raise SystemExit("payload key classes must be a string or list of strings")
+    return payload
+
+
 def normalize_policy(policy: dict[str, Any]) -> dict[str, Any]:
     merged = deep_merge(DEFAULT_POLICY, policy or {})
     modes = merged.get("modes")
@@ -229,6 +276,7 @@ def policy_summary(policy: dict[str, Any]) -> dict[str, Any]:
 
 
 def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
+    payload = validate_payload_schema(payload)
     run_mode = str(payload.get("mode") or payload.get("run_mode") or "supervised-auto")
     if run_mode not in RUN_MODES:
         raise SystemExit(f"invalid run mode: {run_mode}")
@@ -338,6 +386,7 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
 
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload = load_json(args.input_file)
+    loaded_from_file = bool(args.input_file)
     if args.policy_file:
         payload["policy"] = load_json(args.policy_file)
     if args.mode:
@@ -348,15 +397,27 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         payload["command"] = args.command_text
     if args.classes:
         payload["classes"] = args.classes
-    sandbox = dict(payload.get("sandbox_status") or {})
-    if args.sandbox_baseline:
-        sandbox["baseline"] = args.sandbox_baseline
-    if args.default_branch:
-        sandbox["default_branch"] = True
-    if args.uncommitted_changes:
-        sandbox["uncommitted_changes"] = True
-    if sandbox:
+    sandbox_value = payload.get("sandbox_status")
+    sandbox = dict(sandbox_value) if isinstance(sandbox_value, dict) else None
+    if args.sandbox_baseline or args.default_branch or args.uncommitted_changes:
+        if sandbox is None:
+            sandbox = {}
+        if args.sandbox_baseline:
+            sandbox["baseline"] = args.sandbox_baseline
+        if args.default_branch:
+            sandbox["default_branch"] = True
+        if args.uncommitted_changes:
+            sandbox["uncommitted_changes"] = True
+    if sandbox is not None:
+        sandbox.setdefault("default_branch", False)
+        sandbox.setdefault("uncommitted_changes", False)
         payload["sandbox_status"] = sandbox
+    elif not loaded_from_file:
+        payload["sandbox_status"] = {
+            "baseline": "none",
+            "default_branch": False,
+            "uncommitted_changes": False,
+        }
     return payload
 
 
