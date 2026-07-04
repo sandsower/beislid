@@ -8,6 +8,7 @@ ${BEISLID_STATE_DIR:-~/.local/state/beislid}/runs/<flow>/<repo_hash>/<run_id>/
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import re
@@ -15,9 +16,10 @@ import secrets
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 SCHEMA_VERSION = 1
 LEDGER_KIND = "run-ledger-v1"
@@ -113,6 +115,24 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
             tmp.unlink()
 
 
+@contextmanager
+def run_lock(run_dir: Path) -> Iterator[None]:
+    """Hold the cross-process lock for one run directory.
+
+    The lock lives on a dedicated file rather than run.json because write_json
+    replaces JSON files with os.replace(), which would detach a flock held on
+    the old inode.
+    """
+    lock_path = run_dir / ".lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
 def repo_root(cwd: Path | None = None) -> Path:
     cwd = cwd or Path.cwd()
     result = subprocess.run(
@@ -197,21 +217,22 @@ def load_payload(path: str | None) -> dict[str, Any]:
 
 
 def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transcript_summary: str | None = None) -> dict[str, Any]:
-    safe_payload = redact_json(payload)
-    event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
-    with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
-        f.write(json.dumps(event, sort_keys=True) + "\n")
-    if transcript_summary is None:
-        summary = json.dumps(safe_payload, sort_keys=True)[:2000]
-    else:
-        summary = redact_text(transcript_summary)
-    with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
-        f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
-    run = read_json(run_dir / "run.json")
-    run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
-    run["updated_at"] = event["timestamp"]
-    write_json(run_dir / "run.json", run)
-    return event
+    with run_lock(run_dir):
+        safe_payload = redact_json(payload)
+        event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
+        with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event, sort_keys=True) + "\n")
+        if transcript_summary is None:
+            summary = json.dumps(safe_payload, sort_keys=True)[:2000]
+        else:
+            summary = redact_text(transcript_summary)
+        with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
+            f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
+        run = read_json(run_dir / "run.json")
+        run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
+        run["updated_at"] = event["timestamp"]
+        write_json(run_dir / "run.json", run)
+        return event
 
 
 def checkpoint_payload(name: str, payload: dict[str, Any], resume_hint: str | None = None) -> dict[str, Any]:
@@ -227,42 +248,51 @@ def checkpoint_payload(name: str, payload: dict[str, Any], resume_hint: str | No
 
 
 def record_checkpoint(run_dir: Path, name: str, payload: dict[str, Any], resume_hint: str | None = None) -> Path:
-    checkpoint_path = run_dir / "checkpoints" / f"{slug(name, 'checkpoint')}.json"
-    write_json(checkpoint_path, checkpoint_payload(name, payload, resume_hint))
-    run = read_json(run_dir / "run.json")
-    entry = {"name": name, "path": str(checkpoint_path), "timestamp": now()}
-    if resume_hint:
-        entry["resume_hint"] = redact_text(resume_hint, 500)
-        run["resume_hint"] = entry["resume_hint"]
-    run["latest_checkpoint"] = entry
-    run["last_checkpoint"] = str(checkpoint_path)
-    run["current_step"] = name
-    run.setdefault("checkpoints", []).append(str(checkpoint_path))
-    write_json(run_dir / "run.json", run)
-    return checkpoint_path
+    with run_lock(run_dir):
+        checkpoint_path = run_dir / "checkpoints" / f"{slug(name, 'checkpoint')}.json"
+        write_json(checkpoint_path, checkpoint_payload(name, payload, resume_hint))
+        run = read_json(run_dir / "run.json")
+        entry = {"name": name, "path": str(checkpoint_path), "timestamp": now()}
+        if resume_hint:
+            entry["resume_hint"] = redact_text(resume_hint, 500)
+            run["resume_hint"] = entry["resume_hint"]
+        run["latest_checkpoint"] = entry
+        run["last_checkpoint"] = str(checkpoint_path)
+        run["current_step"] = name
+        run.setdefault("checkpoints", []).append(str(checkpoint_path))
+        write_json(run_dir / "run.json", run)
+        return checkpoint_path
 
 
-def next_attempt_dir(gate_root: Path) -> Path:
-    attempt = 1
-    while (gate_root / str(attempt)).exists():
-        attempt += 1
-    path = gate_root / str(attempt)
-    path.mkdir(parents=True, exist_ok=False)
-    return path
+def next_attempt_dir(run_dir: Path, gate_root: Path) -> Path:
+    with run_lock(run_dir):
+        attempt = 1
+        while (gate_root / str(attempt)).exists():
+            attempt += 1
+        path = gate_root / str(attempt)
+        path.mkdir(parents=True, exist_ok=False)
+        return path
 
 
 def command_init(args: argparse.Namespace) -> int:
     repo = repo_root(Path.cwd())
     hash_value = repo_hash(repo)
     flow = normalize_flow(args.flow, args.skill)
-    rid = validate_run_id(args.run_id) if args.run_id else new_run_id()
+    explicit_run_id = validate_run_id(args.run_id) if args.run_id else None
+    rid = explicit_run_id or new_run_id()
     root = run_root_for_repo(flow, hash_value)
-    rdir = root / rid
     suffix = 1
-    while rdir.exists():
-        suffix += 1
-        rid = f"{validate_run_id(args.run_id) if args.run_id else new_run_id()}-{suffix}"
+    while True:
         rdir = root / rid
+        try:
+            rdir.mkdir(parents=True, exist_ok=False)
+            break
+        except FileExistsError:
+            if explicit_run_id:
+                print(f"run id already exists: {rdir}", file=sys.stderr)
+                return 1
+            suffix += 1
+            rid = f"{new_run_id()}-{suffix}"
     for sub in ("artifacts", "artifacts/gates", "artifacts/reviews", "logs", "checkpoints"):
         (rdir / sub).mkdir(parents=True, exist_ok=False)
     started = now()
@@ -338,14 +368,15 @@ def command_gate(args: argparse.Namespace) -> int:
     envelope = load_payload(args.envelope_file)
     scope = slug(args.scope or envelope.get("gate", {}).get("scope", "repo"), "repo")
     safe_name = slug(args.name, "gate")
-    attempt_dir = next_attempt_dir(rdir / "artifacts" / "gates" / scope / safe_name)
+    attempt_dir = next_attempt_dir(rdir, rdir / "artifacts" / "gates" / scope / safe_name)
     envelope_path = attempt_dir / "envelope.json"
-    write_json(envelope_path, redact_json(envelope))
-    run = read_json(rdir / "run.json")
-    artifact = {"name": args.name, "path": str(envelope_path), "kind": "gate", "scope": scope}
-    run.setdefault("artifacts", []).append(artifact)
-    run.setdefault("logs", []).append(artifact)
-    write_json(rdir / "run.json", run)
+    with run_lock(rdir):
+        write_json(envelope_path, redact_json(envelope))
+        run = read_json(rdir / "run.json")
+        artifact = {"name": args.name, "path": str(envelope_path), "kind": "gate", "scope": scope}
+        run.setdefault("artifacts", []).append(artifact)
+        run.setdefault("logs", []).append(artifact)
+        write_json(rdir / "run.json", run)
     checkpoint_path = record_checkpoint(
         rdir,
         f"gate-{scope}-{safe_name}",
@@ -360,12 +391,13 @@ def command_gate(args: argparse.Namespace) -> int:
 def command_interrupt(args: argparse.Namespace) -> int:
     rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
     checkpoint_path = record_checkpoint(rdir, "interrupted", {"reason": args.reason}, args.resume_hint)
-    run = read_json(rdir / "run.json")
-    run["status"] = "interrupted"
-    run["interruption"] = {"timestamp": now(), "reason": redact_text(args.reason), "checkpoint": str(checkpoint_path)}
-    if args.resume_hint:
-        run["resume_hint"] = redact_text(args.resume_hint, 500)
-    write_json(rdir / "run.json", run)
+    with run_lock(rdir):
+        run = read_json(rdir / "run.json")
+        run["status"] = "interrupted"
+        run["interruption"] = {"timestamp": now(), "reason": redact_text(args.reason), "checkpoint": str(checkpoint_path)}
+        if args.resume_hint:
+            run["resume_hint"] = redact_text(args.resume_hint, 500)
+        write_json(rdir / "run.json", run)
     append_event(rdir, "interrupted", {"reason": args.reason, "resume_hint": args.resume_hint, "checkpoint": str(checkpoint_path)})
     print(json.dumps({"run_id": args.run_id, "status": "interrupted", "checkpoint": str(checkpoint_path)}, sort_keys=True))
     return 0
@@ -385,12 +417,13 @@ def command_finalize(args: argparse.Namespace) -> int:
         {"status": args.status, "final_report": str(report_path) if report_path else None},
         "run complete" if args.status == "completed" else "inspect final status before resuming",
     )
-    run = read_json(rdir / "run.json")
-    run["status"] = args.status
-    run["finalized_at"] = now()
-    if report_path:
-        run["paths"]["final_report"] = str(report_path)
-    write_json(rdir / "run.json", run)
+    with run_lock(rdir):
+        run = read_json(rdir / "run.json")
+        run["status"] = args.status
+        run["finalized_at"] = now()
+        if report_path:
+            run["paths"]["final_report"] = str(report_path)
+        write_json(rdir / "run.json", run)
     append_event(rdir, "finalized", {"status": args.status, "final_report": str(report_path) if report_path else None, "checkpoint": str(checkpoint_path)})
     print(json.dumps({"run_id": args.run_id, "status": args.status, "final_report": str(report_path) if report_path else None}, sort_keys=True))
     return 0
