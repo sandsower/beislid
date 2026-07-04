@@ -218,6 +218,7 @@ None, or:
 #### <ID>: <short title>
 - File: <path:line or unavailable>
 - Confidence: high | medium | low
+- Source pass: main | spec-compliance | code-quality | fresh-eyes | <other>
 - Issue: <what is wrong>
 - Evidence: <diff/code/requirement evidence>
 - Why it matters: <impact>

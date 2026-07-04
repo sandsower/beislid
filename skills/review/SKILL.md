@@ -116,6 +116,7 @@ Each finding must include:
 - Stable ID (`R1`, `R2`, ...)
 - File/line when available
 - Confidence (`high`, `medium`, `low`)
+- Source pass (`main`, `spec-compliance`, `code-quality`, `fresh-eyes`, or another caller-provided pass name)
 - Issue
 - Evidence
 - Why it matters
@@ -141,6 +142,7 @@ Output exactly these sections:
 ##### R1: <short title>
 - File: <path:line or unavailable>
 - Confidence: high/medium/low
+- Source pass: main/spec-compliance/code-quality/fresh-eyes/<other>
 - Issue: ...
 - Evidence: ...
 - Why it matters: ...
@@ -175,7 +177,7 @@ You are an independent reviewer using the review contract.
 Review the supplied diff against the supplied requirements/context. Return only Beislið review output format:
 - Review Metadata
 - Strengths
-- Findings grouped by Critical / Important / Minor
+- Findings grouped by Critical / Important / Minor, including Source pass on each finding
 - Caller Handoff
 - Verdict
 

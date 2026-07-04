@@ -75,6 +75,7 @@ When handing a slice to another agent, use the same canonical headings as `hando
 - Required proof and command gates
 - Expected deliverable
 - Stop condition and open questions
+- Suggested first steps
 
 Treat this payload as the contract for both subagent work and same-session handoff notes.
 
