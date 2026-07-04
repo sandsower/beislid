@@ -22,13 +22,17 @@ from typing import Any
 SCHEMA_VERSION = 1
 LEDGER_KIND = "run-ledger-v1"
 CHECKPOINT_KIND = "run-ledger-checkpoint-v1"
-SECRETISH = re.compile(
-    r"(?i)\b((?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+SECRETISH_ASSIGNMENT = re.compile(
+    r"(?i)\b((?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|private[_-]?key|auth[_-]?header)"
     r"(?:[_-][a-z0-9]+)*)\b\s*[:=]\s*"
-    r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\r\n]+)"
+    r"(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,;)}\]]+)"
 )
+SECRETISH_BEARER = re.compile(
+    r"(?i)(authorization\s*:\s*bearer\s+)(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,;)}\]]+)"
+)
+SECRETISH_ENV = re.compile(r"(?i)\$\{?(TOKEN|SECRET|PASSWORD|API[_-]?KEY|AUTH|GITHUB_TOKEN)\}?")
 SECRETISH_JSON_KEY = re.compile(
-    r"(?i)\b(?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization)"
+    r"(?i)\b(?:[a-z0-9]+[_-])*(?:api[_-]?key|token|secret|password|authorization|private[_-]?key|auth[_-]?header)"
     r"(?:[_-][a-z0-9]+)*\b"
 )
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
@@ -64,7 +68,10 @@ def slug(value: str, fallback: str = "item") -> str:
 
 
 def redact_text(text: str, limit: int = 2000) -> str:
-    redacted = SECRETISH.sub(lambda m: f"{m.group(1)}=[REDACTED]", text.replace("\x00", ""))
+    redacted = text.replace("\x00", "")
+    redacted = SECRETISH_BEARER.sub(lambda m: f"{m.group(1)}[REDACTED]", redacted)
+    redacted = SECRETISH_ASSIGNMENT.sub(lambda m: f"{m.group(1)}=[REDACTED]", redacted)
+    redacted = SECRETISH_ENV.sub("[REDACTED]", redacted)
     return redacted[:limit]
 
 

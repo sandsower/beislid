@@ -322,6 +322,50 @@ assert payload['status'] == 'active', payload
 PY
 }
 
+test_policy_secret_parity_redaction() {
+  python3 - "$REPO_DIR/scripts/action_policy.py" "$LEDGER" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+
+def load_module(name: str, path: pathlib.Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+policy = load_module("action_policy", pathlib.Path(sys.argv[1]))
+ledger = load_module("run_ledger", pathlib.Path(sys.argv[2]))
+
+cases = [
+    ("assignment token", "TOKEN=token_value", "TOKEN=[REDACTED]"),
+    ("assignment secret", "secret: secret_value", "secret=[REDACTED]"),
+    ("assignment password", "PASSWORD=password_value", "PASSWORD=[REDACTED]"),
+    ("assignment api key", "API_KEY=api_value", "API_KEY=[REDACTED]"),
+    ("assignment private key", "PRIVATE_KEY=private_value", "PRIVATE_KEY=[REDACTED]"),
+    ("assignment auth header", "auth_header: header_value", "auth_header=[REDACTED]"),
+    ("bearer auth", "Authorization: Bearer bearer_value", "Authorization: Bearer [REDACTED]"),
+    ("env token", "deploy with $TOKEN", "deploy with [REDACTED]"),
+    ("env github token", "deploy with ${GITHUB_TOKEN}", "deploy with [REDACTED]"),
+]
+
+errors = []
+for name, sample, expected in cases:
+    if not policy.infer_secret_bearing("", sample, {}):
+        errors.append(f"policy did not flag {name}: {sample!r}")
+    actual = ledger.redact_text(sample)
+    if actual != expected:
+        errors.append(f"ledger redaction mismatch for {name}: expected {expected!r}, got {actual!r}")
+
+if errors:
+    for error in errors:
+        print(error, file=sys.stderr)
+    raise SystemExit(1)
+PY
+}
+
+
 test_compound_secret_redaction() {
   local state="$TMP/state" out run_id run_dir event_payload
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill kickoff --flow kickoff --ticket-id 15 --ticket-title 'Compound redaction' --branch feature/redaction)"
@@ -340,8 +384,10 @@ PY
   python3 - <<'PY' "$event_payload"
 import json, sys
 payload = {
-    "message": "GITHUB_TOKEN=compound_text_value\nSECRET_KEY=compound_key_value\ndb_password: compound_password_value",
+    "message": "GITHUB_TOKEN=compound_text_value\nSECRET_KEY=compound_key_value\ndb_password: compound_password_value\nprivate_key=compound_private_value\nauth_header: compound_auth_header_value",
     "github_token": "compound_json_value",
+    "private_key": "compound_private_json_value",
+    "auth_header": "compound_auth_header_json_value",
     "notes": "tokenizer and passwordless should remain visible",
     "z_large": "x" * 2500,
     "z_tail": "uncapped_tail_marker",
@@ -545,6 +591,7 @@ run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_fina
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
 run_test "rejects unsafe run id" test_rejects_unsafe_run_id
 run_test "legacy active resume without flow" test_legacy_active_resume_without_flow
+run_test "policy secret parity redaction" test_policy_secret_parity_redaction
 run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
 run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
