@@ -1,0 +1,125 @@
+{
+  "kind": "approved-slice-plan-export-v0",
+  "version": 1,
+  "status": "approved",
+  "supersedes": null,
+  "generated_from": "envelope skill run 2026-07-04, heavy-tier P0 integrity ticket BEI-127 (teotl unification program; last unexported P0 blocker on the OLI-13 path)",
+  "source_work_contract": "~/Personal/teotl/plans/2026-07-02-teotl-unification-core-extraction-spec.md (approved 2026-07-02; companion debt audit 2026-07-02-debt-audit-p0-integrity-batch.md, BEI 1)",
+  "slice_plan": {
+    "phase": "P0 stop-the-bleeding integrity batch (final straggler)",
+    "parallel_groups": [
+      [
+        "bei-127-run-ledger-locking"
+      ]
+    ],
+    "notes": "Single-slice bundle. File-disjoint from all landed P0 slices; no ordering constraints against other work. Prerequisite for the olin port of run_ledger."
+  },
+  "children": [
+    {
+      "id": "bei-127-run-ledger-locking",
+      "source_ticket": "BEI-127"
+    }
+  ],
+  "dependency_graph": {
+    "bei-127-run-ledger-locking": []
+  },
+  "proof_requirements": [
+    {
+      "kind": "proof-requirement-v1",
+      "id": "bei-127-gates",
+      "type": "command_gate",
+      "stage": "pre-pr",
+      "status": "required",
+      "description": "New concurrency suite (audit repro encoded first), the existing run-ledger suite, cross-breakage runs of the sibling trio suites, and the whitespace gate.",
+      "success_criteria": [
+        "python3 scripts/test_run_ledger_concurrency.py exits 0",
+        "bash scripts/test_run_ledger.sh exits 0",
+        "bash scripts/test_action_policy.sh exits 0",
+        "python3 scripts/test_workflow_normalizer.py exits 0",
+        "bash scripts/test_validate_export.sh exits 0",
+        "git diff --check origin/main...HEAD exits 0"
+      ],
+      "failure_policy": {
+        "on_missing": "block",
+        "on_failure": "block",
+        "retryable": true
+      },
+      "expected_artifact": {
+        "kind": "gate_envelope",
+        "reference": "run-ledger gate path or transcript-safe summary"
+      }
+    }
+  ],
+  "guides_and_gates": {
+    "gates": [
+      "diff-whitespace"
+    ],
+    "gate_commands": {
+      "diff-whitespace": "git diff --check origin/main...HEAD",
+      "concurrency-suite": "python3 scripts/test_run_ledger_concurrency.py",
+      "tool-tests": "bash scripts/test_run_ledger.sh && bash scripts/test_action_policy.sh && python3 scripts/test_workflow_normalizer.py && bash scripts/test_validate_export.sh"
+    },
+    "guides": [
+      "Scripts are Python stdlib-only and must stay standalone-runnable; ticket AFK brief is the authoritative slice brief",
+      "The lockfile is a dedicated never-replaced file; run.json cannot be the lock target because write_json swaps inodes via os.replace"
+    ]
+  },
+  "approval": {
+    "approved_at": "2026-07-04T16:22:17Z",
+    "approved_by": "Vic Valenzuela <vic@sandsower.dev>",
+    "verdicts": {
+      "bei-127-run-ledger-locking": "approve"
+    }
+  },
+  "runner_extensions": {
+    "model_routing": {
+      "routing": [
+        {
+          "boundary": "implementation",
+          "tier": "heavy",
+          "mode": "prefer",
+          "reason": "concurrency-correctness work: lock protocol must be implemented exactly as designed, and lost-update reasoning is easy to get subtly wrong",
+          "source": {
+            "skill": "envelope",
+            "phase": "execution"
+          }
+        },
+        {
+          "boundary": "review_fix",
+          "tier": "heavy",
+          "mode": "prefer",
+          "reason": "ticket explicitly recommends strong review for concurrency",
+          "source": {
+            "skill": "envelope"
+          }
+        },
+        {
+          "boundary": "gate_repair",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "gate repair is mechanical against exact commands",
+          "source": {
+            "skill": "envelope"
+          }
+        }
+      ],
+      "tier": "heavy",
+      "mode": "prefer",
+      "candidates": [
+        "anthropic:claude-opus-4.8",
+        "openai:gpt-5.4"
+      ]
+    }
+  },
+  "validation": {
+    "schema_version": "approved-slice-plan-export-v0",
+    "rubric_version": "afk-rubric-v1",
+    "notes": "All include paths probed in the authoring session (test -f on run_ledger.py and test_run_ledger.sh; concurrency test file is new by design); python3, bash, and fcntl importability probed; race sites re-read against current main and line refs updated from the audit's (code shifted after BEI-129): append_event :199-214, record_checkpoint :229-242, next_attempt_dir :245-251, init collision :258-265; repo pinned at 49183bd (v0.4.10). All six afk-rubric-v1 criteria pass with evidence; design decisions (lock primitive, lockfile identity, critical sections, collision exit behavior, test isolation) pre-resolved in the prompt."
+  },
+  "ownership": {
+    "beislid": "Defines planning, autonomy, and proof semantics of this bundle; owns the scripts being fixed.",
+    "rondo": "Owns execution and run evidence produced while carrying out the envelopes.",
+    "memento": "Owns durable memory and learning captured from completed work.",
+    "teotl": "Program umbrella; no runtime responsibility."
+  }
+}
