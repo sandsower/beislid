@@ -20,6 +20,7 @@ BEISLID_BIN_DIR_RESOLVED="${BEISLID_BIN_DIR:-$HOME/.local/bin}"
 BEISLID_CLI_PATH="$BEISLID_BIN_DIR_RESOLVED/beislid"
 
 WITH_SECURITY_HOOKS=0
+WITH_SIGNAL_HOOKS=0
 FORCE=0
 STRICT=0
 STRICT_FAILED=0
@@ -416,7 +417,62 @@ _workflow_signal_usage() {
 Usage:
   beislid workflow-signal emit <working|blocked|waiting|verify|review|done|explore> [--skill NAME] [--phase NAME] [--event NAME] [--repo PATH]
   beislid workflow-signal status [--skill NAME] [--repo PATH]
+  beislid workflow-signal sweep [--max-age-hours N]   (default 24; removes stale signal files)
 USAGE
+}
+
+_workflow_signal_file_age_hours() {
+  # Prints the age in whole hours of the ISO timestamp on line 2 of a signal
+  # file, or nothing when the timestamp is missing/unparseable.
+  local signal_file="$1"
+  python3 - "$signal_file" <<'PY' 2>/dev/null || true
+import sys
+from datetime import datetime, timezone
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        lines = fh.read().splitlines()
+    ts = lines[1].split()[-1]
+    emitted = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+except (OSError, IndexError, ValueError):
+    sys.exit(0)
+age = datetime.now(timezone.utc) - emitted
+print(int(age.total_seconds() // 3600))
+PY
+}
+
+_workflow_signal_sweep() {
+  local max_age_hours=24 removed=0 kept=0 signal_file age
+  while (($#)); do
+    case "$1" in
+      --max-age-hours) shift; max_age_hours="${1:-24}" ;;
+      -h|--help) _workflow_signal_usage; return 0 ;;
+      *) echo "Unknown workflow-signal sweep flag: $1" >&2; return 2 ;;
+    esac
+    if [[ -z "${1:-}" ]]; then
+      echo "Missing value for workflow-signal flag" >&2
+      return 2
+    fi
+    shift
+  done
+  local state_dir="${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}"
+  echo "beislid workflow-signal sweep (max age: ${max_age_hours}h)"
+  if [[ ! -d "$state_dir/signals" ]]; then
+    echo "  no signal state directory"
+    return 0
+  fi
+  while IFS= read -r signal_file; do
+    [[ -f "$signal_file" ]] || continue
+    age="$(_workflow_signal_file_age_hours "$signal_file")"
+    if [[ -z "$age" || "$age" -ge "$max_age_hours" ]]; then
+      rm -f "$signal_file"
+      removed=$((removed + 1))
+      echo "  removed: ${signal_file#"$state_dir/signals/"} (${age:-unknown}h old)"
+    else
+      kept=$((kept + 1))
+    fi
+  done < <(find "$state_dir/signals" -type f 2>/dev/null)
+  echo "  removed: $removed, kept: $kept"
 }
 
 _workflow_signal_state_valid() {
@@ -630,6 +686,23 @@ beislid_workflow_signal() {
       config="$(_workflow_signal_config_lines "$repo" "$skill")"
       echo "beislid workflow-signal status"
       echo "  repo: $repo"
+      # Report the current branch's signal file, flagging likely-stale entries.
+      local repo_hash branch_slug signal_file age
+      repo_hash="$(git -C "$repo" rev-list --max-parents=0 HEAD 2>/dev/null | head -c 12 || true)"
+      if [[ -n "$repo_hash" ]]; then
+        branch_slug="$(git -C "$repo" symbolic-ref --short HEAD 2>/dev/null | tr '/' '-' || true)"
+        [[ -n "$branch_slug" ]] || branch_slug="$(basename "$repo")"
+        signal_file="${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/signals/$repo_hash/$branch_slug"
+        if [[ -f "$signal_file" ]]; then
+          echo "  signal: $(sed -n '2p' "$signal_file")"
+          age="$(_workflow_signal_file_age_hours "$signal_file")"
+          if [[ -n "$age" && "$age" -ge 24 ]]; then
+            echo "  signal-age: ${age}h (likely stale; run \`beislid workflow-signal sweep\`)"
+          fi
+        else
+          echo "  signal: none (idle/done)"
+        fi
+      fi
       while IFS= read -r line; do
         [[ "$line" == configured=1 ]] && saw_config=1
       done <<<"$config"
@@ -644,6 +717,9 @@ beislid_workflow_signal() {
           sink=*) echo "  sink: ${line#sink=}" ;;
         esac
       done <<<"$config"
+      ;;
+    sweep)
+      _workflow_signal_sweep "$@"
       ;;
     ""|-h|--help)
       _workflow_signal_usage
@@ -699,9 +775,9 @@ _write_manifest() {
   version="$(_current_version)"
   commit="$(_current_commit)"
   installed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  python3 - <<'PY' "$MANIFEST" "$installed_at" "$SCRIPT_DIR" "$version" "$commit" "$CLAUDE_SKILLS" "$AGENTS_SKILLS" "$CODEX_SKILLS" "$CLAUDE_HOOKS" "$WITH_SECURITY_HOOKS" "$BEISLID_CLI_LINK_OK" "$BEISLID_BIN_DIR_RESOLVED" "$BEISLID_CLI_PATH"
+  python3 - <<'PY' "$MANIFEST" "$installed_at" "$SCRIPT_DIR" "$version" "$commit" "$CLAUDE_SKILLS" "$AGENTS_SKILLS" "$CODEX_SKILLS" "$CLAUDE_HOOKS" "$WITH_SECURITY_HOOKS" "$WITH_SIGNAL_HOOKS" "$BEISLID_CLI_LINK_OK" "$BEISLID_BIN_DIR_RESOLVED" "$BEISLID_CLI_PATH"
 import json, sys
-manifest, installed_at, repo, version, commit, claude, agents, codex, hooks, security, cli_ok, bin_dir, cli_path = sys.argv[1:]
+manifest, installed_at, repo, version, commit, claude, agents, codex, hooks, security, signals, cli_ok, bin_dir, cli_path = sys.argv[1:]
 data = {
     "installed_at": installed_at,
     "repo": repo,
@@ -714,6 +790,7 @@ data = {
     },
     "hooks_dir": hooks,
     "security_hooks": security == "1",
+    "signal_hooks": signals == "1",
 }
 if cli_ok == "1":
     data["bin_dir"] = bin_dir
@@ -1529,7 +1606,7 @@ _preserve_manifest_for_update() {
     return
   fi
 
-  local manifest_values security manifest_claude manifest_agents manifest_codex manifest_hooks manifest_bin_dir
+  local manifest_values security signals manifest_claude manifest_agents manifest_codex manifest_hooks manifest_bin_dir
   manifest_values="$(python3 - <<'PY' "$MANIFEST"
 import json, sys
 try:
@@ -1543,9 +1620,11 @@ print(skill_dirs.get("agents") or "")
 print(skill_dirs.get("codex") or "")
 print(data.get("hooks_dir") or "")
 print(data.get("bin_dir") or "")
+print("1" if data.get("signal_hooks") is True else "0")
 PY
 )"
   security="$(sed -n '1p' <<<"$manifest_values")"
+  signals="$(sed -n '7p' <<<"$manifest_values")"
   manifest_claude="$(sed -n '2p' <<<"$manifest_values")"
   manifest_agents="$(sed -n '3p' <<<"$manifest_values")"
   manifest_codex="$(sed -n '4p' <<<"$manifest_values")"
@@ -1555,6 +1634,10 @@ PY
   if [[ "$security" == "1" && "$WITH_SECURITY_HOOKS" == 0 ]]; then
     WITH_SECURITY_HOOKS=1
     echo "preserve: security hooks enabled from install manifest"
+  fi
+  if [[ "$signals" == "1" && "$WITH_SIGNAL_HOOKS" == 0 ]]; then
+    WITH_SIGNAL_HOOKS=1
+    echo "preserve: workflow-signal hooks enabled from install manifest"
   fi
   if [[ -z "${CLAUDE_SKILLS_DIR+x}" && -n "$manifest_claude" ]]; then
     CLAUDE_SKILLS="$manifest_claude"
@@ -1778,6 +1861,7 @@ beislid_update_repo() {
 
   local rerun_args=()
   [[ "$WITH_SECURITY_HOOKS" == 1 ]] && rerun_args+=(--with-security-hooks)
+  [[ "$WITH_SIGNAL_HOOKS" == 1 ]] && rerun_args+=(--with-signal-hooks)
   [[ "$FORCE" == 1 ]] && rerun_args+=(--force)
   [[ "$STRICT" == 1 ]] && rerun_args+=(--strict)
 
@@ -1837,6 +1921,19 @@ beislid_install_user() {
     echo
     echo "NOTE: you still need to register the hook in settings.json."
     echo "See docs/credential-guard.md for the snippet."
+  fi
+
+  if [[ "$WITH_SIGNAL_HOOKS" == 1 ]]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "error: --with-signal-hooks requires python3 on PATH" >&2
+      exit 1
+    fi
+    echo
+    echo "Workflow-signal hooks:"
+    link_hook "workflow_signals.py"
+    echo
+    echo "NOTE: you still need to register the hook in settings.json."
+    echo "See docs/workflow-signals.md for the snippet."
   fi
 
   echo

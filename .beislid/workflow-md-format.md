@@ -200,7 +200,7 @@ Typed gate feedback and freeform annotations are distinct. Only a typed payload 
 
 ## Workflow signals shape
 
-`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic state (`waiting`, `verify`, `blocked`, etc.); sinks own local side effects. In v1 the only executable sink is `tmux-glance`, which annotates the current tmux window/tab through the external `tmux-glance` CLI when available. Pi's managed Beislið wrapper additionally surfaces emitted signals in Pi's status/title UI and emits a best-effort start signal for managed skill commands.
+`workflow_signals` lets Beislið skills emit local, transcript-safe workflow-state signals. Beislið owns the semantic state (`waiting`, `verify`, `blocked`, etc.); sinks own local side effects. In v1 the only executable sink is `tmux-glance`, which annotates the current tmux window/tab through the external `tmux-glance` CLI when available. Pi's managed Beislið wrapper additionally surfaces emitted signals in Pi's status/title UI and emits a best-effort start signal for managed skill commands. Claude Code hosts can opt into the `workflow_signals.py` lifecycle-hook heartbeat (`install.sh --with-signal-hooks`), which emits `working`/`waiting`/`done` at prompt/stop/session-end so the signal surface stays truthful between and after skill emissions; see `docs/workflow-signals.md`.
 
 ````markdown
 ## Workflow signals
@@ -224,6 +224,7 @@ Use the CLI for manual or skill-driven emission:
 ```bash
 beislid workflow-signal emit waiting --skill ready-for-review --phase approval
 beislid workflow-signal status --skill ready-for-review
+beislid workflow-signal sweep  # remove stale signal files (default: older than 24h)
 ```
 
 ## Model routing shape

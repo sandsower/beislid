@@ -28,6 +28,7 @@ Flags:
   --copy                  Copy project-local skills instead of symlinking them
   --write-gitignore       Create or update the managed project .gitignore block
   --with-security-hooks   Install credential_guard hook (opt-in; user install only)
+  --with-signal-hooks     Install workflow_signals heartbeat hook (opt-in; user install only)
   --strict                Exit nonzero when expected artifacts are skipped
                           or conflicted during install
   --update                Fast-forward this Beislið repo, then re-run install
@@ -62,6 +63,7 @@ EOF
 while (($#)); do
   case "$1" in
     --with-security-hooks) WITH_SECURITY_HOOKS=1 ;;
+    --with-signal-hooks) WITH_SIGNAL_HOOKS=1 ;;
     --force|--repoint) FORCE=1 ;;
     --strict) STRICT=1 ;;
     --status) STATUS=1 ;;
@@ -118,6 +120,11 @@ fi
 
 if [[ "$PROJECT" == 1 && "$WITH_SECURITY_HOOKS" == 1 ]]; then
   echo "error: --with-security-hooks is a user-install flag and cannot be combined with --project" >&2
+  exit 2
+fi
+
+if [[ "$PROJECT" == 1 && "$WITH_SIGNAL_HOOKS" == 1 ]]; then
+  echo "error: --with-signal-hooks is a user-install flag and cannot be combined with --project" >&2
   exit 2
 fi
 

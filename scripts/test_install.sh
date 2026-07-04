@@ -1936,6 +1936,30 @@ test_security_hooks_off_by_default() {
   fi
 }
 
+test_signal_hooks_off_by_default() {
+  run_installer
+  if [[ -e "$HOOKS/workflow_signals.py" ]]; then
+    note_fail "expected workflow_signals.py not to be installed without --with-signal-hooks"
+  fi
+}
+
+test_signal_hook_installs_and_noops_outside_beislid_repo() {
+  run_installer --with-signal-hooks
+  if [[ ! -L "$HOOKS/workflow_signals.py" ]]; then
+    note_fail "expected workflow_signals.py symlink under hooks dir"
+    return
+  fi
+  local payload out rc=0
+  payload="{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\":\"$TMP\"}"
+  out="$(printf '%s' "$payload" | python3 "$HOOKS/workflow_signals.py")" || rc=$?
+  if [[ "$rc" != 0 ]]; then
+    note_fail "expected hook to exit 0 outside a beislid repo, got rc=$rc"
+  fi
+  if [[ -n "$out" ]]; then
+    note_fail "expected no output outside a beislid repo, got: $out"
+  fi
+}
+
 test_hook_blocks_secret_dump() {
   run_installer --with-security-hooks
   local payload='{"tool_name":"Bash","tool_input":{"command":"cat ~/.ssh/id_rsa"}}'
@@ -2130,6 +2154,8 @@ run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_
 run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump
+run_test "signal hook is opt-in"                              test_signal_hooks_off_by_default
+run_test "signal hook installs and no-ops outside beislid"    test_signal_hook_installs_and_noops_outside_beislid_repo
 run_test "update fast-forwards and relinks"                   test_update_fast_forwards_and_relinks
 run_test "CLI update fast-forwards and relinks"               test_cli_update_fast_forwards_and_relinks
 run_test "update aborts on dirty tree"                        test_update_aborts_on_dirty_tree
