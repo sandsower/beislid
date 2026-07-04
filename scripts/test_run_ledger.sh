@@ -587,6 +587,11 @@ assert classifications.get('env-fail') == 'environment_failure', f'unexpected: {
 assert classifications.get('skipped') is None, f'skip should have no classification: {classifications}'
 PY
 }
+
+
+test_run_ledger_concurrency_suite() {
+  (cd "$REPO_DIR" && python3 "$REPO_DIR/scripts/test_run_ledger_concurrency.py")
+}
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
 run_test "rejects unsafe run id" test_rejects_unsafe_run_id
@@ -601,6 +606,7 @@ run_test "dashboard flow filter" test_dashboard_flow_filter
 run_test "dashboard empty" test_dashboard_empty
 run_test "dashboard with completed" test_dashboard_with_completed
 run_test "dashboard gate classification" test_dashboard_gate_classification
+run_test "run-ledger concurrency suite" test_run_ledger_concurrency_suite
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 if (( fail > 0 )); then
