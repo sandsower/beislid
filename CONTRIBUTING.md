@@ -48,10 +48,10 @@ I maintain this when I have time. Issues may sit. PRs may sit. That's expected.
 Run the validation action locally before submitting:
 
 ```
-./scripts/validate.sh  # checks frontmatter, resolves skill references, markdown lint
+./scripts/validate.sh  # mirrors every CI-blocking check in .github/workflows/validate.yml
 ```
 
-Behavioral testing is manual. See `docs/testing.md`.
+For the individual validators, and for the agent-smoke suite that exercises skills against real hosts, see `docs/testing.md`.
 
 ## Auxiliary file convention (Pocock-style symlinks)
 

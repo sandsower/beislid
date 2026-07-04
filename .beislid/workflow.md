@@ -163,6 +163,17 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   parallel_safe: true
   mutates: false
   cost: cheap
+- name: local-ci-mirror
+  stage: pre-pr
+  kind: sensor
+  execution: computational
+  command: 'bash scripts/validate.sh'
+  timeout_seconds: 900
+  cost: expensive
+  mutates: false
+  parallel_safe: false
+  failure:
+    hint: 'Mirrors every CI-blocking check in .github/workflows/validate.yml (all check_*_consistency.py scripts, script tests, install/action-policy/run-ledger tests, npm test, committed export bundle validation, and the lychee link check where available locally). The cheap gates above only cover a subset; run this before opening a PR to catch what they cannot.'
 ```
 
 Changes to `bin/beislid` runtime-layout checks or `packaging/` must run `bash scripts/test_install.sh` locally before push; the packaged-layout contract is only covered by the install integration tests.
