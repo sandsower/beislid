@@ -91,7 +91,7 @@ If the user skips, print the skipped line. If accepted, invoke `walk-the-diff`; 
 Resume behavior:
 
 - Normal new-PR path: continue to Phase 3.
-- Existing-PR fast path: skip Phase 3. Push, then if AgenticReviewer is required policy-check `gh pr edit <pr> --add-label <label>`; if no label or add fails, stop/ask before `description_keyword`. Report URL after opt-in succeeds or is explicitly skipped.
+- Existing-PR fast path: skip Phase 3. Push, then if AgenticReviewer is required policy-check the label add (`gh pr edit <pr> --add-label <label>` or provider equivalent; stop/ask when none); if no label or add fails, stop/ask before `description_keyword`. Report URL after opt-in succeeds or is explicitly skipped.
 
 If the user explicitly asks for a durable visual proof/review artifact, suggest `show-me` and wait for direct request. Do not auto-run `show-me`.
 

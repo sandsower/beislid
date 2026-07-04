@@ -103,6 +103,7 @@ When a batch has 3+ independent tasks, dispatch subagents:
 - Each subagent gets: focused scope, full context for their task, specific success criteria
 - After all return: review diffs, verify no conflicts, run full test suite
 - Don't dispatch parallel agents for fewer than 3 tasks — the overhead isn't worth it
+- If the host cannot spawn subagents, execute the batch sequentially in plan order; parallelism is an optimization, never a requirement
 
 ### Escalation
 - If a task fails 3 times, stop. Question the approach, not the implementation

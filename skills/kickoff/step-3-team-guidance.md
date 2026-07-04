@@ -12,7 +12,7 @@ Print the Step 3 entry one-liner from `kickoff-templates.md`.
 
 This is an inline file check, not a workflow capability and not a probe-cache entry.
 
-Read `${BEISLID_CONFIG_DIR:-$HOME/.config/beislid}/team-config.md` if it exists. Otherwise fall back to `~/.claude/team-config.md` if present.
+Read `${BEISLID_CONFIG_DIR:-$HOME/.config/beislid}/team-config.md` if it exists. Otherwise fall back to a legacy host config dir if present (`~/.claude/team-config.md`, `~/.codex/team-config.md`).
 
 If the file has an `Enabled: true` section, note team-specific routing, review, QA, or delegation rules so blueprint can fold them into the plan. Otherwise skip.
 

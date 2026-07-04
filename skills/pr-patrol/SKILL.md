@@ -155,7 +155,8 @@ Example pattern:
 
 ```bash
 comment_file="$(mktemp "${TMPDIR:-/tmp}/beislid-pr-comment.XXXXXX.md")"
-$EDITOR "$comment_file"  # or write the approved body through the host agent's file tool
+# Write the approved body to "$comment_file" with the host agent's file tool;
+# never open an interactive editor from a non-interactive agent session.
 # Pass the file as a body field if the host tool supports file-backed fields.
 # Otherwise build a JSON payload file and pass that file to the API client.
 rm -f "$comment_file"

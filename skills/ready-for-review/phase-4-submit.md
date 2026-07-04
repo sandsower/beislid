@@ -12,7 +12,7 @@ Print entry; emit `working`. Verbose appends transcript events.
 
 Read `approval_gates.pr_title_body` from workflow config. If absent or `prompt`, use explicit approval. If `auto`, log title/body to transcript/ledger, record `pr_title_body_approval: auto`, emit `working`, proceed to 4c.
 
-**Explicit-approval (default):** Emit `waiting`; user must explicitly approve title/body before push/PR. Draft PR creation also needs this. Show title/body as context, then ask the single approval question only once in the final/blocking response. Draft-ready after bot fixes needs second approval. Never treat silence, ambiguity, or prior Phase 3 approval as PR approval.
+**Explicit-approval (default):** Emit `waiting`; user must explicitly approve title/body before push/PR. Draft PR creation also needs this. Draft-ready after bot fixes needs second approval. Never treat silence, ambiguity, or prior Phase 3 approval as PR approval.
 
 ## 4-pre. Paired-set front-load
 
@@ -44,7 +44,7 @@ Compose the proposed PR:
 
 If `pr_description.formatter_skill` is configured, probe on first need; on failure use Phase 4b prompt + raw draft. No formatter → raw-draft note.
 
-Show final title/body. If `approval_gates.pr_title_body` is `auto`, log and proceed to 4c; otherwise wait for explicit approval. Never ask twice.
+Show final title/body as context. If `approval_gates.pr_title_body` is `auto`, log and proceed to 4c; otherwise ask the single approval question once in the final/blocking response. Never ask twice.
 
 If draft PRs + provider bot review are supported, after approval offer draft-bot-review. On yes: create draft, handle bot findings like Phase 3 review, rerun applicable gates after functional fixes, commit/push fixes, ask explicit approval before marking ready.
 
@@ -74,9 +74,11 @@ gh pr create --head "<branch>" --title "<title>" --base "<base>" --body "<descri
 
 Add AgenticReviewer label only when required; `label` is required for automatic opt-in. If needed, create PR then `gh pr edit <pr> --add-label <label>`. If label missing/add fails, stop/ask; use `description_keyword` only after explicit approval. Draft adds `--draft`; readying uses provider command after second approval.
 
+Non-gh providers: create the PR via the configured provider capability (`glab`, MCP); with none, emit `blocked` and report branch/base/title/body for manual creation.
+
 On network/sandbox failure, emit `blocked`, surface retry/escalation/abort. Never re-draft or change approved title/body.
 
-Report PR URL with success template. If the provider can report checks, poll/report PR CI once after creation and before final success so the handoff notes capture the initial state. Verbose records push, PR creation, bot-review, fixes, ready-marking, auth preflight.
+Report PR URL with success template. If the provider can report checks, poll/report PR CI once after creation and before final success. Verbose records each 4c side effect and auth preflight.
 
 ## 4d. Capture domain knowledge
 

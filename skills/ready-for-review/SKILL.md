@@ -33,19 +33,19 @@ repo_hash=$(git rev-list --max-parents=0 HEAD | sort | head -c 12)
 workflow_hash=$(git hash-object .beislid/workflow.md)
 ```
 
-Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` and starts with empty in-memory state; matching hash means `fresh` and loads capability entries. Per-cap freshness uses `probe_cache.ttl_hours`, default 24.
+Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` (start with empty in-memory state); matching hash means `fresh` (load capability entries). Per-cap freshness uses `probe_cache.ttl_hours`, default 24.
 
-After config/cache setup, init transcript and `beislid run-ledger init --skill ready-for-review`. Record events, and if active checkpoint with `beislid run-ledger checkpoint --run-id <run_id> --name <phase_name>`. Warn on ledger failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
+After config/cache setup, init transcript and `beislid run-ledger init --skill ready-for-review`. Record events, and if active checkpoint with `beislid run-ledger checkpoint --run-id <run_id> --name <phase_name>`. Ledger and `workflow-signal` calls are best-effort: warn and continue on missing `beislid` CLI or failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
 
 ## Internal: probe(<cap>)
 
-Probe capabilities lazily on first use. The in-memory probe state is authoritative for the run; do not re-probe a capability mid-run unless the user chose retry from a probe-failure prompt.
+Probe capabilities lazily on first use. The in-memory probe state is authoritative for the run; do not re-probe mid-run unless the user chose retry from a probe-failure prompt.
 
 Algorithm:
 1. If `<cap>` exists in memory with `status: ok` and is within TTL, return ok.
 2. Otherwise probe using `probe-semantics.md` for the cap kind.
 3. On success, record the result in memory and continue.
-4. On failure, use the call-site-specific 3-way prompt from `ready-for-review-templates.md` or the active phase aux file: retry re-probes now; proceed-this-session records `session_skip: true` and continues without that capability; abort stops immediately and suppresses cache write-back.
+4. On failure, use the call-site-specific 3-way prompt from `ready-for-review-templates.md` or the active phase aux file: retry re-probes now; proceed-this-session records `session_skip: true` and continues without it; abort stops immediately and suppresses cache write-back.
 5. On successful run end, write back probed/re-probed entries except `session_skip`.
 
 Rules: never silently downgrade a configured capability to unconfigured behavior; never re-probe outside explicit retry; preserve `doctor_run_at` because doctor owns it; last-writer-wins is acceptable for v0.2.
