@@ -58,6 +58,7 @@ DOC_SLICE_FIELDS = {
     "boundaries",
     "dependencies",
     "proof_requirements",
+    "command_proofs",
     "output_expectations",
     "parent_contract",
     "repo",

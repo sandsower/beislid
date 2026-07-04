@@ -16,6 +16,7 @@ For each candidate slice, draft an envelope with:
 - **slice** — id, include/exclude scope grounded in explored repo evidence.
 - **autonomy** — explicit `allow` / `ask` / `deny`; `deny` includes rationale.
 - **proof_requirements** — `proof-requirement-v1` from workflow.md gates (`command_gate`) plus slice proof.
+- **command_proofs** — optional list of executable exit-code proofs, `{id, command, description?, timeout_seconds?, expected_exit?}` (`id`/`command` required); distinct from `proof_requirements` (see `docs/configuration.md` "Command Proofs v0"). Warn, don't block, if a code-changing slice has none.
 - **pause_conditions** — failed proof, ambiguity, unsafe side effects, missing deps, scope drift.
 - **dependencies** — inputs, branches, fixtures, tools, upstream slices.
 - **expected_delivery** — summary, artifacts (`changed_files`, `proof_results`), next step.
@@ -66,4 +67,5 @@ Print the Step 2 exit one-liner. Required outputs: N drafts, tier+rationale, eli
 
 - No envelope cites a gate command, path, or dependency that was not probed in this session; unverified means demote-to-HITL, never AFK.
 - Prompts must be self-contained; "see the ticket" or "as discussed" is a defect.
+- `command_proofs` absent on a code-changing slice: warn in the draft summary, keep going; never invent a proof command to silence it.
 - Authoring never starts implementation work.

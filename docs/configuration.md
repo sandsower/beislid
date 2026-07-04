@@ -643,7 +643,7 @@ Revision mode is self-detecting: re-running `/envelope` with an exported manifes
 
 `bundle.json` carries the BEI-17 required fields: `kind` (`approved-slice-plan-export-v0`), `version`, `status`, `generated_from`, `source_work_contract`, `slice_plan` (which may carry `parallel_groups`: a list of lists of slice ids that can run concurrently — every id must be a known child, each slice appears in at most one group, and no group may contain two slices where one depends transitively on the other), `children` (entries `{id, source_ticket}`; `source_ticket` is optional but must be a non-empty string when present), `dependency_graph` (adjacency map of slice id → dependency ids spanning all slices from all tickets in the bundle; must be acyclic, and a slice absent from the map implicitly has no dependencies), `proof_requirements`, `guides_and_gates`, `approval` (`approved_at`, `approved_by` from git identity after an explicit per-envelope verdict), `runner_extensions`, `validation`, and `ownership`, plus an explicit `supersedes` key (`null` for a first export, the prior `bundle.json` sha256 for revisions). Only `status: approved` bundles are exportable — draft, paused, or superseded plans fail validation (fail-closed). Per-envelope verdicts isolate failures: rejecting or demoting one slice drops it and its edges from the exported graph, slices that depend (directly or transitively) on a dropped slice are themselves demoted to HITL, and export proceeds with the remainder.
 
-Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. Exported routing is generic and boundary-based, not skill-name-based:
+Per-slice manifests use the runner-intake convention: `schema: approved-slice-v1`, `slice_id`, a self-contained `prompt` (objective, design summary, file scope, constraints, verification sections), `boundaries`, `dependencies`, `proof_requirements`, `command_proofs`, `output_expectations`, `parent_contract`, `repo: {url, base_ref, base_sha}` pinning the exact baseline, `allowed_actions: {run_mode, allow, ask, deny}` carrying the envelope autonomy lists verbatim, `process_provider` (default `{name: claude_code}`), and `runner_extensions`. Exported routing is generic and boundary-based, not skill-name-based:
 
 - `runner_extensions.model_routing.routing` is the portable phase-aware contract. Each rule names a generic `boundary` (`planning`, `implementation`, `review_fix`, or `gate_repair`), a provider-neutral `tier` (`light`, `standard`, `heavy`, or `frontier`), a `mode` (`prefer` or `require`), a human `reason`, and optional `source` metadata for observability only. The approved execution envelope / source contract is the authoritative input to this export; Rondo and other runners route on `boundary` + `tier` + `mode`, and may record the source fields, but they must not need Beislið skill names to decide the route.
 - `runner_extensions.model_routing.tier` / `mode` / `candidates` remains the collapsed compatibility projection for runners that only understand one route. When present, it should reflect the broadest applicable boundary rule; when absent, boundary-aware runners can still consume `routing` directly.
@@ -730,6 +730,35 @@ Proof result status vocabulary is `satisfied`, `missing`, `failed`, `blocked`, `
 `success_criteria` should be observable and reviewable. `expected_artifact` records a reference shape, not embedded proof content: command log path, gate envelope, CI URL/check name, Show Me deck path, screenshot path, migration dry-run log, review report, or human approval note.
 
 Existing gate metadata maps naturally to `command_gate` proof requirements: `name` becomes `id`, `stage` carries over, `changed_file_selector` / gate-set selector data becomes `applies_to.paths` plus `applies_to.exclude` when present, `output` guides the expected artifact parser, and `failure` maps into `failure_policy`. Exported command gates default to `on_missing: block` and `on_failure: block`; `failure.retryable`, `max_fix_iterations`, `stop_if_patterns`, and `hint` are copied when present. Setup/pre commands such as codegen, dependency install, or build prerequisites are not quality proof; they are prerequisites for running proofs, and their failure blocks dependent proof collection rather than satisfying done criteria.
+
+## Command Proofs v0
+
+`command_proofs` is the executable exit-code verification contract on a per-slice manifest (`slices/<slice-id>.json`).
+It is a distinct field from `proof_requirements` / `proof-requirement-v1`, not a replacement or a renamed version of it.
+`proof-requirement-v1` declares evidence a human or agent must attest, per stage; `command_proofs` declares deterministic commands that Rondo's clean-eval executor actually runs and grades by exit code, after the slice's repo gates pass.
+Beislið defines and validates the `command_proofs` shape; Rondo owns execution and the `rondo.clean_eval/v0` result record.
+
+`command_proofs` is an optional array of items.
+Each item is `{id, command, description?, timeout_seconds?, expected_exit?}`.
+`id` and `command` are required; `description`, `timeout_seconds`, and `expected_exit` (default `0`) are optional.
+v0 grading is exit-code equality only - there is no `expect_stdout_regex` or `expect_absent_regex` in v0.
+
+```yaml
+command_proofs:
+  - id: proof-behavior-1
+    description: "CLI rejects duplicate --run-id"
+    command: "cd elixir && mix run -e '...'"
+    timeout_seconds: 120
+    expected_exit: 0
+```
+
+Semantics:
+
+- Proofs execute in the clean-eval worktree after the repo gates pass; a gate-failed run never runs proofs.
+- Outcomes join `rondo.clean_eval/v0` under a `proofs` list: `{id, status: pass|fail|error|timeout, exit_code, log_path}`, with per-proof stdout/stderr logs under `clean_eval/proofs/<id>/`.
+- A proof that runs and exits with the wrong code is `fail`, classified as `code_failure`: it feeds the same-tier repair loop, mirroring the invalid-final-report policy. A proof that cannot run (infrastructure error or timeout) is `error`/`timeout`, classified as a retryable environment failure, never a verdict.
+- Absent or empty `command_proofs` is valid and back-compat with every existing envelope; it is never a validation error. The `envelope` skill warns, but does not block, when a code-changing slice has none. v1 may tighten this to a hard requirement.
+- Proof commands run under the frozen per-run action policy and get no network by policy default; they may mutate the disposable clean worktree, since it is discarded after the run.
 
 ## Lifecycle actions
 

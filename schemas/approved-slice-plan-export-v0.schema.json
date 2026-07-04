@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "approved-slice-plan-export-v0.schema.json",
   "title": "approved-slice-plan-export-v0 bundle.json",
-  "$comment": "BEI-134. Supported keyword subset (see scripts/schema_check.py): type, required, properties, enum, items, minimum, pattern only - no oneOf/anyOf/additionalProperties/minItems/minLength. This schema declares SHAPE for scripts/validate_export.py; it never rejects extra keys and stays silent on a field's inner shape when the validator itself never inspected that inner shape (declared here as `{}` for doc/schema field-list parity only). The following stay in scripts/validate_export.py as code because the subset above cannot express them: (1) `supersedes` presence + null-vs-64-char-lowercase-sha256 + version-pairing (version 1 requires supersedes null, version >= 2 requires a hash) - a cross-field conditional; (2) `children` must be a non-empty list, and duplicate slice ids across children - minItems and cross-item uniqueness aren't in the subset; (3) `dependency_graph` edges reference known slice ids, cycle detection, and `slice_plan.parallel_groups` transitive-dependency exclusion - graph semantics, not shape; (4) that every child id has a matching `slices/<id>.json` + `slices/<id>.md` file, and no orphan slice manifests - requires reading the filesystem alongside the JSON. `proof_requirements[]` shape below is a DRAFT placeholder pending RON-146 spec approval: it is declared for forward compatibility but no field inside it is required, and the current validator does not enforce this array's shape at all (a pre-existing gap this schema intentionally starts covering; see BEI-134 report for committed-bundle impact, which is none - both committed bundles already carry array-of-object proof_requirements).",
+  "$comment": "BEI-134. Supported keyword subset (see scripts/schema_check.py): type, required, properties, enum, items, minimum, pattern only - no oneOf/anyOf/additionalProperties/minItems/minLength. This schema declares SHAPE for scripts/validate_export.py; it never rejects extra keys and stays silent on a field's inner shape when the validator itself never inspected that inner shape (declared here as `{}` for doc/schema field-list parity only). The following stay in scripts/validate_export.py as code because the subset above cannot express them: (1) `supersedes` presence + null-vs-64-char-lowercase-sha256 + version-pairing (version 1 requires supersedes null, version >= 2 requires a hash) - a cross-field conditional; (2) `children` must be a non-empty list, and duplicate slice ids across children - minItems and cross-item uniqueness aren't in the subset; (3) `dependency_graph` edges reference known slice ids, cycle detection, and `slice_plan.parallel_groups` transitive-dependency exclusion - graph semantics, not shape; (4) that every child id has a matching `slices/<id>.json` + `slices/<id>.md` file, and no orphan slice manifests - requires reading the filesystem alongside the JSON. RON-146 (resolved): the executable exit-code command-proof contract lives under the distinct per-slice `command_proofs` field (see execution-envelope-v0.schema.json), NOT under `proof_requirements` - `proof_requirements` here stays the untouched proof-requirement-v1 attestation shape (see docs/configuration.md 'Proof Requirement v1'); its inner shape remains unenforced at bundle level, as before BEI-134.",
   "type": "object",
   "required": [
     "kind",
@@ -62,18 +62,7 @@
       "type": "object"
     },
     "proof_requirements": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "$comment": "draft - pending RON-146 spec approval. Distinct from the existing proof-requirement-v1 shape (kind/id/type/stage/status/success_criteria/failure_policy/expected_artifact, see docs/configuration.md 'Proof Requirement v1'); this is a machine-executable command-proof draft. No field is required.",
-        "properties": {
-          "id": { "type": "string" },
-          "description": { "type": "string" },
-          "command": { "type": "string" },
-          "timeout_seconds": { "type": "integer", "minimum": 0 },
-          "expected_exit": { "type": "integer", "minimum": 0 }
-        }
-      }
+      "$comment": "proof-requirement-v1 items per docs/configuration.md 'Proof Requirement v1'; shape not enforced here (validator never inspected this array's shape at bundle level). RON-146's executable command-proof shape is a distinct field, `command_proofs`, declared per-slice in execution-envelope-v0.schema.json - it does not live here."
     },
     "guides_and_gates": {
       "$comment": "Required as a key; content never type-checked by the validator."

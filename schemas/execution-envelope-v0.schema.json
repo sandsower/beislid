@@ -28,6 +28,21 @@
     "proof_requirements": {
       "$comment": "proof-requirement-v1 items per docs/configuration.md 'Proof Requirement v1'; shape not enforced here (validator never inspects it on a slice manifest)."
     },
+    "command_proofs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "command"],
+        "$comment": "RON-146 v0: executable exit-code command-proof, distinct from `proof_requirements` (proof-requirement-v1 attestation, see docs/configuration.md 'Proof Requirement v1'). Rondo's clean-eval executor runs `command` post-gates and grades by exit-code equality only (default `expected_exit: 0`). Optional array; absent/empty is valid on every slice (back-compat) - the `envelope` skill warns, but the validator never requires it, for a code-changing slice with none.",
+        "properties": {
+          "id": { "type": "string", "pattern": "\\S" },
+          "description": { "type": "string" },
+          "command": { "type": "string", "pattern": "\\S" },
+          "timeout_seconds": { "type": "integer", "minimum": 0 },
+          "expected_exit": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
     "output_expectations": {},
     "parent_contract": {},
     "repo": {

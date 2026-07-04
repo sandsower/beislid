@@ -450,6 +450,48 @@ test_schema_enum_violation_rejected() {
   expect_invalid "$TMP/bundle" "schema_version"
 }
 
+# RON-146: `command_proofs` is a distinct, optional per-slice field from
+# `proof_requirements` - executable exit-code command proofs, not
+# proof-requirement-v1 attestations. Absent is valid (back-compat); present
+# must be well-formed (id + command required per item).
+test_command_proofs_absent_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  expect_valid "$TMP/bundle"
+}
+
+test_command_proofs_present_valid_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["command_proofs"] = [{"id": "proof-1", "command": "true", "description": "sanity", "timeout_seconds": 30, "expected_exit": 0}]'
+  expect_valid "$TMP/bundle"
+}
+
+test_command_proofs_missing_command_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["command_proofs"] = [{"id": "proof-1"}]'
+  expect_invalid "$TMP/bundle" "command_proofs"
+}
+
+test_command_proofs_missing_id_rejected() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["command_proofs"] = [{"command": "true"}]'
+  expect_invalid "$TMP/bundle" "command_proofs"
+}
+
+test_command_proofs_empty_list_accepted() {
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["command_proofs"] = []'
+  expect_valid "$TMP/bundle"
+}
+
+test_command_proofs_distinct_from_proof_requirements() {
+  # proof-requirement-v1 items (no `command` field) coexist on the same slice
+  # as command_proofs items (require `command`); the two fields validate
+  # independently.
+  write_valid_bundle "$TMP/bundle"
+  mutate_slice "$TMP/bundle/slices/slice-a.json" 'manifest["proof_requirements"] = [{"kind": "proof-requirement-v1", "id": "pre-pr-gates", "type": "command_gate", "stage": "pre-pr", "status": "required"}]; manifest["command_proofs"] = [{"id": "proof-1", "command": "true"}]'
+  expect_valid "$TMP/bundle"
+}
+
 # BEI-134: schema-driven validation must not change the verdict on any
 # committed bundle - same exit code, same "valid: <dir>" stdout.
 test_committed_export_bundles_still_valid() {
@@ -533,6 +575,12 @@ run_test "model_routing empty candidates rejected" test_model_routing_empty_cand
 run_test "model_routing absent accepted" test_model_routing_absent_accepted
 run_test "schema-driven required field missing rejected" test_schema_required_field_missing_rejected
 run_test "schema-driven enum violation rejected" test_schema_enum_violation_rejected
+run_test "command_proofs absent accepted" test_command_proofs_absent_accepted
+run_test "command_proofs present and valid accepted" test_command_proofs_present_valid_accepted
+run_test "command_proofs missing command rejected" test_command_proofs_missing_command_rejected
+run_test "command_proofs missing id rejected" test_command_proofs_missing_id_rejected
+run_test "command_proofs empty list accepted" test_command_proofs_empty_list_accepted
+run_test "command_proofs distinct from proof_requirements" test_command_proofs_distinct_from_proof_requirements
 run_test "committed export bundles still valid, output unchanged" test_committed_export_bundles_still_valid
 run_test "cli dispatch valid bundle" test_cli_dispatch_valid
 run_test "cli dispatch invalid bundle" test_cli_dispatch_invalid
