@@ -1170,6 +1170,17 @@ _project_skill_is_installed() {
   return 1
 }
 
+_project_stage_copy_skill_dir() {
+  local src="$1" stage="$2" project="$3" host="$4" skill="$5" fingerprint
+  (
+    set -eEuo pipefail
+    trap 'rm -rf "$stage"' INT TERM ERR
+    cp -R -L "$src/." "$stage/"
+    fingerprint="$(_project_dir_fingerprint "$stage")" || fingerprint=""
+    _write_project_copy_marker "$stage" "$project" "$host" "$skill" "$src" "$fingerprint"
+  )
+}
+
 _write_project_copy_marker() {
   local dst="$1" project="$2" host="$3" skill="$4" src="$5" fingerprint="$6"
   if command -v python3 >/dev/null 2>&1; then
@@ -1205,12 +1216,16 @@ EOF
 }
 
 _project_copy_skill_dir() {
-  local src="$1" dst="$2" label="$3" project="$4" host="$5" skill="$6" action="$7" fingerprint
+  local src="$1" dst="$2" label="$3" project="$4" host="$5" skill="$6" action="$7" fingerprint parent staging
+  parent="$(dirname "$dst")"
+  staging="$(mktemp -d "$parent/.${skill}.staging.XXXXXX")"
+  _project_stage_copy_skill_dir "$src" "$staging" "$project" "$host" "$skill"
   rm -rf "$dst"
-  mkdir -p "$dst"
-  cp -R -L "$src/." "$dst/"
+  if ! mv "$staging" "$dst"; then
+    rm -rf "$staging"
+    return 1
+  fi
   fingerprint="$(_project_dir_fingerprint "$dst")" || fingerprint=""
-  _write_project_copy_marker "$dst" "$project" "$host" "$skill" "$src" "$fingerprint"
   _project_record_owned_copy "$host" "$skill" "$fingerprint"
   case "$action" in
     refresh)

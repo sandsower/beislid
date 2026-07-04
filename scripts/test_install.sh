@@ -338,6 +338,57 @@ run_cli_from_dir() {
   return "$rc"
 }
 
+run_installer_with_timeout() {
+  STDOUT="$TMP/stdout.log"
+  STDERR="$TMP/stderr.log"
+  local timeout_bin
+  timeout_bin="$(command -v timeout || command -v gtimeout)"
+  local rc=0
+  CLAUDE_SKILLS_DIR="$CLAUDE_SKILLS" \
+  AGENTS_SKILLS_DIR="$AGENTS_SKILLS" \
+  CODEX_SKILLS_DIR="$CODEX_SKILLS" \
+  CLAUDE_HOOKS_DIR="$HOOKS" \
+  BEISLID_BIN_DIR="$BIN_DIR" \
+  BEISLID_STATE_DIR="$STATE" \
+  BEISLID_FAKE_PI_LOG="${BEISLID_FAKE_PI_LOG:-}" \
+  PATH="$TMP/bin:$PATH" \
+    "$timeout_bin" --signal=TERM --kill-after=5s 3s "$INSTALL" "$@" >"$STDOUT" 2>"$STDERR" || rc=$?
+  return "$rc"
+}
+
+start_slow_cp_wrapper() {
+  local start_flag="$1" real_cp="$2"
+  cat >"$TMP/bin/cp" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+touch "$start_flag"
+sleep 10
+exec "$real_cp" "\$@"
+EOF
+  chmod +x "$TMP/bin/cp"
+}
+
+assert_no_ownerless_project_skill_dirs() {
+  local project="$1"
+  python3 - <<'PY' "$project"
+import os, sys
+project = sys.argv[1]
+bad = []
+for host in ("agents", "claude", "codex"):
+    skills_root = os.path.join(project, f".{host}", "skills")
+    if not os.path.isdir(skills_root):
+        continue
+    for name in sorted(os.listdir(skills_root)):
+        path = os.path.join(skills_root, name)
+        if os.path.isdir(path) and not os.path.exists(os.path.join(path, ".beislid-owner.json")):
+            bad.append(path)
+if bad:
+    for path in bad:
+        print(path)
+    raise SystemExit(1)
+PY
+}
+
 run_installer_without_target_env() {
   STDOUT="$TMP/stdout.log"
   STDERR="$TMP/stderr.log"
@@ -1671,6 +1722,25 @@ test_project_copy_uses_marker_when_manifest_missing() {
   assert_json_field "$project/.codex/skills/verify/.beislid-owner.json" owner beislid
 }
 
+test_project_copy_interrupt_cleans_staging_dir() {
+  local project="$TMP/project-copy-interrupted"
+  local cp_start="$TMP/cp-started"
+  local real_cp
+  mkdir -p "$project"
+  real_cp="$(command -v cp)"
+  start_slow_cp_wrapper "$cp_start" "$real_cp"
+
+  if run_installer_with_timeout --project "$project" --copy; then
+    note_fail "expected interrupted project copy install to time out"
+  fi
+
+  if [[ ! -e "$cp_start" ]]; then
+    note_fail "expected cp wrapper to start during interrupted install"
+  fi
+
+  assert_no_ownerless_project_skill_dirs "$project"
+}
+
 test_project_gitignore_write_is_idempotent() {
   local project="$TMP/project-gitignore"
   mkdir -p "$project"
@@ -2127,6 +2197,7 @@ run_test "project copy refreshes marker-owned dirs"            test_project_copy
 run_test "project copy uses manifest when marker missing"      test_project_copy_uses_manifest_when_marker_missing
 run_test "project copy manifest preserves recreated dirs"      test_project_copy_manifest_does_not_clobber_recreated_unmarked_dir
 run_test "project copy uses marker when manifest missing"      test_project_copy_uses_marker_when_manifest_missing
+run_test "project copy interrupt leaves no ownerless dirs"      test_project_copy_interrupt_cleans_staging_dir
 run_test "project gitignore write is idempotent"               test_project_gitignore_write_is_idempotent
 run_test "project gitignore write replaces managed block"      test_project_gitignore_write_replaces_managed_block
 run_test "project install repairs dangling symlinks"           test_project_dangling_symlink_autorepair
