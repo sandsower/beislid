@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "malformed_block",
+      "message": "expected child indentation of 2 spaces at line 5",
+      "path": "sections.gates"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "c439f0b729686438aafd42125c65d59682e76a5d"
+  },
+  "status": "error",
+  "warnings": []
+}

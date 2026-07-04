@@ -1,0 +1,43 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "exponent": "1e3",
+        "leading": ".5",
+        "name": "numbers",
+        "trailing": "1.",
+        "version": "1.5.2",
+        "weight": 1.5,
+        "whole": 2
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "c5778b7ea82bdc8ba02c75c1856f9fcf280caa4e"
+  },
+  "status": "ok",
+  "warnings": []
+}

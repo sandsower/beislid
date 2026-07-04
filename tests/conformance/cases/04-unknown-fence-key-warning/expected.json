@@ -1,0 +1,44 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "command": "echo ok",
+        "name": "unit"
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "8e683a7025e43af80923cc3051fee621d012707c"
+  },
+  "status": "warning",
+  "warnings": [
+    {
+      "code": "unknown_fence_key",
+      "message": "unknown beislid:not_a_real_key block at line 3",
+      "path": "sections.not_a_real_key"
+    }
+  ]
+}

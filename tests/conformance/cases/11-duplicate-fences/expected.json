@@ -1,0 +1,44 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "command": "echo first",
+        "name": "first"
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "18b1118501f4dafb0f51cc1dca1d18b7fd7eb5c4"
+  },
+  "status": "warning",
+  "warnings": [
+    {
+      "code": "duplicate_key",
+      "message": "duplicate beislid:gates block at line 8; first occurrence wins",
+      "path": "sections.gates"
+    }
+  ]
+}

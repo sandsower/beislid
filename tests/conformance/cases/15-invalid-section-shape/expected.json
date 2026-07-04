@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "invalid_section_shape",
+      "message": "clean_eval must be a mapping",
+      "path": "sections.clean_eval"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/15-invalid-section-shape/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "d16500e198271f49e4d7afa0efdc4e0686c884ed"
+  },
+  "status": "error",
+  "warnings": []
+}

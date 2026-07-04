@@ -1,0 +1,46 @@
+{
+  "errors": [
+    {
+      "code": "invalid_value",
+      "message": "model and models are mutually exclusive on a route",
+      "path": "sections.model_routing.defaults"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": {
+        "mode": "prefer",
+        "model": "anthropic:claude-sonnet-4.5",
+        "models": [
+          "anthropic:claude-sonnet-4.5"
+        ]
+      },
+      "overrides": [],
+      "tier_mode": "prefer"
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "4e89810a309a4e19f49896d8dd89915b316eaafe"
+  },
+  "status": "error",
+  "warnings": []
+}

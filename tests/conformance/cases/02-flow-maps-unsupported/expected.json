@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "flow_map_unsupported",
+      "message": "flow_map_unsupported at line 12; use block style",
+      "path": "sections.gates"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "d4fb0bbf4db8c7e3b52f941eab68459a9b908853"
+  },
+  "status": "error",
+  "warnings": []
+}

@@ -69,6 +69,8 @@ id_pattern: '^[A-Z]{2,4}-\d+$'
 ```
 ````
 
+Scalar parsing is YAML-lite: in unquoted scalars, a `#` preceded by whitespace starts a comment and terminates the value; quoted scalars keep `#` literally. Double-quoted scalars honor only `\n`, `\t`, `\\`, and `\"`; any other backslash escape is invalid. Single-quoted scalars are literal except `''` -> `'`. Decimal floats matching `-?\d+\.\d+` parse as numbers; exponents, `1.`, `.5`, and `1.5.2` stay strings. Inline lists are flat; nested `[` is rejected and flow-map list items must use block style.
+
 ## Canonical fenced keys
 
 Keys recognized by Beislið orchestrators. Optional fields are noted; the rest are required when the parent key is set.
@@ -152,6 +154,8 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `probe_cache` — fields: `ttl_hours` (integer; defaults to 24 when absent)
 
 Capabilities not in this list are unknown — doctor reports them with a `💭` inline note and continues.
+
+The workflow normalizer treats the fenced-key registry in this file as canonical. It warns on any `beislid:*` fence key not listed here; keys listed here but owned by other tools are skipped silently by the normalizer and handled by their owning tools.
 
 ## Pi handoff shape
 
@@ -674,7 +678,8 @@ Frontend (Next.js) and backend (Hono) get different gates.
   paths: ['apps/web/**']
   cwd: apps/web
   gates:
-    - { name: lint, command: 'pnpm lint' }
+    - name: lint
+      command: 'pnpm lint'
     - name: typecheck
       stage: pre-pr
       kind: sensor
@@ -693,7 +698,8 @@ Frontend (Next.js) and backend (Hono) get different gates.
   cwd: apps/api
   setup: 'cd .. && make gen-api && make gen-proto'
   gates:
-    - { name: lint, command: 'bun run lint' }
+    - name: lint
+      command: 'bun run lint'
 ​```
 
 ​```beislid:split_policy

@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "unknown_escape",
+      "message": "unknown_escape at line 11",
+      "path": "sections.model_routing"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "literal": "a\\nb",
+        "name": "line1\nline2",
+        "single": "don't"
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "16d65c47d87f3ac47cb8ab734b40bd80c8479da2"
+  },
+  "status": "error",
+  "warnings": []
+}

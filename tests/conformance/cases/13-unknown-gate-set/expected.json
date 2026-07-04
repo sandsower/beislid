@@ -1,0 +1,58 @@
+{
+  "errors": [
+    {
+      "code": "unknown_gate_set",
+      "message": "selector references missing gate set 'missing'",
+      "path": "sections.gate_sets.selectors[0].gate_sets"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [
+        {
+          "gate_sets": [
+            "fast",
+            "missing"
+          ],
+          "paths": [
+            "**"
+          ]
+        }
+      ],
+      "sets": {
+        "fast": {
+          "gates": [
+            {
+              "command": "pnpm lint",
+              "name": "lint"
+            }
+          ]
+        }
+      }
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/13-unknown-gate-set/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "36d57cdfb18f3c9f6cf2eb4bdbd33dd189a6cff0"
+  },
+  "status": "error",
+  "warnings": []
+}

@@ -1,0 +1,55 @@
+{
+  "errors": [
+    {
+      "code": "invalid_value",
+      "message": "model_routing.tiers keys must be light, standard, heavy, or frontier",
+      "path": "sections.model_routing.tiers.tiny"
+    },
+    {
+      "code": "invalid_value",
+      "message": "model_routing.tier_mode must be prefer or require",
+      "path": "sections.model_routing.tier_mode"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": {
+        "mode": "prefer",
+        "models": [
+          "anthropic:claude-sonnet-4.5"
+        ]
+      },
+      "overrides": [],
+      "tier_mode": "someday",
+      "tiers": {
+        "tiny": [
+          "openai:gpt-4"
+        ]
+      }
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "5ab74e9a35e22703304a288f27ad60f01e9aeb85"
+  },
+  "status": "error",
+  "warnings": []
+}

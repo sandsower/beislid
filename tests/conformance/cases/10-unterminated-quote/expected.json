@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "unterminated_quote",
+      "message": "unterminated_quote at line 4",
+      "path": "sections.gates"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "e00dfc0b44de3d0557934a764812473ba04235c5"
+  },
+  "status": "error",
+  "warnings": []
+}

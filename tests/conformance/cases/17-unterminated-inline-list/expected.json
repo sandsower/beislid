@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "malformed_block",
+      "message": "unterminated inline list at line 5",
+      "path": "sections.gates"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/17-unterminated-inline-list/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "811853c3b94a696784f964af95378d86f693af64"
+  },
+  "status": "error",
+  "warnings": []
+}

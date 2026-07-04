@@ -174,6 +174,21 @@ jobs:
       # Harness self-test only: every host invocation is mocked, no live agents.
       - run: python3 scripts/test_agent_smoke_harness.py
 
+  normalizer-conformance:
+    name: Workflow normalizer conformance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/test_workflow_normalizer.py
+      - run: python3 scripts/run_conformance.py
+
   show-me-tests:
     name: Show-me integrity tests
     runs-on: ubuntu-latest

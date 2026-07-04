@@ -1,0 +1,44 @@
+{
+  "errors": [
+    {
+      "code": "invalid_version_stamp",
+      "message": "expected first line '<!-- beislid-workflow: v1 -->'",
+      "path": "source.version_stamp"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "command": "pnpm lint",
+        "name": "lint"
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/14-invalid-version-stamp/workflow.md",
+    "version_stamp": "# Workflow without a version stamp",
+    "workflow_hash": "78291500d06bf0ef3bab3b0d151c1c70c344994f"
+  },
+  "status": "error",
+  "warnings": []
+}

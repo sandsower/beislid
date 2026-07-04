@@ -15,6 +15,8 @@ from typing import Any
 SCHEMA_VERSION = "beislid.workflow.normalizer.v1"
 VERSION_STAMP = "<!-- beislid-workflow: v1 -->"
 DEFAULT_WORKFLOW = Path(".beislid/workflow.md")
+DEFAULT_FORMAT_DOC = Path(".beislid/workflow-md-format.md")
+
 TARGET_KEYS = {
     "gates",
     "gate_sets",
@@ -24,16 +26,50 @@ TARGET_KEYS = {
     "visual_surfaces",
     "model_routing",
 }
-FENCE = re.compile(r"```beislid:([^\s`]+)\s*\n(.*?)\n```", re.DOTALL)
-SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+# The registry is the union of the documented fenced keys in
+# `.beislid/workflow-md-format.md` plus the normalizer-owned target keys above.
+# Registered-but-not-target keys are parsed for syntax, then discarded.
+NORMALIZER_OWNED_KEYS = TARGET_KEYS
+DOC_FENCE_KEYS = {
+    "action_policy",
+    "babysit",
+    "branch_pattern",
+    "domain_expert.agent",
+    "envelope",
+    "explore",
+    "fresh_eyes",
+    "gate_sets",
+    "guided_walkthrough.threshold_files",
+    "knowledge_store.path",
+    "lifecycle_actions",
+    "model_routing",
+    "pi_handoff",
+    "pr_review_source",
+    "pr_review_update",
+    "probe_cache",
+    "ready_for_review",
+    "scopes",
+    "split_policy",
+    "ticket_source",
+    "visual_surfaces",
+    "workflow_signals",
+}
+FENCE_KEY_REGISTRY = DOC_FENCE_KEYS | NORMALIZER_OWNED_KEYS
+
 ALLOWED_GATE_STAGES = {"preflight", "per-edit", "pre-commit", "pre-pr", "post-pr", "continuous", "human-interrupt"}
 ALLOWED_GATE_EXECUTIONS = {"computational", "inferential", "human"}
 ALLOWED_VISUAL_MODES = {"off", "suggest", "prompt", "auto"}
 ALLOWED_CLEAN_EVAL_MODES = {"off", "require"}
 ALLOWED_MODEL_MODES = {"prefer", "require"}
+ALLOWED_MODEL_TIERS = {"light", "standard", "heavy", "frontier"}
+ALLOWED_TIER_MODE = {"prefer", "require"}
+
+FENCE_OPEN_RE = re.compile(r"^```beislid:([^\s`]+)\s*$")
+SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
-@dataclass
+@dataclass(frozen=True)
 class Diagnostic:
     code: str
     path: str
@@ -43,17 +79,31 @@ class Diagnostic:
         return {"code": self.code, "path": self.path, "message": self.message}
 
 
+@dataclass(frozen=True)
+class Token:
+    line: int
+    indent: int
+    content: str
+
+
+@dataclass(frozen=True)
+class FenceBlock:
+    key: str
+    start_line: int
+    body_lines: list[tuple[int, str]]
+
+
 class WorkflowParseError(ValueError):
-    pass
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+    def __str__(self) -> str:  # pragma: no cover - inherited behavior is trivial
+        return str(self.args[0])
 
 
 def normalize_workflow(workflow_path: str | Path = DEFAULT_WORKFLOW) -> dict[str, Any]:
-    """Return a normalized JSON-serializable envelope for workflow.md.
-
-    The function is read-only: it does not mutate workflow.md or write generated
-    artifacts. Invalid version stamps and malformed target blocks are represented
-    in the returned envelope as errors; callers decide exit status from `status`.
-    """
+    """Return a normalized JSON-serializable envelope for workflow.md."""
 
     path = Path(workflow_path)
     warnings: list[Diagnostic] = []
@@ -63,10 +113,11 @@ def normalize_workflow(workflow_path: str | Path = DEFAULT_WORKFLOW) -> dict[str
     try:
         raw_bytes = path.read_bytes()
     except OSError as exc:
-        return _envelope(path, b"", None, sections, warnings, [Diagnostic("workflow_not_found", "source.path", str(exc))])
+        return _envelope(path, None, None, sections, warnings, [Diagnostic("workflow_not_found", "source.path", str(exc))])
 
     text = raw_bytes.decode("utf-8", errors="replace")
-    first_line = text.splitlines()[0].strip() if text.splitlines() else ""
+    lines = text.splitlines()
+    first_line = lines[0].strip() if lines else ""
     if first_line != VERSION_STAMP:
         errors.append(
             Diagnostic(
@@ -76,17 +127,38 @@ def normalize_workflow(workflow_path: str | Path = DEFAULT_WORKFLOW) -> dict[str
             )
         )
 
-    blocks = _extract_blocks(text, warnings)
-    for key in sorted(TARGET_KEYS):
-        if key not in blocks:
+    blocks = _extract_blocks(text, errors)
+    seen_keys: set[str] = set()
+    for block in blocks:
+        if block.key not in FENCE_KEY_REGISTRY:
+            warnings.append(
+                Diagnostic(
+                    "unknown_fence_key",
+                    f"sections.{block.key}",
+                    f"unknown beislid:{block.key} block at line {block.start_line}",
+                )
+            )
             continue
-        block_path = f"sections.{key}"
+
+        if block.key in seen_keys:
+            warnings.append(
+                Diagnostic(
+                    "duplicate_key",
+                    f"sections.{block.key}",
+                    f"duplicate beislid:{block.key} block at line {block.start_line}; first occurrence wins",
+                )
+            )
+            continue
+        seen_keys.add(block.key)
+
         try:
-            parsed = _parse_workflow_yaml(blocks[key])
+            parsed = _parse_workflow_yaml(block.body_lines)
         except WorkflowParseError as exc:
-            errors.append(Diagnostic("malformed_block", block_path, str(exc)))
+            errors.append(Diagnostic(exc.code, f"sections.{block.key}", str(exc)))
             continue
-        sections[key] = _normalize_section(key, parsed, warnings, errors)
+
+        if block.key in TARGET_KEYS:
+            sections[block.key] = _normalize_section(block.key, parsed, warnings, errors)
 
     _validate_sections(sections, warnings, errors)
     return _envelope(path, raw_bytes, first_line, sections, warnings, errors)
@@ -94,7 +166,7 @@ def normalize_workflow(workflow_path: str | Path = DEFAULT_WORKFLOW) -> dict[str
 
 def _envelope(
     path: Path,
-    raw_bytes: bytes,
+    raw_bytes: bytes | None,
     version_stamp: str | None,
     sections: dict[str, Any],
     warnings: list[Diagnostic],
@@ -105,7 +177,7 @@ def _envelope(
         "schema_version": SCHEMA_VERSION,
         "source": {
             "path": path.as_posix(),
-            "workflow_hash": _git_blob_sha1(raw_bytes) if raw_bytes else None,
+            "workflow_hash": _git_blob_sha1(raw_bytes) if raw_bytes is not None else None,
             "version_stamp": version_stamp,
         },
         "status": status,
@@ -131,23 +203,37 @@ def _default_sections() -> dict[str, Any]:
     }
 
 
-def _extract_blocks(text: str, warnings: list[Diagnostic]) -> dict[str, str]:
-    blocks: dict[str, str] = {}
-    for match in FENCE.finditer(text):
-        key = match.group(1).strip()
-        if key not in TARGET_KEYS:
+def _extract_blocks(text: str, errors: list[Diagnostic]) -> list[FenceBlock]:
+    blocks: list[FenceBlock] = []
+    current: FenceBlock | None = None
+
+    for line_no, raw in enumerate(text.splitlines(), start=1):
+        stripped = raw.lstrip()
+        if current is None:
+            if not stripped.startswith("```beislid:"):
+                continue
+            match = FENCE_OPEN_RE.match(stripped)
+            if not match:
+                continue
+            current = FenceBlock(key=match.group(1).strip(), start_line=line_no, body_lines=[])
             continue
-        if key in blocks:
-            line = text.count("\n", 0, match.start()) + 1
-            warnings.append(
-                Diagnostic(
-                    "duplicate_key",
-                    f"sections.{key}",
-                    f"duplicate beislid:{key} block at line {line}; first occurrence wins",
-                )
+
+        if stripped.startswith("```") and stripped == "```":
+            blocks.append(current)
+            current = None
+            continue
+
+        current.body_lines.append((line_no, raw))
+
+    if current is not None:
+        errors.append(
+            Diagnostic(
+                "malformed_block",
+                f"sections.{current.key}",
+                f"unterminated beislid:{current.key} block starting at line {current.start_line}",
             )
-            continue
-        blocks[key] = match.group(2)
+        )
+
     return blocks
 
 
@@ -165,16 +251,24 @@ def _normalize_section(
             errors.append(Diagnostic("invalid_section_shape", path, f"{key} must be a list"))
             return []
         return parsed
+
     if key == "gate_sets":
         if not isinstance(parsed, dict):
             errors.append(Diagnostic("invalid_section_shape", path, "gate_sets must be a mapping"))
             return {"sets": {}, "selectors": []}
-        return {"sets": parsed.get("sets") or {}, "selectors": parsed.get("selectors") or []}
+        out = dict(parsed)
+        out.setdefault("sets", {})
+        out.setdefault("selectors", [])
+        return out
+
     if key == "lifecycle_actions":
         if not isinstance(parsed, dict):
             errors.append(Diagnostic("invalid_section_shape", path, "lifecycle_actions must be a mapping"))
             return {"events": {}}
-        return {"events": parsed.get("events") or {}}
+        out = dict(parsed)
+        out.setdefault("events", {})
+        return out
+
     if key == "clean_eval":
         if not isinstance(parsed, dict):
             errors.append(Diagnostic("invalid_section_shape", path, "clean_eval must be a mapping"))
@@ -182,6 +276,7 @@ def _normalize_section(
         out = dict(parsed)
         out.setdefault("mode", "off")
         return out
+
     if key == "visual_surfaces":
         if not isinstance(parsed, dict):
             errors.append(Diagnostic("invalid_section_shape", path, "visual_surfaces must be a mapping"))
@@ -190,6 +285,7 @@ def _normalize_section(
         out.setdefault("mode", "suggest")
         out.setdefault("workflows", {})
         return out
+
     if key == "model_routing":
         if not isinstance(parsed, dict):
             errors.append(Diagnostic("invalid_section_shape", path, "model_routing must be a mapping"))
@@ -197,23 +293,43 @@ def _normalize_section(
         out = dict(parsed)
         out.setdefault("defaults", None)
         out.setdefault("overrides", [])
+        out.setdefault("tier_mode", "prefer")
         if isinstance(out.get("defaults"), dict):
-            out["defaults"] = _normalize_route(out["defaults"], f"{path}.defaults", warnings)
+            out["defaults"] = _normalize_route(out["defaults"], f"{path}.defaults", warnings, errors)
         if isinstance(out.get("overrides"), list):
-            normalized = []
+            normalized: list[Any] = []
             for index, route in enumerate(out["overrides"]):
                 if isinstance(route, dict):
-                    normalized.append(_normalize_route(route, f"{path}.overrides[{index}]", warnings))
+                    normalized.append(_normalize_route(route, f"{path}.overrides[{index}]", warnings, errors))
                 else:
                     normalized.append(route)
             out["overrides"] = normalized
+        tiers = out.get("tiers")
+        if tiers is not None:
+            if not isinstance(tiers, dict):
+                errors.append(Diagnostic("invalid_section_shape", f"{path}.tiers", "tiers must be a mapping"))
+            else:
+                for tier_name in tiers:
+                    if tier_name not in ALLOWED_MODEL_TIERS:
+                        errors.append(
+                            Diagnostic(
+                                "invalid_value",
+                                f"{path}.tiers.{tier_name}",
+                                "model_routing.tiers keys must be light, standard, heavy, or frontier",
+                            )
+                        )
+        if out.get("tier_mode") not in ALLOWED_TIER_MODE:
+            errors.append(Diagnostic("invalid_value", f"{path}.tier_mode", "model_routing.tier_mode must be prefer or require"))
         return out
+
     return parsed
 
 
-def _normalize_route(route: dict[str, Any], path: str, warnings: list[Diagnostic]) -> dict[str, Any]:
+def _normalize_route(route: dict[str, Any], path: str, warnings: list[Diagnostic], errors: list[Diagnostic]) -> dict[str, Any]:
     out = dict(route)
-    if "model" in out and "models" not in out:
+    if "model" in out and "models" in out:
+        errors.append(Diagnostic("invalid_value", path, "model and models are mutually exclusive on a route"))
+    elif "model" in out and "models" not in out:
         out["models"] = [out.pop("model")]
     if "when" in out:
         warnings.append(Diagnostic("reserved_field", f"{path}.when", "model_routing.when is reserved in workflow.md v1"))
@@ -263,11 +379,15 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                     )
     model = sections.get("model_routing") or {}
     if isinstance(model, dict):
-        routes = []
+        routes: list[tuple[str, dict[str, Any]]] = []
         if isinstance(model.get("defaults"), dict):
             routes.append(("sections.model_routing.defaults", model["defaults"]))
         if isinstance(model.get("overrides"), list):
-            routes.extend((f"sections.model_routing.overrides[{i}]", route) for i, route in enumerate(model["overrides"]) if isinstance(route, dict))
+            routes.extend(
+                (f"sections.model_routing.overrides[{i}]", route)
+                for i, route in enumerate(model["overrides"])
+                if isinstance(route, dict)
+            )
         for path, route in routes:
             if route.get("mode") not in ALLOWED_MODEL_MODES:
                 errors.append(Diagnostic("invalid_value", f"{path}.mode", "model_routing mode must be prefer or require"))
@@ -287,121 +407,137 @@ def _validate_gates(gates: Any, path: str, warnings: list[Diagnostic]) -> None:
             )
 
 
-def _parse_workflow_yaml(text: str) -> Any:
-    lines = _tokenize_yaml_lines(text)
-    if not lines:
+def _parse_workflow_yaml(body_lines: list[tuple[int, str]]) -> Any:
+    tokens = _tokenize_yaml_lines(body_lines)
+    if not tokens:
         return None
-    value, index = _parse_block(lines, 0, lines[0][0])
-    if index != len(lines):
-        raise WorkflowParseError(f"could not parse line {index + 1}")
+    value, index = _parse_block(tokens, 0, tokens[0].indent, "sections")
+    if index != len(tokens):
+        raise WorkflowParseError("malformed_block", f"could not parse line {tokens[index].line}")
     return value
 
 
-def _tokenize_yaml_lines(text: str) -> list[tuple[int, str]]:
-    lines: list[tuple[int, str]] = []
-    for number, raw in enumerate(text.splitlines(), start=1):
+def _tokenize_yaml_lines(body_lines: list[tuple[int, str]]) -> list[Token]:
+    tokens: list[Token] = []
+    for line_no, raw in body_lines:
         if "\t" in raw[: len(raw) - len(raw.lstrip())]:
-            raise WorkflowParseError(f"tabs are not supported at line {number}")
-        if not raw.strip() or raw.lstrip().startswith("#"):
+            raise WorkflowParseError("malformed_block", f"tabs are not supported at line {line_no}")
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
             continue
         indent = len(raw) - len(raw.lstrip(" "))
-        lines.append((indent, raw.strip()))
-    return lines
+        tokens.append(Token(line=line_no, indent=indent, content=stripped))
+    return tokens
 
 
-def _parse_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[Any, int]:
-    if index >= len(lines):
+def _parse_block(tokens: list[Token], index: int, indent: int, path: str) -> tuple[Any, int]:
+    if index >= len(tokens):
         return None, index
-    current_indent, content = lines[index]
-    if current_indent < indent:
+    current = tokens[index]
+    if current.indent < indent:
         return None, index
-    if current_indent > indent:
-        raise WorkflowParseError(f"unexpected indentation at line {index + 1}")
-    if content.startswith("- "):
-        return _parse_list(lines, index, indent)
-    return _parse_map(lines, index, indent)
+    if current.indent > indent:
+        raise WorkflowParseError("malformed_block", f"unexpected indentation at line {current.line}")
+    if current.content.startswith("- "):
+        return _parse_list(tokens, index, indent, path)
+    if ":" in current.content:
+        return _parse_map(tokens, index, indent, path)
+    if index + 1 < len(tokens) and tokens[index + 1].indent > current.indent:
+        raise WorkflowParseError("malformed_block", f"scalar block has unexpected child at line {tokens[index + 1].line}")
+    return _parse_scalar(current.content, current.line, path), index + 1
 
 
-def _parse_map(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[dict[str, Any], int]:
+def _parse_map(tokens: list[Token], index: int, indent: int, path: str) -> tuple[dict[str, Any], int]:
     out: dict[str, Any] = {}
-    while index < len(lines):
-        current_indent, content = lines[index]
-        if current_indent < indent:
+    while index < len(tokens):
+        current = tokens[index]
+        if current.indent < indent:
             break
-        if current_indent > indent:
-            raise WorkflowParseError(f"unexpected indentation at line {index + 1}")
-        if content.startswith("- "):
+        if current.indent > indent:
+            raise WorkflowParseError("malformed_block", f"unexpected indentation at line {current.line}")
+        if current.content.startswith("- "):
             break
-        key, value_text = _split_key_value(content, index)
+        key, value_text = _split_key_value(current.content, current.line)
         if key in out:
-            raise WorkflowParseError(f"duplicate key {key!r} at line {index + 1}")
+            raise WorkflowParseError("malformed_block", f"duplicate key {key!r} at line {current.line}")
         index += 1
         if value_text:
-            out[key] = _parse_scalar(value_text)
-        elif index < len(lines) and lines[index][0] > current_indent:
-            child_indent = lines[index][0]
-            if child_indent != current_indent + 2:
-                raise WorkflowParseError(f"expected child indentation of {current_indent + 2} spaces at line {index + 1}")
-            out[key], index = _parse_block(lines, index, child_indent)
+            out[key] = _parse_scalar(value_text, current.line, f"{path}.{key}")
+        elif index < len(tokens) and tokens[index].indent > current.indent:
+            child_indent = tokens[index].indent
+            if child_indent != current.indent + 2:
+                raise WorkflowParseError("malformed_block",
+                    f"expected child indentation of {current.indent + 2} spaces at line {tokens[index].line}"
+                )
+            out[key], index = _parse_block(tokens, index, child_indent, f"{path}.{key}")
         else:
             out[key] = None
     return out, index
 
 
-def _parse_list(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[list[Any], int]:
+def _parse_list(tokens: list[Token], index: int, indent: int, path: str) -> tuple[list[Any], int]:
     out: list[Any] = []
-    while index < len(lines):
-        current_indent, content = lines[index]
-        if current_indent < indent:
+    while index < len(tokens):
+        current = tokens[index]
+        if current.indent < indent:
             break
-        if current_indent > indent:
-            raise WorkflowParseError(f"unexpected indentation at line {index + 1}")
-        if not content.startswith("- "):
+        if current.indent > indent:
+            raise WorkflowParseError("malformed_block", f"unexpected indentation at line {current.line}")
+        if not current.content.startswith("- "):
             break
-        item_text = content[2:].strip()
+        item_text = current.content[2:].strip()
+        item_path = f"{path}[{len(out)}]"
         index += 1
         if not item_text:
-            if index < len(lines) and lines[index][0] > current_indent:
-                child_indent = lines[index][0]
-                if child_indent != current_indent + 2:
-                    raise WorkflowParseError(f"expected child indentation of {current_indent + 2} spaces at line {index + 1}")
-                item, index = _parse_block(lines, index, child_indent)
+            if index < len(tokens) and tokens[index].indent > current.indent:
+                child_indent = tokens[index].indent
+                if child_indent != current.indent + 2:
+                    raise WorkflowParseError("malformed_block",
+                        f"expected child indentation of {current.indent + 2} spaces at line {tokens[index].line}"
+                    )
+                item, index = _parse_block(tokens, index, child_indent, item_path)
             else:
                 item = None
+        elif item_text.startswith("{"):
+            raise WorkflowParseError("flow_map_unsupported", f"flow_map_unsupported at line {current.line}; use block style")
         elif _looks_like_inline_map_item(item_text):
-            key, value_text = _split_key_value(item_text, index - 1)
-            item = {key: _parse_scalar(value_text) if value_text else None}
-            if not value_text and index < len(lines) and lines[index][0] > current_indent:
-                child_indent = lines[index][0]
-                if child_indent != current_indent + 2:
-                    raise WorkflowParseError(f"expected child indentation of {current_indent + 2} spaces at line {index + 1}")
-                item[key], index = _parse_block(lines, index, child_indent)
-            if index < len(lines) and lines[index][0] > current_indent:
-                child_indent = lines[index][0]
-                if child_indent != current_indent + 2:
-                    raise WorkflowParseError(f"expected child indentation of {current_indent + 2} spaces at line {index + 1}")
-                continuation, index = _parse_block(lines, index, child_indent)
+            key, value_text = _split_key_value(item_text, current.line)
+            item = {key: _parse_scalar(value_text, current.line, f"{item_path}.{key}") if value_text else None}
+            if not value_text and index < len(tokens) and tokens[index].indent > current.indent:
+                child_indent = tokens[index].indent
+                if child_indent != current.indent + 2:
+                    raise WorkflowParseError("malformed_block",
+                        f"expected child indentation of {current.indent + 2} spaces at line {tokens[index].line}"
+                    )
+                item[key], index = _parse_block(tokens, index, child_indent, f"{item_path}.{key}")
+            if index < len(tokens) and tokens[index].indent > current.indent:
+                child_indent = tokens[index].indent
+                if child_indent != current.indent + 2:
+                    raise WorkflowParseError("malformed_block",
+                        f"expected child indentation of {current.indent + 2} spaces at line {tokens[index].line}"
+                    )
+                continuation, index = _parse_block(tokens, index, child_indent, item_path)
                 if not isinstance(continuation, dict):
-                    raise WorkflowParseError(f"list item continuation must be a mapping before line {index + 1}")
+                    raise WorkflowParseError("malformed_block", f"list item continuation must be a mapping before line {tokens[index - 1].line}")
                 overlap = set(item).intersection(continuation)
                 if overlap:
-                    raise WorkflowParseError(f"duplicate key {sorted(overlap)[0]!r} in list item")
+                    raise WorkflowParseError("malformed_block", f"duplicate key {sorted(overlap)[0]!r} in list item")
                 item.update(continuation)
         else:
-            item = _parse_scalar(item_text)
-            if index < len(lines) and lines[index][0] > current_indent:
-                raise WorkflowParseError(f"scalar list item has unexpected child at line {index + 1}")
+            item = _parse_scalar(item_text, current.line, item_path)
+            if index < len(tokens) and tokens[index].indent > current.indent:
+                raise WorkflowParseError("malformed_block", f"scalar list item has unexpected child at line {tokens[index].line}")
         out.append(item)
     return out, index
 
 
-def _split_key_value(content: str, index: int) -> tuple[str, str]:
+def _split_key_value(content: str, line_no: int) -> tuple[str, str]:
     if ":" not in content:
-        raise WorkflowParseError(f"expected key/value mapping at line {index + 1}")
+        raise WorkflowParseError("malformed_block", f"expected key/value mapping at line {line_no}")
     key, value = content.split(":", 1)
     key = key.strip()
     if not key or not SIMPLE_KEY.match(key):
-        raise WorkflowParseError(f"invalid mapping key at line {index + 1}")
+        raise WorkflowParseError("malformed_block", f"invalid mapping key at line {line_no}")
     return key, value.strip()
 
 
@@ -412,17 +548,17 @@ def _looks_like_inline_map_item(text: str) -> bool:
     return bool(SIMPLE_KEY.match(key))
 
 
-def _parse_scalar(value: str) -> Any:
+def _parse_scalar(value: str, line_no: int, path: str) -> Any:
     value = value.strip()
     if not value:
         return ""
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return []
-        return [_parse_scalar(part.strip()) for part in _split_inline_list(inner)]
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        return value[1:-1]
+    if value.startswith("["):
+        return _parse_inline_list(value, line_no, path)
+    value, had_comment = _strip_comment(value, line_no)
+    if not value:
+        return None if had_comment else ""
+    if value[0] in {"'", '"'}:
+        return _parse_quoted_scalar(value, line_no, path)
     lowered = value.lower()
     if lowered == "true":
         return True
@@ -430,43 +566,188 @@ def _parse_scalar(value: str) -> Any:
         return False
     if lowered in {"null", "none", "~"}:
         return None
+    if re.fullmatch(r"-?\d+\.\d+", value):
+        return float(value)
     if re.fullmatch(r"-?\d+", value):
         return int(value)
     return value
 
 
-def _split_inline_list(inner: str) -> list[str]:
+def _strip_comment(text: str, line_no: int) -> tuple[str, bool]:
+    idx = _find_comment_start(text)
+    if idx is None:
+        return text.rstrip(), False
+    return text[:idx].rstrip(), True
+
+
+def _find_comment_start(text: str) -> int | None:
+    quote: str | None = None
+    escape = False
+    index = 0
+    while index < len(text):
+        ch = text[index]
+        if quote == '"':
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                quote = None
+            index += 1
+            continue
+        if quote == "'":
+            if ch == "'" and index + 1 < len(text) and text[index + 1] == "'":
+                index += 2
+                continue
+            if ch == "'":
+                quote = None
+                index += 1
+                continue
+            index += 1
+            continue
+        if ch in {"'", '"'}:
+            quote = ch
+            index += 1
+            continue
+        if ch == "#" and (index == 0 or text[index - 1].isspace()):
+            return index
+        index += 1
+    return None
+
+
+def _parse_quoted_scalar(text: str, line_no: int, path: str) -> str:
+    quote = text[0]
+    if len(text) < 2 or text[-1] != quote:
+        raise WorkflowParseError("unterminated_quote", f"unterminated_quote at line {line_no}")
+    inner = text[1:-1]
+    if quote == "'":
+        out: list[str] = []
+        index = 0
+        while index < len(inner):
+            ch = inner[index]
+            if ch == "'":
+                if index + 1 < len(inner) and inner[index + 1] == "'":
+                    out.append("'")
+                    index += 2
+                    continue
+                raise WorkflowParseError("unterminated_quote", f"unterminated_quote at line {line_no}")
+            out.append(ch)
+            index += 1
+        return "".join(out)
+
+    out = []
+    index = 0
+    while index < len(inner):
+        ch = inner[index]
+        if ch == '"':
+            raise WorkflowParseError("unterminated_quote", f"unterminated_quote at line {line_no}")
+        if ch != "\\":
+            out.append(ch)
+            index += 1
+            continue
+        if index + 1 >= len(inner):
+            raise WorkflowParseError("unterminated_quote", f"unterminated_quote at line {line_no}")
+        esc = inner[index + 1]
+        if esc == "n":
+            out.append("\n")
+        elif esc == "t":
+            out.append("\t")
+        elif esc == "\\":
+            out.append("\\")
+        elif esc == '"':
+            out.append('"')
+        else:
+            raise WorkflowParseError("unknown_escape", f"unknown_escape at line {line_no}")
+        index += 2
+    return "".join(out)
+
+
+def _parse_inline_list(text: str, line_no: int, path: str) -> list[Any]:
+    if not text.startswith("["):
+        raise WorkflowParseError("nested_inline_list", f"nested_inline_list at line {line_no}; use block style")
     parts: list[str] = []
     current: list[str] = []
     quote: str | None = None
     escape = False
-    for char in inner:
-        if escape:
-            current.append(char)
-            escape = False
-            continue
-        if char == "\\" and quote == '"':
-            current.append(char)
-            escape = True
-            continue
-        if quote:
-            current.append(char)
-            if char == quote:
+    saw_comment = False
+    index = 1
+    while index < len(text):
+        ch = text[index]
+        if quote == '"':
+            current.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
                 quote = None
+            index += 1
             continue
-        if char in {"'", '"'}:
-            quote = char
-            current.append(char)
+        if quote == "'":
+            current.append(ch)
+            if ch == "'" and index + 1 < len(text) and text[index + 1] == "'":
+                current.append("'")
+                index += 2
+                continue
+            if ch == "'":
+                quote = None
+            index += 1
             continue
-        if char == ",":
-            parts.append("".join(current).strip())
+        if ch == "#" and (index == 0 or text[index - 1].isspace()):
+            saw_comment = True
+            break
+        if ch in {"'", '"'}:
+            quote = ch
+            current.append(ch)
+            index += 1
+            continue
+        if ch == "[":
+            raise WorkflowParseError("nested_inline_list", f"nested_inline_list at line {line_no}; use block style")
+        if ch == ",":
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
             current = []
+            index += 1
             continue
-        current.append(char)
-    if quote:
-        raise WorkflowParseError("unterminated quote in inline list")
-    parts.append("".join(current).strip())
-    return [part for part in parts if part]
+        if ch == "]":
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
+            trailing = text[index + 1 :].strip()
+            if trailing and not trailing.startswith("#"):
+                raise WorkflowParseError("malformed_block", f"unexpected trailing content at line {line_no}")
+            return [_parse_scalar(part, line_no, f"{path}[{item_index}]") for item_index, part in enumerate(parts)]
+        current.append(ch)
+        index += 1
+    if quote is not None:
+        raise WorkflowParseError("unterminated_quote", f"unterminated_quote at line {line_no}")
+    if saw_comment:
+        part = "".join(current).strip()
+        if part:
+            parts.append(part)
+        return [_parse_scalar(part, line_no, f"{path}[{item_index}]") for item_index, part in enumerate(parts)]
+    raise WorkflowParseError("malformed_block", f"unterminated inline list at line {line_no}")
+
+
+# The registry is derived from the canonical format doc when available, but the
+# normalizer-owned keys stay recognized even if the doc is absent in a packaged
+# install.
+
+def _registry_keys() -> set[str]:
+    keys = set(FENCE_KEY_REGISTRY)
+    try:
+        doc = DEFAULT_FORMAT_DOC.read_text(encoding="utf-8")
+    except OSError:
+        return keys
+    for match in re.finditer(r"```beislid:([^\s`]+)", doc):
+        key = match.group(1).strip()
+        if key and key != "<key>":
+            keys.add(key)
+    return keys
+
+
+FENCE_KEY_REGISTRY = _registry_keys()
 
 
 def main(argv: list[str] | None = None) -> int:

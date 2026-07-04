@@ -56,25 +56,6 @@ events:
         path: 'plans/{feature}-design.md'
 ```
 
-## PR reviews
-
-```beislid:review_feedback_profiles
-- name: coderabbit
-  match:
-    author_regex: 'coderabbitai'
-  extract:
-    prompt_regex: '```agent-prompt\\n(?P<prompt>.*?)```'
-    prompt_format: markdown
-```
-
-## Ready-for-review
-
-```beislid:clean_eval
-mode: require
-surface: auto
-artifact_root: .beislid/clean-eval
-```
-
 ## Visual surfaces
 
 ```beislid:visual_surfaces
@@ -126,21 +107,89 @@ class WorkflowNormalizerTests(unittest.TestCase):
             envelope["sections"]["lifecycle_actions"]["events"]["blueprint_approved"]["actions"][0]["type"],
             "artifact",
         )
-        self.assertEqual(envelope["sections"]["clean_eval"]["mode"], "require")
         self.assertEqual(envelope["sections"]["visual_surfaces"]["provider"], "lavish-axi")
         self.assertEqual(envelope["sections"]["model_routing"]["overrides"][0]["models"], ["anthropic:claude-opus-4.8"])
         self.assertEqual(envelope["warnings"], [])
         self.assertEqual(envelope["errors"], [])
 
-    def test_warning_config_exits_successfully_with_warning_status(self) -> None:
+    def test_d1_comments_and_inline_lists_follow_yaml_comment_rules(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->
 
-```beislid:model_routing
-defaults:
-  model: anthropic:claude-sonnet-4.5
-  when:
-    branch: main
+```beislid:gates
+- name: lint
+  parallel_safe: true # optional
+  autofix: npm run lint -- --fix # optional
+  command: 'echo "a # b"'
+  paths: [docs/**, *.md # optional]
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        gate = envelope["sections"]["gates"][0]
+        self.assertEqual(envelope["status"], "ok")
+        self.assertEqual(gate["parallel_safe"], True)
+        self.assertEqual(gate["autofix"], "npm run lint -- --fix")
+        self.assertEqual(gate["command"], 'echo "a # b"')
+        self.assertEqual(gate["paths"], ["docs/**", "*.md"])
+        self.assertEqual(envelope["warnings"], [])
+        self.assertEqual(envelope["errors"], [])
+
+    def test_d2_flow_maps_are_rejected_even_inside_registered_scopes(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:scopes
+- name: frontend
+  paths: ['apps/web/**']
+  gates:
+    - name: lint
+      command: 'pnpm lint'
+```
+
+```beislid:gates
+- { name: lint, command: 'pnpm lint' }
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(envelope["errors"][0]["code"], "flow_map_unsupported")
+        self.assertIn("block style", envelope["errors"][0]["message"])
+        self.assertEqual(envelope["warnings"], [])
+
+    def test_d3_parse_errors_report_absolute_workflow_line_numbers(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: ok
+    command: bad-indent
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(envelope["errors"][0]["code"], "malformed_block")
+        self.assertIn("line 5", envelope["errors"][0]["message"])
+
+    def test_d4_unknown_fence_keys_warn_with_absolute_lines(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:not_a_real_key
+value: 1
+```
+
+```beislid:gates
+- name: unit
+  command: 'echo ok'
 ```
 """
         )
@@ -148,8 +197,139 @@ defaults:
         envelope = workflow_normalizer.normalize_workflow(workflow)
 
         self.assertEqual(envelope["status"], "warning")
-        self.assertEqual(envelope["warnings"][0]["code"], "reserved_field")
+        self.assertEqual(envelope["warnings"][0]["code"], "unknown_fence_key")
+        self.assertEqual(envelope["warnings"][0]["path"], "sections.not_a_real_key")
+        self.assertIn("line 3", envelope["warnings"][0]["message"])
         self.assertEqual(envelope["errors"], [])
+
+    def test_d5_tier_enums_and_tier_mode_are_validated(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:model_routing
+defaults:
+  model: anthropic:claude-sonnet-4.5
+tier_mode: someday
+tiers:
+  tiny: [openai:gpt-4]
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        codes = [error["code"] for error in envelope["errors"]]
+        paths = [error["path"] for error in envelope["errors"]]
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(codes, ["invalid_value", "invalid_value"])
+        self.assertEqual(paths, ["sections.model_routing.tiers.tiny", "sections.model_routing.tier_mode"])
+
+    def test_d6_model_and_models_are_mutually_exclusive(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:model_routing
+defaults:
+  model: anthropic:claude-sonnet-4.5
+  models: ['anthropic:claude-sonnet-4.5']
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(envelope["errors"][0]["code"], "invalid_value")
+        self.assertEqual(envelope["errors"][0]["path"], "sections.model_routing.defaults")
+        self.assertIn("mutually exclusive", envelope["errors"][0]["message"])
+
+    def test_d7_decimal_floats_parse_as_numbers(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: numbers
+  weight: 1.5
+  whole: 2
+  exponent: 1e3
+  trailing: 1.
+  leading: .5
+  version: 1.5.2
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        gate = envelope["sections"]["gates"][0]
+        self.assertEqual(envelope["status"], "ok")
+        self.assertIsInstance(gate["weight"], float)
+        self.assertEqual(gate["weight"], 1.5)
+        self.assertIsInstance(gate["whole"], int)
+        self.assertEqual(gate["whole"], 2)
+        self.assertEqual(gate["exponent"], "1e3")
+        self.assertEqual(gate["trailing"], "1.")
+        self.assertEqual(gate["leading"], ".5")
+        self.assertEqual(gate["version"], "1.5.2")
+
+    def test_d8_nested_inline_lists_raise_explicit_error(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: paths
+  paths: [[a, b], c]
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(envelope["errors"][0]["code"], "nested_inline_list")
+        self.assertIn("block style", envelope["errors"][0]["message"])
+
+    def test_d9_quoted_scalars_handle_escapes_and_literals(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: "line1\\nline2"
+  single: 'don''t'
+  literal: 'a\\nb'
+```
+
+```beislid:model_routing
+defaults:
+  model: "bad\\q"
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        gate = envelope["sections"]["gates"][0]
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(gate["name"], "line1\nline2")
+        self.assertEqual(gate["single"], "don't")
+        self.assertEqual(gate["literal"], "a\\nb")
+        self.assertEqual(envelope["errors"][0]["code"], "unknown_escape")
+
+    def test_d9b_unterminated_quotes_error(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: "abc
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(envelope["errors"][0]["code"], "unterminated_quote")
+        self.assertIn("line 4", envelope["errors"][0]["message"])
 
     def test_duplicate_blocks_warn_and_first_occurrence_wins(self) -> None:
         workflow = self.write_workflow(
@@ -191,22 +371,6 @@ defaults:
         self.assertEqual(envelope["errors"][0]["code"], "invalid_version_stamp")
         self.assertNotEqual(proc.returncode, 0)
         self.assertEqual(json.loads(proc.stdout)["status"], "error")
-
-    def test_malformed_block_is_error(self) -> None:
-        workflow = self.write_workflow(
-            """<!-- beislid-workflow: v1 -->
-
-```beislid:gates
-- name: ok
-    command: bad-indent
-```
-"""
-        )
-
-        envelope = workflow_normalizer.normalize_workflow(workflow)
-
-        self.assertEqual(envelope["status"], "error")
-        self.assertEqual(envelope["errors"][0]["code"], "malformed_block")
 
     def test_beislid_cli_workflow_normalize_json_reads_current_repo_workflow(self) -> None:
         workflow = self.write_workflow(VALID_WORKFLOW)

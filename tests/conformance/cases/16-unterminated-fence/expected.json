@@ -1,0 +1,39 @@
+{
+  "errors": [
+    {
+      "code": "malformed_block",
+      "message": "unterminated beislid:gates block starting at line 3",
+      "path": "sections.gates"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/16-unterminated-fence/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "f5c89503b7b92f5e19abcbc5191b12e924376c05"
+  },
+  "status": "error",
+  "warnings": []
+}

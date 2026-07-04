@@ -1,0 +1,44 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "autofix": "npm run lint -- --fix",
+        "command": "echo \"a # b\"",
+        "name": "lint",
+        "parallel_safe": true,
+        "paths": [
+          "docs/**",
+          "*.md"
+        ]
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "<masked>",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "6f94c1182f625090c26fc46e2421d5044ac8a478"
+  },
+  "status": "ok",
+  "warnings": []
+}

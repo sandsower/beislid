@@ -1,0 +1,65 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [
+      {
+        "command": "pnpm lint",
+        "execution": "psychic",
+        "name": "lint",
+        "stage": "someday"
+      }
+    ],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": {
+        "mode": "prefer",
+        "models": [
+          "anthropic:claude-sonnet-4.5"
+        ],
+        "when": {
+          "branch": "main"
+        }
+      },
+      "overrides": [],
+      "tier_mode": "prefer"
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/12-reserved-warnings/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "7c69babbd7c3c95e85412065bef2f4098ba262ed"
+  },
+  "status": "warning",
+  "warnings": [
+    {
+      "code": "reserved_field",
+      "message": "model_routing.when is reserved in workflow.md v1",
+      "path": "sections.model_routing.defaults.when"
+    },
+    {
+      "code": "reserved_value",
+      "message": "unknown gate stage 'someday'",
+      "path": "sections.gates[0].stage"
+    },
+    {
+      "code": "reserved_value",
+      "message": "unknown gate execution 'psychic'",
+      "path": "sections.gates[0].execution"
+    }
+  ]
+}
