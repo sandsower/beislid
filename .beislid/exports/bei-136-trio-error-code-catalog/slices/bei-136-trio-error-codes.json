@@ -1,0 +1,135 @@
+{
+  "schema": "approved-slice-v1",
+  "slice_id": "bei-136-trio-error-codes",
+  "source_ticket": "BEI-136",
+  "prompt": "## Objective\nGive olin's port of action_policy and validate_export a frozen error-code contract, completing BEI-131 decision D11: 'the trio ships one error-code contract'.\n\n## Design summary\n- Reality check (audited in-session): neither script has stable codes today. action_policy.py raises free-text via SystemExit at 19 sites; validate_export.py appends free-text at 26 sites. So this slice mints codes first, then catalogs.\n- Code minting: snake_case codes in the established normalizer style (D11: 'Keep the existing code style'). One code per distinct failure CLASS - multiple sites sharing a meaning share a code. Audit each site; resolve duplicate-meaning or inconsistent messages before freezing (ticket acceptance).\n- Emission format: prepend the code to the existing message - '<code>: <human text>'. Preserve exit-code semantics and the human text; downstream consumers grep these messages, so verify with a repo-wide grep that nothing parses the exact old strings before changing them (pause if something does).\n- Catalog: extend docs/parser-conformance.md with two sibling sections ('action_policy error codes', 'validate_export error codes') using the exact existing 4-column table: | code | severity | when emitted | path convention |. Every cataloged code must exist in the implementation - no aspirational entries.\n- Conformance-corpus pinning for the two tools: only if trivial; otherwise state the follow-up in the final report per the ticket.\n- Extend the script-harness tests to assert the code-prefixed format for a representative sample of failure classes per script.\n\n## File scope\nInclude: scripts/action_policy.py, scripts/validate_export.py, docs/parser-conformance.md, existing script tests. Exclude: workflow_normalizer and its frozen catalog rows.\n\n## Constraints\nThe catalog freezes once shipped - correctness over speed. Beislid auto-releases on push; this slice does NOT push (human close-out). No remote writes.\n\n## Verification\ngrep -q 'action_policy' docs/parser-conformance.md && grep -q 'validate_export' docs/parser-conformance.md\npython3 scripts/validate_skills.py\nbash scripts/validate.sh  # pre-PR local CI mirror, expensive - run once before handoff",
+  "boundaries": [
+    "Include: scripts/action_policy.py",
+    "Include: scripts/validate_export.py",
+    "Include: docs/parser-conformance.md",
+    "Include: tests covering the two scripts' error emission (extend existing script harness tests)",
+    "Exclude: workflow_normalizer (already cataloged, frozen)",
+    "Exclude: New conformance corpus cases unless trivial (file follow-up instead)"
+  ],
+  "dependencies": [
+    "python3 at /opt/homebrew/bin/python3 (probed)",
+    "Audited in-session: action_policy.py has 19 free-text SystemExit raise sites, validate_export.py has 26 errors.append sites, ZERO stable codes today",
+    "Catalog table style captured from docs/parser-conformance.md lines 14-33 (code | severity | when emitted | path convention)"
+  ],
+  "proof_requirements": [
+    "bei-136-trio-error-codes-gates: Beislid cheap gate set (diff-whitespace, skill/consistency checkers).",
+    "bei-136-trio-error-codes-gates success: git diff --check origin/main...HEAD exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_skill_size_budgets.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/validate_skills.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_planning_lifecycle_consistency.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_visual_surfaces_consistency.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_artifact_templates_consistency.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_workflow_signals_consistency.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_lifecycle_hooks_consistency.py exits 0",
+    "bei-136-trio-error-codes-gates success: python3 scripts/check_run_ledger_skill_examples_consistency.py exits 0"
+  ],
+  "command_proofs": [
+    {
+      "id": "catalog-action-policy",
+      "command": "grep -q 'action_policy' docs/parser-conformance.md",
+      "description": "action_policy codes cataloged",
+      "timeout_seconds": 30,
+      "expected_exit": 0
+    },
+    {
+      "id": "catalog-validate-export",
+      "command": "grep -q 'validate_export' docs/parser-conformance.md",
+      "description": "validate_export codes cataloged",
+      "timeout_seconds": 30,
+      "expected_exit": 0
+    },
+    {
+      "id": "validate-skills",
+      "command": "python3 scripts/validate_skills.py",
+      "description": "Repo consistency gate",
+      "timeout_seconds": 120,
+      "expected_exit": 0
+    }
+  ],
+  "output_expectations": {
+    "summary": "Both scripts emit '<code>: <message>' with snake_case codes (one per failure class); docs/parser-conformance.md gains two sibling catalog sections in the existing table style, audited against the implementations; olin's port of the two tools has a frozen contract to target.",
+    "artifacts": [
+      "changed_files",
+      "proof_results"
+    ],
+    "next_step": "Human close-out: review workspace diff, land on a branch, push, CI, mark ticket Done with run provenance."
+  },
+  "parent_contract": {
+    "work_contract": "BEI-136 follow-up from BEI-131 D11",
+    "source": "Linear BEI-136 + docs/plans/2026-07-03-bei-131-canonical-parser-decisions.md (D11)",
+    "ticket": "BEI-136"
+  },
+  "repo": {
+    "url": "git@github.com:sandsower/beislid.git",
+    "base_ref": "origin/main",
+    "base_sha": "91d0b25c17f25b24430742ecf779e0515e6e7fec"
+  },
+  "allowed_actions": {
+    "run_mode": "supervised-auto",
+    "allow": [
+      "Edit files listed in boundaries.include",
+      "Introduce code identifiers into the two scripts' error emission (format: '<code>: <message>')",
+      "Run the configured gates and targeted tests",
+      "Create local commits on a work branch"
+    ],
+    "ask": [
+      "Any edit outside boundaries.include",
+      "Adding dependencies not named in the slice",
+      "Behavioral changes beyond the bound design summary"
+    ],
+    "deny": [
+      "git push, PR creation, or any remote write",
+      "Tracker (Linear/GitHub) mutations",
+      "External service mutations",
+      "Destructive actions outside the repo workspace"
+    ]
+  },
+  "process_provider": {
+    "name": "claude_code"
+  },
+  "runner_extensions": {
+    "model_routing": {
+      "routing": [
+        {
+          "boundary": "implementation",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "Authored tier for this slice; see bundle validation notes.",
+          "source": {
+            "skill": "envelope",
+            "phase": "execution"
+          }
+        },
+        {
+          "boundary": "review_fix",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "review/fix iterations stay mechanical against exact feedback and gate output",
+          "source": {
+            "skill": "envelope"
+          }
+        },
+        {
+          "boundary": "gate_repair",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "gate repair is bounded by exact gate commands",
+          "source": {
+            "skill": "envelope"
+          }
+        }
+      ],
+      "tier": "standard",
+      "mode": "prefer",
+      "candidates": [
+        "pi:openai-codex/gpt-5.4-mini",
+        "pi:openrouter/moonshotai/kimi-k2.7-code"
+      ]
+    }
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "kind": "approved-slice-plan-export-v0",
+  "version": 1,
+  "status": "approved",
+  "supersedes": null,
+  "generated_from": "envelope skill run 2026-07-05 (batch: remaining open tickets across teotl stack)",
+  "source_work_contract": "Linear ticket bodies (evidence-audited in-session); see per-slice parent_contract",
+  "slice_plan": {
+    "phase": "Deterministic trio error-code contract (BEI-131 D11 completion)",
+    "parallel_groups": [
+      [
+        "bei-136-trio-error-codes"
+      ]
+    ],
+    "notes": "Audited in-session: action_policy.py (19 SystemExit sites) and validate_export.py (26 append sites) have zero stable codes today, so the slice mints codes then catalogs - scope confirmed against ticket acceptance. Catalog table style captured from docs/parser-conformance.md L14-33. Repo clean at origin/main 91d0b25. Deny push: beislid auto-releases on push; human close-out."
+  },
+  "children": [
+    {
+      "id": "bei-136-trio-error-codes",
+      "source_ticket": "BEI-136"
+    }
+  ],
+  "dependency_graph": {
+    "bei-136-trio-error-codes": []
+  },
+  "proof_requirements": [
+    {
+      "kind": "proof-requirement-v1",
+      "id": "bei-136-trio-error-codes-gates",
+      "type": "command_gate",
+      "stage": "pre-pr",
+      "status": "required",
+      "description": "Beislid cheap gate set (diff-whitespace, skill/consistency checkers).",
+      "success_criteria": [
+        "git diff --check origin/main...HEAD exits 0",
+        "python3 scripts/check_skill_size_budgets.py exits 0",
+        "python3 scripts/validate_skills.py exits 0",
+        "python3 scripts/check_planning_lifecycle_consistency.py exits 0",
+        "python3 scripts/check_visual_surfaces_consistency.py exits 0",
+        "python3 scripts/check_artifact_templates_consistency.py exits 0",
+        "python3 scripts/check_workflow_signals_consistency.py exits 0",
+        "python3 scripts/check_lifecycle_hooks_consistency.py exits 0",
+        "python3 scripts/check_run_ledger_skill_examples_consistency.py exits 0"
+      ],
+      "failure_semantics": "code_failure: same-tier repair loop, then pause"
+    }
+  ],
+  "guides_and_gates": {
+    "gates": [
+      "diff-whitespace",
+      "skill-size-budgets",
+      "validate-skills",
+      "approved-planning-lifecycle-consistency",
+      "visual-surfaces-consistency",
+      "artifact-templates-consistency",
+      "workflow-signals-consistency",
+      "lifecycle-hooks-consistency",
+      "run-ledger-skill-examples-consistency"
+    ],
+    "gate_commands": {
+      "diff-whitespace": "git diff --check origin/main...HEAD",
+      "skill-size-budgets": "python3 scripts/check_skill_size_budgets.py",
+      "validate-skills": "python3 scripts/validate_skills.py",
+      "approved-planning-lifecycle-consistency": "python3 scripts/check_planning_lifecycle_consistency.py",
+      "visual-surfaces-consistency": "python3 scripts/check_visual_surfaces_consistency.py",
+      "artifact-templates-consistency": "python3 scripts/check_artifact_templates_consistency.py",
+      "workflow-signals-consistency": "python3 scripts/check_workflow_signals_consistency.py",
+      "lifecycle-hooks-consistency": "python3 scripts/check_lifecycle_hooks_consistency.py",
+      "run-ledger-skill-examples-consistency": "python3 scripts/check_run_ledger_skill_examples_consistency.py"
+    },
+    "guides": [
+      "Rondo owns execution and run evidence; Beislid owns envelope semantics",
+      "All slices deny push/PR/tracker writes: human close-out per slice"
+    ]
+  },
+  "approval": {
+    "approved_at": "2026-07-05T23:20:00Z",
+    "approved_by": "Vic Valenzuela <victor@dala.care>",
+    "verdicts": {
+      "bei-136-trio-error-codes": "approve"
+    }
+  },
+  "runner_extensions": {
+    "model_routing": {
+      "routing": [
+        {
+          "boundary": "implementation",
+          "tier": "heavy",
+          "mode": "prefer",
+          "reason": "Bundle mixes tiers; individual slices carry their own tier projection.",
+          "source": {
+            "skill": "envelope",
+            "phase": "execution"
+          }
+        },
+        {
+          "boundary": "review_fix",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "mechanical review/fix",
+          "source": {
+            "skill": "envelope"
+          }
+        },
+        {
+          "boundary": "gate_repair",
+          "tier": "standard",
+          "mode": "prefer",
+          "reason": "bounded by exact gate commands",
+          "source": {
+            "skill": "envelope"
+          }
+        }
+      ]
+    }
+  },
+  "validation": {
+    "schema_version": "approved-slice-plan-export-v0",
+    "rubric_version": "afk-rubric-v1",
+    "notes": "Audited in-session: action_policy.py (19 SystemExit sites) and validate_export.py (26 append sites) have zero stable codes today, so the slice mints codes then catalogs - scope confirmed against ticket acceptance. Catalog table style captured from docs/parser-conformance.md L14-33. Repo clean at origin/main 91d0b25. Deny push: beislid auto-releases on push; human close-out."
+  },
+  "ownership": {
+    "beislid": "Defines planning, autonomy, and proof semantics of this exported bundle.",
+    "rondo": "Owns execution scheduling, run evidence, and command-proof results.",
+    "memento": "Owns durable memory and learning captured after completed work.",
+    "teotl": "Program/ticket umbrella; no runtime responsibility."
+  }
+}
