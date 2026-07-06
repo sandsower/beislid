@@ -1,0 +1,42 @@
+{
+  "lifecycle": {
+    "events": {
+      "blueprint_approved": {
+        "actions": [
+          {
+            "approval": "auto",
+            "id": "write-design-artifact",
+            "path": "plans/{feature}-design.md",
+            "type": "artifact"
+          }
+        ]
+      },
+      "break_spec_approved": {
+        "actions": [
+          {
+            "approval": "prompt",
+            "id": "write-structure-artifact",
+            "path": "plans/{feature}-structure.md",
+            "type": "artifact"
+          }
+        ]
+      },
+      "spec_approved": {
+        "actions": [
+          {
+            "approval": "prompt",
+            "id": "write-spec-artifact",
+            "path": "plans/{feature}-spec.md",
+            "type": "artifact"
+          },
+          {
+            "approval": "prompt",
+            "id": "post-spec-body-to-tracker",
+            "type": "tracker"
+          }
+        ]
+      }
+    }
+  },
+  "version": "crust.workflow/v1"
+}
