@@ -146,7 +146,7 @@ No command, tool, path, skill, or network probe is run for this capability. Miss
 
 `mode: off` records `status: ok` without running the `binary` probe — it is explicit project policy to never call crust, not a probe result. `mode: prefer` (or an absent block) with the binary missing is a graceful, non-blocking miss: every seam falls back to its documented legacy path per `crust-seam-protocol.md`, and doctor should mention the install story (`cargo build --release -p crust-cli` from the crust repo; no published release yet) rather than treating it as a failure. `mode: require` with the binary missing should be surfaced as a real gap: seams that would otherwise delegate to crust hard-stop instead of silently falling back.
 
-Doctor's `.crust/` freshness check re-runs `crust import beislid-workflow --source .beislid/workflow.md --json` in preview mode (no `--write`) and diffs its `outputs[].content` per module against the committed `.crust/*.jsonc` files. Report drift with a re-import remediation (`crust import beislid-workflow --write --overwrite`) rather than editing `.crust/` itself. This check only runs when the `crust_seam` probe is `ok`; skip it silently otherwise.
+Doctor's `.crust/` freshness check re-runs `crust import beislid-workflow --source .beislid/workflow.md --json` in preview mode (no `--write`) and diffs its `outputs[].content` per module against the committed `.crust/*.jsonc` files. Report drift with a re-import remediation (`crust import beislid-workflow --write --overwrite --json`) rather than editing `.crust/` itself. This check only runs when the `crust_seam` probe is `ok`; skip it silently otherwise.
 
 ### workflow_signals validation
 

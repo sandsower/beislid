@@ -17,7 +17,7 @@ Project config: `<repo>/.beislid/workflow.md`. Probe lazily per `probe-semantics
 
 Read `<repo>/.beislid/workflow.md` and validate line 1 is exactly `<!-- beislid-workflow: v1 -->`; hard-fail and stop if missing or wrong (run `/setup` for fresh projects). Initialize the probe cache exactly as `kickoff` does (`repo_hash`, `workflow_hash`, `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json`, fresh/stale/cold). Print orientation prose from `envelope-templates.md` (≤240 chars).
 
-For durable evidence, `probe(crust_seam)`; on ok, best-effort `crust ledger init --skill envelope --flow envelope`, else `beislid run-ledger init --skill envelope --flow envelope` (`crust-seam-protocol.md`), with ticket/branch context when known. Warn on ledger failure; never block.
+For durable evidence, `probe(crust_seam)`; on ok, best-effort `crust ledger init --skill envelope --flow envelope --json`, else `beislid run-ledger init --skill envelope --flow envelope` (`crust-seam-protocol.md`), with ticket/branch context when known. Warn on ledger failure; never block.
 
 ## Step protocol loading
 

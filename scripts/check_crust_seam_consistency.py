@@ -91,15 +91,21 @@ REQUIRED_REFERENCES = {
     ],
 }
 
-# Files whose fenced ```bash blocks may contain literal `crust <subcommand>`
-# invocations that must always carry --json (TOON is the binary's default).
-GRAMMAR_CHECKED_FILES = [
-    CANONICAL,
-    ".beislid/action-policy-protocol.md",
-]
+# Files whose fenced ```bash blocks or inline `crust ...` spans may contain
+# literal crust invocations that must always carry --json (TOON is the
+# binary's default). Every file that references the seam is scanned, plus the
+# doctor templates. Inline spans count as invocations only when they carry a
+# `--` flag; flagless spans are prose family references. A flagless copyable
+# example is still wrong by the protocol invariant, but only flagged forms
+# are machine-checkable without a leaf-subcommand registry.
+GRAMMAR_CHECKED_FILES = sorted(
+    set(REQUIRED_REFERENCES) | {CANONICAL, ".beislid/doctor-templates.md"}
+)
 
 FENCE_RE = re.compile(r"```bash\n(.*?)```", re.DOTALL)
 CRUST_LINE_RE = re.compile(r"^crust\s+\S")
+INLINE_CRUST_RE = re.compile(r"`(crust [^`]+)`")
+JSON_EXEMPT_TOKENS = ("--version", "--help")
 
 
 def _logical_lines(block: str) -> list[str]:
@@ -123,6 +129,13 @@ def _logical_lines(block: str) -> list[str]:
     return logical
 
 
+def _json_exempt(candidate: str) -> bool:
+    tokens = candidate.split()
+    if "help" in tokens:
+        return True
+    return any(exempt in tokens for exempt in JSON_EXEMPT_TOKENS)
+
+
 def _check_grammar(root: pathlib.Path, rel: str, errors: list[str]) -> None:
     path = root / rel
     if not path.exists():
@@ -133,12 +146,20 @@ def _check_grammar(root: pathlib.Path, rel: str, errors: list[str]) -> None:
             candidate = line.strip()
             if not candidate or not CRUST_LINE_RE.match(candidate):
                 continue
-            if "help" in candidate.split():
+            if _json_exempt(candidate):
                 continue
             if "--json" not in candidate:
                 errors.append(
                     f"{rel}: crust invocation missing --json: `{candidate}`"
                 )
+    for span in INLINE_CRUST_RE.findall(text):
+        candidate = span.strip()
+        if "--" not in candidate or _json_exempt(candidate):
+            continue
+        if "--json" not in candidate:
+            errors.append(
+                f"{rel}: inline crust invocation missing --json: `{candidate}`"
+            )
 
 
 def main() -> int:
