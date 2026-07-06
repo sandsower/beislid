@@ -37,7 +37,7 @@ Print orientation prose from `kickoff-templates.md` (≤240 chars).
 
 On `continue this ticket` / `continue from checkpoint`, read `.beislid/checkpoints/latest.json` first. Prefer matching `kickoff_context_ready`; ask if unclear. Use as planning context; validate the live ticket first. Bad/missing pointers are non-blocking. `beislid run-ledger resume --flow kickoff --ticket-id <id> --branch <branch>` may add context but never replaces live validation or checkpoints.
 
-For durable evidence, best-effort `beislid run-ledger init --skill kickoff --flow kickoff`; record checkpoints with `beislid run-ledger checkpoint --run-id <run_id> --flow kickoff --name kickoff_context_ready` (later checkpoints use `--name <step_name>`). Warn on ledger failure; don't block kickoff.
+For durable evidence, `probe(crust_seam)`; on ok, best-effort `crust ledger init --skill kickoff --flow kickoff`, else `beislid run-ledger init --skill kickoff --flow kickoff` (`crust-seam-protocol.md`). Record checkpoints with the same seam's `ledger checkpoint --run-id <run_id> --flow kickoff --name kickoff_context_ready` (later checkpoints use `--name <step_name>`). Warn on ledger failure; don't block kickoff.
 
 ## Internal: probe(<cap>)
 

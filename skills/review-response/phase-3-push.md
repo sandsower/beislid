@@ -18,7 +18,8 @@ If only cosmetic changes were made, pushing without gates is allowed after telli
 
 Categorize the fix diff by gate model:
 
-- `gate_sets`: select by files, apply excludes/defaults, union/de-dupe, run executable `pre-pr` gates, and record reasons.
+- `probe(crust_seam)`; if ok, select via `crust gates select --stage pre_pr --changed-files <files> --json` (`crust-seam-protocol.md`) and run its `selected[]` commands.
+- Else `gate_sets`: select by files, apply excludes/defaults, union/de-dupe, run executable `pre-pr` gates, and record reasons.
 - `scopes`: for each touched scope, `pushd <scope.cwd>`, run scope `setup` once if present, then run executable `pre-pr` gates.
 - top-level `gates`: when no scopes exist, run executable `pre-pr` gates from repo root.
 - none: print `no gates configured — skipping`.
