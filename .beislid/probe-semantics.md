@@ -45,6 +45,20 @@ Known multi-command logical capabilities:
 - `ticket_update` when `comment_command` is configured, with optional `issue_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`) is performed by setup/orchestrators before execution.
 - `lifecycle_actions.<event>` for P0 CLI actions under one event's `actions[]` list. Probe every unique first binary from that event's `type: cli` action commands and record one logical capability. Validate each action's optional `on_failure` as exactly `prompt`, `continue`, or `abort`; omitted means `prompt`. Orchestrators probe only events they execute, e.g. kickoff probes `lifecycle_actions.kickoff_start`, while spec/blueprint/break-spec probe their own planning approval event when it contains CLI actions. Future events must not block current-event execution. Non-CLI providers such as `mcp` are reserved for CLI lifecycle actions; orchestrators must not execute unsupported providers.
 
+### binary
+
+Capability declares a standalone CLI binary plus an optional minimum version (e.g. `crust_seam.binary: crust`, `crust_seam.min_version: 0.1.0`). This differs from `cli` in that the target is a versioned tool the host doesn't otherwise depend on, not a command whose first word is enough.
+
+**Probe:** run `command -v <binary>` via Bash. On success, run `<binary> --version` and parse the trailing dotted version triple from its plain-text output (no machine-readable version envelope is assumed). Compare component-by-component against `min_version` when configured.
+
+| Status | Condition |
+|---|---|
+| `ok` | Binary resolves and, when `min_version` is configured, the parsed version meets or exceeds it. `probe_supported: true`. |
+| `missing` | `command -v` fails. `probe_supported: true`. Reason: `"binary '<name>' not on PATH"`. |
+| `failed` | `--version` output doesn't parse as a dotted version triple, or the parsed version is below `min_version`. `probe_supported: true`. Reason names what was found and what was required. |
+
+Known `binary` capability: `crust_seam.binary` (default `crust`). See the **crust_seam validation** special case below for the paired config shape.
+
 ### path
 
 Capability declares a filesystem path (e.g. `path: knowledge-base/`).
@@ -119,6 +133,20 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 | `failed` | Unknown mode/class, invalid decision, invalid sandbox baseline, malformed `rules`/`actions`/`sandbox`, or invalid fallback value. `probe_supported: true`; reason names the invalid path/value. |
 
 No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
+
+### crust_seam validation and probe
+
+`beislid:crust_seam` is validated as shape, then its `binary` field drives a `binary` probe (above). Fields: `mode` (`prefer` | `require` | `off`, default `prefer` when the block is absent), `binary` (default `crust`), `min_version` (optional dotted version string). Unknown `mode` values or a non-string `min_version` are a config failure.
+
+| Status | Condition |
+|---|---|
+| `ok` | `mode: off`, or the `binary` probe resolves (and meets `min_version` when set). `probe_supported: true`. |
+| `missing` | `mode: prefer` or `require` and the `binary` probe is `missing`/`failed`. `probe_supported: true`. Reason names the binary and, for `require`, that the seam is hard-required. |
+| `failed` | Malformed `mode`/`min_version` shape. `probe_supported: true`. |
+
+`mode: off` records `status: ok` without running the `binary` probe — it is explicit project policy to never call crust, not a probe result. `mode: prefer` (or an absent block) with the binary missing is a graceful, non-blocking miss: every seam falls back to its documented legacy path per `crust-seam-protocol.md`, and doctor should mention the install story (`cargo build --release -p crust-cli` from the crust repo; no published release yet) rather than treating it as a failure. `mode: require` with the binary missing should be surfaced as a real gap: seams that would otherwise delegate to crust hard-stop instead of silently falling back.
+
+Doctor's `.crust/` freshness check re-runs `crust import beislid-workflow --source .beislid/workflow.md --json` in preview mode (no `--write`) and diffs its `outputs[].content` per module against the committed `.crust/*.jsonc` files. Report drift with a re-import remediation (`crust import beislid-workflow --write --overwrite --json`) rather than editing `.crust/` itself. This check only runs when the `crust_seam` probe is `ok`; skip it silently otherwise.
 
 ### workflow_signals validation
 

@@ -1,0 +1,45 @@
+{
+  "pr_reviews": {
+    "source": {
+      "summary_command": "gh pr view --json url,number,reviewDecision,reviews,comments",
+      "threads_command": "gh api repos/{owner}/{repo}/pulls/{number}/comments",
+      "type": "cli"
+    },
+    "update": {
+      "reply_command": "gh api repos/{owner}/{repo}/pulls/{number}/comments --method POST --input {json_file}",
+      "rerequest_command": "gh api repos/{owner}/{repo}/pulls/{number}/requested_reviewers --method POST --input {json_file}",
+      "type": "cli"
+    }
+  },
+  "probe_cache": {
+    "ttl_hours": 24
+  },
+  "tracker": {
+    "ticket_source": {
+      "id_pattern": "^BEI-\\d+$",
+      "link_template": "https://linear.app/teotl/issue/{id}",
+      "tool": "mcp__linear__get_issue",
+      "type": "mcp"
+    },
+    "ticket_update": {
+      "comment_tool": "mcp__linear__save_comment",
+      "issue_tool": "mcp__linear__save_issue",
+      "type": "mcp"
+    }
+  },
+  "version": "crust.integrations/v1",
+  "workflow_signals": {
+    "mode": "auto",
+    "sinks": [
+      {
+        "type": "tmux-glance"
+      }
+    ],
+    "skills": {
+      "babysit": "auto",
+      "poke-holes": "auto",
+      "ready-for-review": "auto",
+      "review-response": "auto"
+    }
+  }
+}

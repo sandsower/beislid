@@ -196,6 +196,13 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
       "value": "goal: 50k; review-response loop: on; gates before push: on; merge/memento/retro: ask/ask/ask"
+    },
+    "crust_seam": {
+      "status": "ok",
+      "probe_supported": true,
+      "probed_at": "2026-04-29T15:30:00Z",
+      "probe_kind": "binary",
+      "value": "mode: prefer; crust 0.1.0; .crust/ fresh; seams delegated: gates, policy, workflow, ledger"
     }
   }
 }
@@ -244,6 +251,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ ship_time_artifacts validation                            ok (mode: remind; planning-artifact summary only)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
 ✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)
+✓ crust_seam binary:crust                                   ok (0.1.0; .crust/ fresh; delegated: gates, policy, workflow, ledger)
 cache file:        <path>
 cache valid until: <ISO-8601>
 workflow_hash:     <hash>

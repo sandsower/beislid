@@ -105,7 +105,15 @@ jobs:
           skills/review-response/output-templates.md
           skills/review-response/review-response-templates.md
           skills/review-response/action-policy-protocol.md
-          skills/ready-for-review/action-policy-protocol.md'
+          skills/ready-for-review/action-policy-protocol.md
+          skills/kickoff/crust-seam-protocol.md
+          skills/envelope/crust-seam-protocol.md
+          skills/ready-for-review/crust-seam-protocol.md
+          skills/review-response/crust-seam-protocol.md
+          skills/implement/crust-seam-protocol.md
+          skills/babysit/crust-seam-protocol.md
+          skills/retro/crust-seam-protocol.md
+          skills/doctor/crust-seam-protocol.md'
 
           missing_or_not_symlink=$(printf '%s\n' "$required" | while read -r path; do
             [ -L "$path" ] || echo "$path"
@@ -125,7 +133,8 @@ jobs:
                                 -o -name 'ready-for-review-templates.md' \
                                 -o -name 'kickoff-templates.md' \
                                 -o -name 'review-response-templates.md' \
-                                -o -name 'action-policy-protocol.md' \) \
+                                -o -name 'action-policy-protocol.md' \
+                                -o -name 'crust-seam-protocol.md' \) \
                     | xargs -I{} sh -c '[ -L "{}" ] || echo "{}"')
           if [ -n "$stray_regular" ]; then
             echo "Found per-skill aux files that should be symlinks but are regular files:"
@@ -154,6 +163,7 @@ jobs:
       - run: python3 scripts/check_run_ledger_skill_examples_consistency.py
       - run: python3 scripts/check_visual_surfaces_consistency.py
       - run: python3 scripts/check_workflow_signals_consistency.py
+      - run: python3 scripts/check_crust_seam_consistency.py
 
   script-tests:
     name: Validator and helper script tests

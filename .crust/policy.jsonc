@@ -1,0 +1,86 @@
+{
+  "modes": {
+    "supervised_auto": {
+      "rules": [
+        {
+          "actions": [
+            "ticket.fetch"
+          ],
+          "decision": "allow",
+          "id": "action-ticketwildcardfetch"
+        },
+        {
+          "actions": [
+            "ticket.comment"
+          ],
+          "decision": "allow",
+          "id": "action-ticketwildcardcomment"
+        },
+        {
+          "actions": [
+            "pr.review.reply"
+          ],
+          "decision": "allow",
+          "id": "action-prwildcardreviewwildcardreply"
+        },
+        {
+          "actions": [
+            "git.push"
+          ],
+          "decision": "allow",
+          "id": "action-gitwildcardpush"
+        },
+        {
+          "actions": [
+            "gh.pr.create"
+          ],
+          "decision": "allow",
+          "id": "action-ghwildcardprwildcardcreate"
+        },
+        {
+          "actions": [
+            "gh.pr.edit.label"
+          ],
+          "decision": "allow",
+          "id": "action-ghwildcardprwildcardeditwildcardlabel"
+        },
+        {
+          "actions": [
+            "gh.pr.merge"
+          ],
+          "decision": "allow",
+          "id": "action-ghwildcardprwildcardmerge"
+        },
+        {
+          "actions": [
+            "pr.merge"
+          ],
+          "decision": "allow",
+          "id": "action-prwildcardmerge"
+        },
+        {
+          "actions": [
+            "memento.capture"
+          ],
+          "decision": "allow",
+          "id": "action-mementowildcardcapture"
+        },
+        {
+          "actions": [
+            "retro.run"
+          ],
+          "decision": "allow",
+          "id": "action-retrowildcardrun"
+        },
+        {
+          "actions": [
+            "retro.apply"
+          ],
+          "decision": "allow",
+          "id": "action-retrowildcardapply"
+        }
+      ]
+    }
+  },
+  "version": "crust.policy/v1"
+}
