@@ -49,15 +49,15 @@ Known multi-command logical capabilities:
 
 Capability declares a standalone CLI binary plus an optional minimum version (e.g. `crust_seam.binary: crust`, `crust_seam.min_version: 0.1.0`). This differs from `cli` in that the target is a versioned tool the host doesn't otherwise depend on, not a command whose first word is enough.
 
-**Probe:** run `command -v <binary>` via Bash. On success, run `<binary> --version` and parse the trailing dotted version triple from its plain-text output (no machine-readable version envelope is assumed). Compare component-by-component against `min_version` when configured.
+**Probe:** run `command -v <binary>` via Bash. On success, prefer the binary's machine-readable info envelope when the capability documents one (e.g. `crust info --json`); fall back to parsing the trailing dotted version triple from `<binary> --version`'s plain-text output only when no envelope is documented, or when the documented envelope call itself fails (older binary, unknown subcommand). Compare component-by-component against `min_version` when configured, using whichever technique actually resolved a version.
 
 | Status | Condition |
 |---|---|
-| `ok` | Binary resolves and, when `min_version` is configured, the parsed version meets or exceeds it. `probe_supported: true`. |
+| `ok` | Binary resolves and, when `min_version` is configured, the resolved version meets or exceeds it. `probe_supported: true`. A probe that had to fall back to the plain-text `--version` technique after a documented envelope call failed still records `ok`, but qualified as a legacy/degraded result rather than a plain `ok` - see the capability's own special case for the exact fallback trigger and value wording. |
 | `missing` | `command -v` fails. `probe_supported: true`. Reason: `"binary '<name>' not on PATH"`. |
-| `failed` | `--version` output doesn't parse as a dotted version triple, or the parsed version is below `min_version`. `probe_supported: true`. Reason names what was found and what was required. |
+| `failed` | Neither technique produces a parseable version, or the resolved version is below `min_version`. `probe_supported: true`. Reason names what was found and what was required. |
 
-Known `binary` capability: `crust_seam.binary` (default `crust`). See the **crust_seam validation** special case below for the paired config shape.
+Known `binary` capability: `crust_seam.binary` (default `crust`). See the **crust_seam validation and probe** special case below for the paired config shape, the concrete envelope/fallback techniques, and the legacy-result value wording.
 
 ### path
 
@@ -138,11 +138,13 @@ No command, tool, path, skill, or network probe is run for this capability. Miss
 
 `beislid:crust_seam` is validated as shape, then its `binary` field drives a `binary` probe (above). Fields: `mode` (`prefer` | `require` | `off`, default `prefer` when the block is absent), `binary` (default `crust`), `min_version` (optional dotted version string). Unknown `mode` values or a non-string `min_version` are a config failure.
 
+The `binary` probe's rich technique for `crust_seam` is `crust info --json`, parsing the `crust.info/v1` envelope for `version`, `commit`, and `capabilities[]`. Confirm `kind` is exactly `crust.info/v1`; an unexpected `kind` is a hard integration failure, not a probe miss, matching the crust-seam-protocol rule that a wrong response shape is never a graceful fallback trigger. Feature-detection is capability-membership (e.g. `"cockpit" in capabilities`), never a version-string heuristic. An older `crust` without the `info` subcommand exits non-zero (clap's unknown-subcommand exit code 2); on that failure, the probe falls back to `command -v crust` plus `crust --version`'s plain-text triple parse and records the result as `ok` with `probe_mode: legacy` - a successful but degraded probe, not `failed`. See `crust-seam-protocol.md` for the exact call/envelope contract.
+
 | Status | Condition |
 |---|---|
-| `ok` | `mode: off`, or the `binary` probe resolves (and meets `min_version` when set). `probe_supported: true`. |
+| `ok` | `mode: off`, or the `binary` probe resolves (and meets `min_version` when set) via either the rich `crust info --json` technique or the legacy `--version` fallback. `probe_supported: true`. |
 | `missing` | `mode: prefer` or `require` and the `binary` probe is `missing`/`failed`. `probe_supported: true`. Reason names the binary and, for `require`, that the seam is hard-required. |
-| `failed` | Malformed `mode`/`min_version` shape. `probe_supported: true`. |
+| `failed` | Malformed `mode`/`min_version` shape, or the binary resolves but neither the rich envelope nor the legacy fallback resolves a usable version. `probe_supported: true`. |
 
 `mode: off` records `status: ok` without running the `binary` probe — it is explicit project policy to never call crust, not a probe result. `mode: prefer` (or an absent block) with the binary missing is a graceful, non-blocking miss: every seam falls back to its documented legacy path per `crust-seam-protocol.md`, and doctor should mention the install story (`cargo build --release -p crust-cli` from the crust repo; no published release yet) rather than treating it as a failure. `mode: require` with the binary missing should be surfaced as a real gap: seams that would otherwise delegate to crust hard-stop instead of silently falling back.
 

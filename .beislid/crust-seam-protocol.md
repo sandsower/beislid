@@ -12,7 +12,16 @@ This file is intentionally the single place that documents crust call shapes. Ca
 - `mode: require` — probe `crust`; on `missing`, hard-stop naming the install story (no published release yet: `cargo build --release -p crust-cli` from the crust repo, binary lands at `target/release/crust`). Never silently fall back when `require` is configured.
 - `mode: off` — never probe or call crust; every seam uses its legacy path unconditionally.
 
-Probe technique: `command -v crust`, then `crust --version`. Crust has no machine-readable version envelope in v1 — `--version` prints plain text `crust <major>.<minor>.<patch>` (observed: `crust 0.1.0`). Parse the trailing dotted triple and compare against configured `min_version` with a simple per-component integer compare; do not attempt full semver range parsing. A parse failure on `--version` output is `status: failed`, `probe_supported: true`.
+Probe technique: `command -v crust`, then `crust info --json`. Crust ships a machine-readable `crust.info/v1` envelope (OLI-36) carrying `version`, a nullable `commit`, and the sorted `capabilities[]` list of top-level subcommand families, e.g.:
+
+```json
+{ "kind": "crust.info/v1", "ok": true, "version": "0.1.0", "commit": null,
+  "capabilities": ["ask","cli","cockpit","export","gates","herd","import","info","ledger","placement","policy","preflights","rondo","run","status","validate","workflow"] }
+```
+
+Confirm `kind` is exactly `crust.info/v1` before reading other fields; an unexpected `kind` is a hard integration failure per the call-contract rule above, not a probe miss. Compare `version`'s dotted triple against configured `min_version` with a simple per-component integer compare; do not attempt full semver range parsing. Feature-detection for a given seam or capability is membership in `capabilities[]` (e.g. `"cockpit" in capabilities`), never a `version` string heuristic - the capability list is derived straight from crust's real CLI surface and is drift-proof where a version-string cutoff would not be.
+
+`crust info` only exists on builds that shipped OLI-36 or later. An older `crust` exits non-zero on `crust info --json` (clap's unknown-subcommand exit code 2). On that failure, fall back to `crust --version`, which prints plain text `crust <major>.<minor>.<patch>` (observed: `crust 0.1.0`) with no `capabilities[]` to check. Parse the trailing dotted triple the same way and compare against `min_version`. Record the result as `status: ok` with `probe_mode: legacy` - a successful but degraded probe, not a failure - and treat every capability-membership check as unresolved (not present) while running in legacy mode, since there is no capability list to consult. A parse failure on `--version` output (the last-resort path) is `status: failed`, `probe_supported: true`.
 
 ## Call contract
 
