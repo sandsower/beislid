@@ -421,7 +421,7 @@ min_version: 0.1.0
 ```
 ````
 
-`mode: prefer` uses crust for a seam when its `binary` probe is `ok`, and silently falls back to that seam's legacy Python/prose path otherwise. `mode: require` hard-stops naming the install story when the probe fails, instead of falling back. `mode: off` disables the seam entirely; every decision uses its legacy path unconditionally. `binary` names the executable to probe (default `crust`). `min_version` is an optional minimum dotted version compared against `crust --version`'s plain-text output. See `crust-seam-protocol.md` for the full call contract, token normalization table, and per-seam fallback ladder.
+`mode: prefer` uses crust for a seam when its `binary` probe is `ok`, and silently falls back to that seam's legacy Python/prose path otherwise. `mode: require` hard-stops naming the install story when the probe fails, instead of falling back. `mode: off` disables the seam entirely; every decision uses its legacy path unconditionally. `binary` names the executable to probe (default `crust`). `min_version` is an optional minimum dotted version compared against the `version` field of the `crust.info/v1` envelope (`crust info --json`); an older crust without that subcommand falls back to `crust --version`'s plain-text output for the same comparison and records the probe as legacy/degraded. See `crust-seam-protocol.md` for the full call contract, token normalization table, and per-seam fallback ladder.
 
 ## Gate object shape
 
