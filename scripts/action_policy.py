@@ -95,7 +95,11 @@ DEFAULT_POLICY: dict[str, Any] = {
             },
             "unknown_action": "allow",
             "unclassified_action": "allow",
-            "sandbox": {"minimum": "none", "on_uncommitted_changes": "allow"},
+            "sandbox": {
+                "minimum": "none",
+                "on_insufficient_baseline": "ask",
+                "on_uncommitted_changes": "allow",
+            },
         },
         "unattended-auto": {
             "rules": {
@@ -110,7 +114,11 @@ DEFAULT_POLICY: dict[str, Any] = {
             },
             "unknown_action": "ask",
             "unclassified_action": "ask",
-            "sandbox": {"minimum": "non-default-branch", "on_uncommitted_changes": "ask"},
+            "sandbox": {
+                "minimum": "non-default-branch",
+                "on_insufficient_baseline": "ask",
+                "on_uncommitted_changes": "ask",
+            },
         },
     },
 }
@@ -214,6 +222,10 @@ def normalize_policy(policy: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(sandbox, dict):
             raise SystemExit(f"policy.modes.{mode}.sandbox must be an object")
         validate_baseline(str(sandbox.get("minimum", "none")), f"{mode}.sandbox.minimum")
+        validate_decision(
+            str(sandbox.get("on_insufficient_baseline", "ask")),
+            f"{mode}.sandbox.on_insufficient_baseline",
+        )
         validate_decision(str(sandbox.get("on_uncommitted_changes", "ask")), f"{mode}.sandbox.on_uncommitted_changes")
     return merged
 
@@ -227,6 +239,10 @@ def sandbox_decision(mode_policy: dict[str, Any], sandbox_status: dict[str, Any]
     sandbox_policy = mode_policy.get("sandbox", {})
     required = str(sandbox_policy.get("minimum", "none"))
     actual = str(sandbox_status.get("baseline", "none"))
+    insufficient_decision = validate_decision(
+        str(sandbox_policy.get("on_insufficient_baseline", "ask")),
+        "sandbox.on_insufficient_baseline",
+    )
     validate_baseline(required, "sandbox.minimum")
     validate_baseline(actual, "sandbox_status.baseline")
 
@@ -235,13 +251,13 @@ def sandbox_decision(mode_policy: dict[str, Any], sandbox_status: dict[str, Any]
     hints: list[str] = []
 
     if BASELINE_RANK[actual] < BASELINE_RANK[required]:
-        decision = "ask"
-        matched.append({"type": "sandbox", "rule": "minimum", "decision": "ask"})
+        decision = insufficient_decision
+        matched.append({"type": "sandbox", "rule": "minimum", "decision": insufficient_decision})
         hints.append(f"Run {run_mode} from at least {required} isolation; current baseline is {actual}.")
 
     if sandbox_status.get("default_branch") is True and required != "none":
-        decision = stricter(decision, "ask")
-        matched.append({"type": "sandbox", "rule": "default_branch", "decision": "ask"})
+        decision = stricter(decision, insufficient_decision)
+        matched.append({"type": "sandbox", "rule": "default_branch", "decision": insufficient_decision})
         hints.append("Switch to a non-default branch before unattended side effects.")
 
     if sandbox_status.get("uncommitted_changes") is True:

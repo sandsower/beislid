@@ -109,7 +109,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `pi_handoff` — Pi-extension-only context handoff policy. Fields: `enabled` (bool, default true when the Beislið Pi extension is active), `events` (`all` or list of lifecycle/checkpoint event names, default `all`; default `all` excludes planning approval events unless explicitly listed), and `exclude` (list of event names to suppress). Repo workflow declares team intent; local Pi extension settings are the final override. Portable skills do not execute this key directly.
 
 **Action policy:**
-- `action_policy` — optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. When the `crust_seam` capability probes `ok`, orchestrators evaluate through `crust policy decide` first per `crust-seam-protocol.md`; this fenced block remains the same override input for both the crust and beislid evaluator paths.
+- `action_policy` - optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_insufficient_baseline` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. `on_insufficient_baseline` defaults to `ask` and may be set to `deny` for a fail-closed isolation boundary. When the `crust_seam` capability probes `ok`, orchestrators evaluate through `crust policy decide` first per `crust-seam-protocol.md`; this fenced block remains the same override input for both the crust and beislid evaluator paths.
 
 **Crust seam:**
 - `crust_seam` — optional config for the crust delegation seam (`crust-seam-protocol.md`). Fields: `mode` (`prefer` / `require` / `off`, default `prefer` when the block is absent), `binary` (default `crust`), `min_version` (optional dotted version string). `prefer` uses crust when its `binary` probe is `ok` and falls back to each seam's legacy path otherwise; `require` hard-stops when the probe fails instead of falling back; `off` never probes or calls crust.
@@ -384,6 +384,7 @@ modes:
   unattended-auto:
     sandbox:
       minimum: separate-worktree
+      on_insufficient_baseline: deny
       on_uncommitted_changes: deny
     rules:
       git-remote: deny
@@ -401,7 +402,7 @@ modes:
 Built-in defaults:
 
 - `supervised-auto`: `read` and `network-read` allow; `workspace-write`, `dependency-install`, `git-local`, `git-remote`, and `secret-bearing` ask; `destructive` denies; no sandbox baseline is required, but uncommitted changes ask.
-- `unattended-auto`: `read` and `network-read` allow; `workspace-write`, `dependency-install`, and `git-local` ask; `git-remote`, `destructive`, and `secret-bearing` deny; sandbox minimum is `non-default-branch`, and uncommitted changes ask.
+- `unattended-auto`: `read` and `network-read` allow; `workspace-write`, `dependency-install`, and `git-local` ask; `git-remote`, `destructive`, and `secret-bearing` deny; sandbox minimum is `non-default-branch`, insufficient baselines ask, and uncommitted changes ask.
 
 Evaluator input is explicit JSON/config from the calling orchestrator. The evaluator intentionally does not attempt full shell parsing. It uses a small known-action registry plus conservative secret-bearing heuristics for obvious tokens, environment variable names, and authorization headers. Optional `actions` entries are explicit project allow/ask/deny decisions for stable action ids such as `pr.review.reply`; they may relax `ask` and ordinary policy denies but are floored by the protected classes — a `destructive` or `secret-bearing` decision can never be downgraded per action, only by an explicit mode-wide class rule. Doctor validates policy overrides through the same evaluator contract (`beislid action-policy validate`) and records a concise effective-policy summary rather than probing an external dependency.
 
