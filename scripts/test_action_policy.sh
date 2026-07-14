@@ -187,6 +187,30 @@ test_separate_worktree_satisfies_non_default_branch_baseline() {
   assert_decision "$out" allow
 }
 
+test_insufficient_baseline_can_be_denied_by_override() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "sandbox": {
+        "minimum": "separate-worktree",
+        "on_insufficient_baseline": "deny"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action file.write --sandbox-baseline non-default-branch)"
+  assert_decision "$out" deny || return 1
+  assert_contains_json_text "$out" '"rule": "minimum"' || return 1
+  assert_contains_json_text "$out" '"decision": "deny"' || return 1
+
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action file.write --sandbox-baseline separate-worktree)"
+  assert_decision "$out" allow || return 1
+}
+
 test_uncommitted_changes_can_be_denied_by_override() {
   local override out
   override="$TMP/policy.json"
@@ -429,6 +453,31 @@ JSON
   grep -qF 'invalid decision' "$err" || { note_fail "expected invalid decision error"; return 1; }
 }
 
+test_validate_rejects_invalid_insufficient_baseline_decision() {
+  local override err
+  override="$TMP/policy.json"
+  err="$TMP/err.txt"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "sandbox": {
+        "on_insufficient_baseline": "sometimes"
+      }
+    }
+  }
+}
+JSON
+  if python3 "$POLICY" validate --policy-file "$override" >"$TMP/out.txt" 2>"$err"; then
+    note_fail "expected invalid insufficient-baseline decision to fail"
+    return 1
+  fi
+  grep -qF 'invalid decision for supervised-auto.sandbox.on_insufficient_baseline: sometimes' "$err" || {
+    note_fail "expected invalid insufficient-baseline decision error"
+    return 1
+  }
+}
+
 test_cli_dispatch() {
   local out
   out="$(BEISLID_HOME="$REPO_DIR" "$CLI" action-policy evaluate --mode supervised-auto --action git.push)"
@@ -464,6 +513,7 @@ run_test "PR label edit is git remote" test_pr_label_edit_is_known_git_remote
 run_test "policy override denies workspace write" test_policy_override_can_deny_workspace_write
 run_test "unattended requires non-default branch" test_unattended_requires_non_default_branch_by_default
 run_test "separate worktree satisfies baseline" test_separate_worktree_satisfies_non_default_branch_baseline
+run_test "insufficient baseline override can deny" test_insufficient_baseline_can_be_denied_by_override
 run_test "uncommitted changes override can deny" test_uncommitted_changes_can_be_denied_by_override
 run_test "secret heuristic adds class" test_secret_heuristic_adds_secret_bearing_class
 run_test "misspelled sandbox_status key is rejected" test_misspelled_sandbox_status_key_is_rejected
@@ -479,6 +529,7 @@ run_test "action override cannot allow inferred secret deny" test_action_overrid
 run_test "validate valid policy summary" test_validate_valid_policy_summary
 run_test "validate rejects malformed mode policy" test_validate_rejects_malformed_mode_policy
 run_test "validate rejects invalid policy" test_validate_rejects_invalid_policy
+run_test "validate rejects invalid insufficient-baseline decision" test_validate_rejects_invalid_insufficient_baseline_decision
 run_test "CLI dispatch" test_cli_dispatch
 run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
 

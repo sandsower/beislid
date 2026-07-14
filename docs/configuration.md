@@ -295,7 +295,7 @@ Default behavior:
 - `supervised-auto`: read/network-read actions allow; workspace writes, dependency installs, local/remote git, and secret-bearing actions ask; destructive actions deny.
 - `unattended-auto`: read/network-read actions allow; workspace writes, dependency installs, and local git ask; remote git, destructive, and secret-bearing actions deny.
 - Unknown or unclassified actions ask by default in both modes.
-- `unattended-auto` requires at least a `non-default-branch` sandbox baseline by default. Stricter baselines are `separate-worktree` and `host-sandbox`. Uncommitted changes ask unless project policy overrides that to deny or allow.
+- `unattended-auto` requires at least a `non-default-branch` sandbox baseline by default. Stricter baselines are `separate-worktree` and `host-sandbox`. Insufficient baselines ask by default; set `on_insufficient_baseline: deny` for a non-overridable isolation boundary. Uncommitted changes ask unless project policy overrides that to deny or allow.
 
 Override defaults in workflow config only where the project needs stricter or looser behavior:
 
@@ -307,6 +307,7 @@ modes:
   unattended-auto:
     sandbox:
       minimum: separate-worktree
+      on_insufficient_baseline: deny
       on_uncommitted_changes: deny
     rules:
       git-remote: deny
