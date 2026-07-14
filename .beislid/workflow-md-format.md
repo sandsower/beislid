@@ -408,6 +408,41 @@ Evaluator input is explicit JSON/config from the calling orchestrator. The evalu
 
 The policy decision envelope contains `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. Run summaries and ledger events should preserve that shape, plus a separate human outcome when an `ask` decision is accepted or declined.
 
+## Agent isolation shape
+
+`agent_isolation` declares desired workspace-placement strategy without claiming that a host supports it.
+An absent block preserves legacy behavior and does not activate native placement.
+
+````markdown
+## Agent isolation
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+```
+````
+
+`orchestrator` accepts `current`, `native`, or `manual`.
+`current` keeps the active task association, `native` requests a verified host transition, and `manual` requests a Beislið-provisioned workspace followed by the host-specific handoff.
+
+`delegate` accepts `native`, `manual`, or `sequential`.
+Native and manual delegate placement remain unavailable until the selected host adapter passes end-to-end conformance for path anchoring, exact SHA, clean state, handoff, integration, and cleanup.
+
+`manual_root` accepts `repo-sibling` or an absolute path.
+The runtime `BEISLID_WORKTREE_ROOT` environment variable may supply the manual root when workflow configuration omits it, and the portable default is `<repo-parent>/<repo-name>-worktrees`.
+Manual placements always allocate a fresh child path and branch and never adopt an existing one.
+
+`fallback.orchestrator` is `manual-transition-required` because an unresolved top-level host transition must return control to the user before mutation.
+`fallback.delegate` accepts `manual` or `sequential`, and `sequential` is required when the host cannot enforce the manual destination path or required runtime isolation.
+
+The normalized defaults for a present partial block are `current`, `sequential`, `repo-sibling`, and the fail-closed fallbacks above.
+Capability results use only `verified-native`, `verified-manual`, or `unavailable`; configuration values are requests, not capability evidence.
+Action authorization remains in `action_policy` and is not duplicated here.
+
 ## Crust seam shape
 
 `crust_seam` configures whether repo-aware orchestrators delegate deterministic decisions to the `crust` binary. All fields are optional; an absent block means `mode: prefer` with defaults.

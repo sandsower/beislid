@@ -18,6 +18,7 @@ DEFAULT_WORKFLOW = Path(".beislid/workflow.md")
 DEFAULT_FORMAT_DOC = Path(".beislid/workflow-md-format.md")
 
 TARGET_KEYS = {
+    "agent_isolation",
     "gates",
     "gate_sets",
     "lifecycle_actions",
@@ -33,6 +34,7 @@ TARGET_KEYS = {
 NORMALIZER_OWNED_KEYS = TARGET_KEYS
 DOC_FENCE_KEYS = {
     "action_policy",
+    "agent_isolation",
     "babysit",
     "branch_pattern",
     "domain_expert.agent",
@@ -64,6 +66,10 @@ ALLOWED_CLEAN_EVAL_MODES = {"off", "require"}
 ALLOWED_MODEL_MODES = {"prefer", "require"}
 ALLOWED_MODEL_TIERS = {"light", "standard", "heavy", "frontier"}
 ALLOWED_TIER_MODE = {"prefer", "require"}
+ALLOWED_ORCHESTRATOR_PLACEMENTS = {"current", "native", "manual"}
+ALLOWED_DELEGATE_PLACEMENTS = {"native", "manual", "sequential"}
+ALLOWED_ORCHESTRATOR_FALLBACKS = {"manual-transition-required"}
+ALLOWED_DELEGATE_FALLBACKS = {"manual", "sequential"}
 
 FENCE_OPEN_RE = re.compile(r"^```beislid:([^\s`]+)\s*$")
 SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -244,6 +250,34 @@ def _normalize_section(
     errors: list[Diagnostic],
 ) -> Any:
     path = f"sections.{key}"
+    if key == "agent_isolation":
+        defaults = {
+            "orchestrator": "current",
+            "delegate": "sequential",
+            "manual_root": "repo-sibling",
+            "fallback": {
+                "orchestrator": "manual-transition-required",
+                "delegate": "sequential",
+            },
+        }
+        if not isinstance(parsed, dict):
+            errors.append(Diagnostic("invalid_section_shape", path, "agent_isolation must be a mapping"))
+            return defaults
+        out = dict(parsed)
+        out.setdefault("orchestrator", defaults["orchestrator"])
+        out.setdefault("delegate", defaults["delegate"])
+        out.setdefault("manual_root", defaults["manual_root"])
+        fallback = out.setdefault("fallback", dict(defaults["fallback"]))
+        if not isinstance(fallback, dict):
+            errors.append(Diagnostic("invalid_section_shape", f"{path}.fallback", "fallback must be a mapping"))
+            out["fallback"] = dict(defaults["fallback"])
+        else:
+            fallback = dict(fallback)
+            fallback.setdefault("orchestrator", defaults["fallback"]["orchestrator"])
+            fallback.setdefault("delegate", defaults["fallback"]["delegate"])
+            out["fallback"] = fallback
+        return out
+
     if key in {"gates", "review_feedback_profiles"}:
         if parsed is None:
             return []
@@ -338,6 +372,54 @@ def _normalize_route(route: dict[str, Any], path: str, warnings: list[Diagnostic
 
 
 def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], errors: list[Diagnostic]) -> None:
+    isolation = sections.get("agent_isolation")
+    if isinstance(isolation, dict):
+        if isolation.get("orchestrator") not in ALLOWED_ORCHESTRATOR_PLACEMENTS:
+            errors.append(
+                Diagnostic(
+                    "invalid_value",
+                    "sections.agent_isolation.orchestrator",
+                    "orchestrator must be current, native, or manual",
+                )
+            )
+        if isolation.get("delegate") not in ALLOWED_DELEGATE_PLACEMENTS:
+            errors.append(
+                Diagnostic(
+                    "invalid_value",
+                    "sections.agent_isolation.delegate",
+                    "delegate must be native, manual, or sequential",
+                )
+            )
+        manual_root = isolation.get("manual_root")
+        if not isinstance(manual_root, str) or (
+            manual_root != "repo-sibling" and not Path(manual_root).expanduser().is_absolute()
+        ):
+            errors.append(
+                Diagnostic(
+                    "invalid_value",
+                    "sections.agent_isolation.manual_root",
+                    "manual_root must be repo-sibling or an absolute path",
+                )
+            )
+        fallback = isolation.get("fallback")
+        if isinstance(fallback, dict):
+            if fallback.get("orchestrator") not in ALLOWED_ORCHESTRATOR_FALLBACKS:
+                errors.append(
+                    Diagnostic(
+                        "invalid_value",
+                        "sections.agent_isolation.fallback.orchestrator",
+                        "orchestrator fallback must be manual-transition-required",
+                    )
+                )
+            if fallback.get("delegate") not in ALLOWED_DELEGATE_FALLBACKS:
+                errors.append(
+                    Diagnostic(
+                        "invalid_value",
+                        "sections.agent_isolation.fallback.delegate",
+                        "delegate fallback must be manual or sequential",
+                    )
+                )
+
     _validate_gates(sections.get("gates") or [], "sections.gates", warnings)
     gate_sets = sections.get("gate_sets") or {}
     if isinstance(gate_sets, dict):

@@ -112,6 +112,75 @@ class WorkflowNormalizerTests(unittest.TestCase):
         self.assertEqual(envelope["warnings"], [])
         self.assertEqual(envelope["errors"], [])
 
+    def test_agent_isolation_is_absent_and_disabled_for_legacy_workflows(self) -> None:
+        workflow = self.write_workflow(VALID_WORKFLOW)
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        self.assertNotIn("agent_isolation", envelope["sections"])
+
+    def test_agent_isolation_normalizes_explicit_opt_in_strategy(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        self.assertEqual(
+            envelope["sections"]["agent_isolation"],
+            {
+                "orchestrator": "native",
+                "delegate": "manual",
+                "manual_root": "repo-sibling",
+                "fallback": {
+                    "orchestrator": "manual-transition-required",
+                    "delegate": "sequential",
+                },
+            },
+        )
+
+    def test_agent_isolation_rejects_unsafe_or_unknown_strategy_values(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: automatic
+delegate: shared
+manual_root: relative/worktrees
+fallback:
+  orchestrator: sequential
+  delegate: manual-transition-required
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [error["path"] for error in envelope["errors"]],
+            [
+                "sections.agent_isolation.orchestrator",
+                "sections.agent_isolation.delegate",
+                "sections.agent_isolation.manual_root",
+                "sections.agent_isolation.fallback.orchestrator",
+                "sections.agent_isolation.fallback.delegate",
+            ],
+        )
+        self.assertTrue(all(error["code"] == "invalid_value" for error in envelope["errors"]))
+
     def test_d1_comments_and_inline_lists_follow_yaml_comment_rules(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->
