@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -13,12 +14,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HELPER = ROOT / "scripts" / "workspace_placement.py"
+LEDGER = ROOT / "scripts" / "run_ledger.py"
 
 
-def run(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    *args: str,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(args),
         cwd=cwd,
+        env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -39,6 +46,23 @@ class WorkspacePlacementTests(unittest.TestCase):
         self.git("add", "README.md")
         self.git("commit", "-q", "-m", "Initial fixture")
         self.sha = self.git("rev-parse", "HEAD").stdout.strip()
+        self.env = os.environ.copy()
+        self.env["BEISLID_STATE_DIR"] = str(Path(self.tmp.name) / "state")
+        initialized = run(
+            sys.executable,
+            str(LEDGER),
+            "init",
+            "--skill",
+            "implement",
+            "--flow",
+            "implement",
+            "--run-id",
+            "placement-test",
+            cwd=self.repo,
+            env=self.env,
+        )
+        self.assertEqual(initialized.returncode, 0, initialized.stderr)
+        self.run_id = json.loads(initialized.stdout)["run_id"]
 
     def git(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         result = run("git", *args, cwd=cwd or self.repo)
@@ -59,6 +83,12 @@ class WorkspacePlacementTests(unittest.TestCase):
             "repo-sibling",
             "--label",
             "worker",
+            "--run-id",
+            self.run_id,
+            "--flow",
+            "implement",
+            cwd=self.repo,
+            env=self.env,
         )
 
     def test_manual_create_proves_fresh_exact_sha_worktree_and_receipt(self) -> None:
@@ -84,6 +114,12 @@ class WorkspacePlacementTests(unittest.TestCase):
             self.assertEqual(receipt["workspace"]["cleanup_owner"], "beislid")
             self.assertEqual(receipt["workspace"]["created_by"], "beislid")
             self.assertTrue(receipt["workspace"]["clean"])
+            self.assertEqual(receipt["ledger"]["run_id"], self.run_id)
+            self.assertEqual(receipt["ledger"]["flow"], "implement")
+
+            receipt_path = Path(receipt["ledger"]["receipt_path"])
+            self.assertTrue(receipt_path.is_file())
+            self.assertEqual(json.loads(receipt_path.read_text(encoding="utf-8")), receipt)
 
             path = Path(receipt["workspace"]["path"])
             self.assertEqual(path.parent, expected_root)

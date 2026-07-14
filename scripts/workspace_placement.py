@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import run_ledger
+
 
 RECEIPT_KIND = "workspace-placement-receipt-v1"
 PLACEMENT_OPERATION = "place_mutating_delegate"
@@ -96,6 +98,17 @@ def require_source_preflight(repo: Path, expected_sha: str) -> str:
     return actual
 
 
+def require_run_ledger(repo: Path, run_id: str, flow: str) -> Path:
+    try:
+        run_dir = run_ledger.find_run_dir(run_id, repo, flow)
+    except SystemExit as exc:
+        raise PlacementError(f"automatic placement requires an initialized run ledger: {exc}") from exc
+    run = run_ledger.read_json(run_dir / "run.json")
+    if run.get("status") != "running":
+        raise PlacementError(f"automatic placement requires a running ledger; status is {run.get('status', 'unknown')}")
+    return run_dir
+
+
 def allocate_identity(repo: Path, root: Path, label: str) -> tuple[str, str, Path]:
     prefix = slug(label)
     for _ in range(MAX_ALLOCATION_ATTEMPTS):
@@ -116,6 +129,7 @@ def remove_failed_worktree(repo: Path, path: Path, branch: str) -> None:
 
 def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
     repo = git_root(Path(args.repo).expanduser().resolve())
+    run_dir = require_run_ledger(repo, args.run_id, args.flow)
     expected_sha = require_source_preflight(repo, args.expected_sha)
     root = resolve_manual_root(repo, args.manual_root)
     placement_id, branch, path = allocate_identity(repo, root, args.label)
@@ -146,7 +160,7 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
         remove_failed_worktree(repo, path, branch)
         raise
 
-    return {
+    receipt = {
         "kind": RECEIPT_KIND,
         "placement_id": placement_id,
         "operation": PLACEMENT_OPERATION,
@@ -165,6 +179,13 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
             "created_by": "beislid",
         },
     }
+    try:
+        _, stored_receipt = run_ledger.record_workspace_receipt(run_dir, receipt)
+    except SystemExit as exc:
+        raise PlacementError(
+            f"ledger receipt failed after creating retained workspace {path.resolve()}: {exc}"
+        ) from exc
+    return stored_receipt
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -175,6 +196,8 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--expected-sha", required=True, help="full commit SHA for the new worktree")
     create.add_argument("--manual-root", help="repo-sibling or an absolute worktree root")
     create.add_argument("--label", default="placement", help="human-readable placement label")
+    create.add_argument("--run-id", required=True, help="initialized external run-ledger id")
+    create.add_argument("--flow", required=True, help="run-ledger flow containing the placement receipt")
     return parser
 
 

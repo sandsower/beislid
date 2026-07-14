@@ -592,6 +592,60 @@ PY
 test_run_ledger_concurrency_suite() {
   (cd "$REPO_DIR" && python3 "$REPO_DIR/scripts/test_run_ledger_concurrency.py")
 }
+
+test_workspace_receipt_and_lifecycle_events() {
+  local state="$TMP/state" out run_id run_dir receipt_payload event_payload receipt_path duplicate_err
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill implement --flow implement --run-id workspace-ledger-test --branch feature/workspaces)"
+  run_id="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  run_dir="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['run_dir'])
+PY
+)"
+
+  receipt_payload="$TMP/receipt.json"
+  printf '%s\n' '{"kind":"workspace-placement-receipt-v1","placement_id":"worker-abc123","workspace":{"path":"/safe/worktree","cleanup_owner":"beislid"},"runtime":{"db_password":"do-not-store","binding_names":["primary"]}}' > "$receipt_payload"
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" workspace-receipt --run-id "$run_id" --flow implement --json-file "$receipt_payload")"
+  receipt_path="$(python3 - <<'PY' "$out"
+import json, sys
+print(json.loads(sys.argv[1])['receipt'])
+PY
+)"
+
+  [[ "$receipt_path" == "$run_dir/artifacts/workspaces/worker-abc123/receipt.json" ]] || { note_fail "unexpected receipt path: $receipt_path"; return 1; }
+  assert_file "$receipt_path"
+  assert_file "$run_dir/artifacts/workspaces/worker-abc123/events.jsonl"
+  assert_contains "$receipt_path" '"db_password": "[REDACTED]"'
+  assert_contains "$run_dir/events.jsonl" '"type": "workspace_receipt_recorded"'
+  assert_contains "$run_dir/run.json" '"worker-abc123"'
+  if grep -qF 'do-not-store' "$receipt_path" "$run_dir/events.jsonl" "$run_dir/transcript.md"; then
+    note_fail "workspace receipt secret should be redacted"
+    return 1
+  fi
+  if [[ -e "$state/workspaces" ]]; then
+    note_fail "workspace state must stay inside the existing run ledger"
+    return 1
+  fi
+
+  event_payload="$TMP/workspace-event.json"
+  printf '%s\n' '{"reason":"interrupted before integration","cleanup_disposition":"retain"}' > "$event_payload"
+  (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" workspace-event --run-id "$run_id" --flow implement --placement-id worker-abc123 --type retained --json-file "$event_payload" --summary 'retained for explicit recovery') >/dev/null
+  assert_contains "$run_dir/artifacts/workspaces/worker-abc123/events.jsonl" '"type": "retained"'
+  assert_contains "$run_dir/events.jsonl" '"type": "workspace_retained"'
+  assert_contains "$run_dir/run.json" '"last_event": "retained"'
+
+  duplicate_err="$TMP/duplicate-receipt.err"
+  if (cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" workspace-receipt --run-id "$run_id" --flow implement --json-file "$receipt_payload") >/dev/null 2>"$duplicate_err"; then
+    note_fail "duplicate placement receipt should fail closed"
+    return 1
+  fi
+  assert_contains "$duplicate_err" 'workspace receipt already exists'
+}
+
 run_test "init/event/checkpoint/finalize/resume" test_init_event_checkpoint_finalize_resume
 run_test "resume ignores completed without flag" test_resume_ignores_completed_without_flag
 run_test "rejects unsafe run id" test_rejects_unsafe_run_id
@@ -606,6 +660,7 @@ run_test "dashboard flow filter" test_dashboard_flow_filter
 run_test "dashboard empty" test_dashboard_empty
 run_test "dashboard with completed" test_dashboard_with_completed
 run_test "dashboard gate classification" test_dashboard_gate_classification
+run_test "workspace receipt and lifecycle events" test_workspace_receipt_and_lifecycle_events
 run_test "run-ledger concurrency suite" test_run_ledger_concurrency_suite
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

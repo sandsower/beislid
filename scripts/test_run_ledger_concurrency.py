@@ -226,10 +226,94 @@ def test_explicit_run_id_collision_errors() -> None:
             raise TestFailure(f"collision diagnostic should name the colliding directory; got: {combined!r}")
 
 
+def test_concurrent_workspace_receipts_are_unique_and_collision_safe() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        repo, env = setup_fixture(tmp)
+        init = init_run(repo, env)
+        run_id = init["run_id"]
+        run_dir = Path(init["run_dir"])
+        payloads: list[Path] = []
+        for index in range(20):
+            payload = tmp / f"receipt-{index}.json"
+            payload.write_text(
+                json.dumps(
+                    {
+                        "kind": "workspace-placement-receipt-v1",
+                        "placement_id": f"worker-{index}",
+                        "workspace": {"path": f"/worktrees/worker-{index}", "cleanup_owner": "beislid"},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            payloads.append(payload)
+
+        def record_receipt(payload: Path) -> subprocess.CompletedProcess[str]:
+            return run(
+                [
+                    "python3",
+                    str(LEDGER),
+                    "workspace-receipt",
+                    "--run-id",
+                    run_id,
+                    "--flow",
+                    "kickoff",
+                    "--json-file",
+                    str(payload),
+                ],
+                cwd=repo,
+                env=env,
+                check=False,
+            )
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = [future.result() for future in as_completed(executor.submit(record_receipt, path) for path in payloads)]
+        failures = [result for result in results if result.returncode != 0]
+        if failures:
+            first = failures[0]
+            raise TestFailure(f"workspace receipt failed: stdout={first.stdout!r} stderr={first.stderr!r}")
+
+        for index in range(20):
+            receipt = run_dir / "artifacts" / "workspaces" / f"worker-{index}" / "receipt.json"
+            if not receipt.is_file():
+                raise TestFailure(f"missing concurrent workspace receipt: {receipt}")
+
+        collision = tmp / "receipt-collision.json"
+        collision.write_text(
+            json.dumps(
+                {
+                    "kind": "workspace-placement-receipt-v1",
+                    "placement_id": "collision",
+                    "workspace": {"path": "/worktrees/collision", "cleanup_owner": "beislid"},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            collisions = [future.result() for future in as_completed(executor.submit(record_receipt, collision) for _ in range(10))]
+        successes = [result for result in collisions if result.returncode == 0]
+        if len(successes) != 1:
+            raise TestFailure(f"expected one collision winner, got {len(successes)}")
+        for result in collisions:
+            if result.returncode != 0 and "workspace receipt already exists" not in result.stderr:
+                raise TestFailure(f"unexpected collision error: {result.stderr!r}")
+
+        run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+        workspace_artifacts = [artifact for artifact in run_payload.get("artifacts", []) if artifact.get("kind") == "workspace"]
+        if len(workspace_artifacts) != 21 or len(run_payload.get("workspaces", {})) != 21:
+            raise TestFailure(
+                f"expected 21 indexed workspaces, got artifacts={len(workspace_artifacts)} "
+                f"workspaces={len(run_payload.get('workspaces', {}))}"
+            )
+
+
 def main() -> int:
     tests = [
         ("concurrent event appends", test_concurrent_event_appends),
         ("concurrent gate attempt dirs", test_concurrent_gate_attempt_dirs),
+        ("concurrent workspace receipts", test_concurrent_workspace_receipts_are_unique_and_collision_safe),
         ("explicit run-id collision", test_explicit_run_id_collision_errors),
     ]
     passed = 0

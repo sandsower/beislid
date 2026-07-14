@@ -40,6 +40,7 @@ SECRETISH_JSON_KEY = re.compile(
 VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+WORKSPACE_RECEIPT_KIND = "workspace-placement-receipt-v1"
 
 
 def now() -> str:
@@ -220,23 +221,134 @@ def load_payload(path: str | None) -> dict[str, Any]:
     return read_json(Path(path))
 
 
+def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(payload, sort_keys=True) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def _append_event_unlocked(
+    run_dir: Path,
+    event_type: str,
+    payload: dict[str, Any],
+    transcript_summary: str | None = None,
+) -> dict[str, Any]:
+    safe_payload = redact_json(payload)
+    event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
+    append_jsonl(run_dir / "events.jsonl", event)
+    if transcript_summary is None:
+        summary = json.dumps(safe_payload, sort_keys=True)[:2000]
+    else:
+        summary = redact_text(transcript_summary)
+    with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
+        f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
+        f.flush()
+        os.fsync(f.fileno())
+    run = read_json(run_dir / "run.json")
+    run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
+    run["updated_at"] = event["timestamp"]
+    write_json(run_dir / "run.json", run)
+    return event
+
+
 def append_event(run_dir: Path, event_type: str, payload: dict[str, Any], transcript_summary: str | None = None) -> dict[str, Any]:
     with run_lock(run_dir):
+        return _append_event_unlocked(run_dir, event_type, payload, transcript_summary)
+
+
+def validate_placement_id(value: str) -> str:
+    if not RUN_ID_SEGMENT.fullmatch(value) or value in {".", ".."}:
+        raise SystemExit("invalid placement id: use a single path-safe segment [A-Za-z0-9_.-]")
+    return value
+
+
+def workspace_dir(run_dir: Path, placement_id: str) -> Path:
+    return run_dir / "artifacts" / "workspaces" / validate_placement_id(placement_id)
+
+
+def record_workspace_receipt(run_dir: Path, receipt: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    if receipt.get("kind") != WORKSPACE_RECEIPT_KIND:
+        raise SystemExit(f"workspace receipt kind must be {WORKSPACE_RECEIPT_KIND}")
+    placement_id = validate_placement_id(str(receipt.get("placement_id") or ""))
+    placement_dir = workspace_dir(run_dir, placement_id)
+    receipt_path = placement_dir / "receipt.json"
+
+    with run_lock(run_dir):
+        run = read_json(run_dir / "run.json")
+        if run.get("status") != "running":
+            raise SystemExit(f"workspace receipts require a running ledger; status is {run.get('status', 'unknown')}")
+        if placement_dir.exists():
+            raise SystemExit(f"workspace receipt already exists: {receipt_path}")
+        placement_dir.mkdir(parents=True, exist_ok=False)
+
+        safe_receipt = redact_json(receipt)
+        safe_receipt["ledger"] = {
+            "run_id": run["run_id"],
+            "flow": run["flow"],
+            "receipt_path": str(receipt_path),
+        }
+        write_json(receipt_path, safe_receipt)
+        placement_events = placement_dir / "events.jsonl"
+        placed_event = {
+            "timestamp": now(),
+            "type": "placed",
+            "payload": {"receipt_path": str(receipt_path)},
+        }
+        append_jsonl(placement_events, placed_event)
+
+        artifact = {
+            "name": placement_id,
+            "path": str(receipt_path),
+            "kind": "workspace",
+        }
+        run.setdefault("artifacts", []).append(artifact)
+        run.setdefault("workspaces", {})[placement_id] = {
+            "receipt": str(receipt_path),
+            "events": str(placement_events),
+            "last_event": "placed",
+            "updated_at": placed_event["timestamp"],
+        }
+        write_json(run_dir / "run.json", run)
+        _append_event_unlocked(
+            run_dir,
+            "workspace_receipt_recorded",
+            {"placement_id": placement_id, "receipt": str(receipt_path)},
+            f"workspace {placement_id} receipt recorded",
+        )
+        return receipt_path, safe_receipt
+
+
+def record_workspace_event(
+    run_dir: Path,
+    placement_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+    summary: str | None = None,
+) -> Path:
+    placement_id = validate_placement_id(placement_id)
+    event_type = validate_placement_id(event_type)
+    placement_dir = workspace_dir(run_dir, placement_id)
+    receipt_path = placement_dir / "receipt.json"
+    events_path = placement_dir / "events.jsonl"
+    with run_lock(run_dir):
+        if not receipt_path.is_file():
+            raise SystemExit(f"workspace receipt not found: {receipt_path}")
         safe_payload = redact_json(payload)
         event = {"timestamp": now(), "type": event_type, "payload": safe_payload}
-        with (run_dir / "events.jsonl").open("a", encoding="utf-8") as f:
-            f.write(json.dumps(event, sort_keys=True) + "\n")
-        if transcript_summary is None:
-            summary = json.dumps(safe_payload, sort_keys=True)[:2000]
-        else:
-            summary = redact_text(transcript_summary)
-        with (run_dir / "transcript.md").open("a", encoding="utf-8") as f:
-            f.write(f"\n## {redact_text(event_type, 160)}\n- {summary}\n")
+        append_jsonl(events_path, event)
         run = read_json(run_dir / "run.json")
-        run.setdefault("events", {})["count"] = int(run.get("events", {}).get("count", 0)) + 1
-        run["updated_at"] = event["timestamp"]
+        workspace = run.setdefault("workspaces", {}).setdefault(placement_id, {})
+        workspace["last_event"] = event_type
+        workspace["updated_at"] = event["timestamp"]
         write_json(run_dir / "run.json", run)
-        return event
+        _append_event_unlocked(
+            run_dir,
+            f"workspace_{event_type}",
+            {"placement_id": placement_id, "event": safe_payload},
+            summary,
+        )
+    return events_path
 
 
 def checkpoint_payload(name: str, payload: dict[str, Any], resume_hint: str | None = None) -> dict[str, Any]:
@@ -355,6 +467,32 @@ def command_event(args: argparse.Namespace) -> int:
     payload = load_payload(args.json_file)
     append_event(rdir, args.type, payload, args.summary)
     print(json.dumps({"run_id": args.run_id, "event_type": args.type}, sort_keys=True))
+    return 0
+
+
+def command_workspace_receipt(args: argparse.Namespace) -> int:
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
+    receipt = load_payload(args.json_file)
+    receipt_path, _ = record_workspace_receipt(rdir, receipt)
+    print(json.dumps({"run_id": args.run_id, "receipt": str(receipt_path)}, sort_keys=True))
+    return 0
+
+
+def command_workspace_event(args: argparse.Namespace) -> int:
+    rdir = find_run_dir(args.run_id, repo_root(Path.cwd()), args.flow)
+    payload = load_payload(args.json_file)
+    events_path = record_workspace_event(rdir, args.placement_id, args.type, payload, args.summary)
+    print(
+        json.dumps(
+            {
+                "run_id": args.run_id,
+                "placement_id": args.placement_id,
+                "event_type": args.type,
+                "events": str(events_path),
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 
@@ -718,6 +856,21 @@ def build_parser() -> argparse.ArgumentParser:
     event_p.add_argument("--json-file")
     event_p.add_argument("--summary")
     event_p.set_defaults(func=command_event)
+
+    workspace_receipt_p = sub.add_parser("workspace-receipt")
+    workspace_receipt_p.add_argument("--run-id", required=True)
+    workspace_receipt_p.add_argument("--flow")
+    workspace_receipt_p.add_argument("--json-file", required=True)
+    workspace_receipt_p.set_defaults(func=command_workspace_receipt)
+
+    workspace_event_p = sub.add_parser("workspace-event")
+    workspace_event_p.add_argument("--run-id", required=True)
+    workspace_event_p.add_argument("--flow")
+    workspace_event_p.add_argument("--placement-id", required=True)
+    workspace_event_p.add_argument("--type", required=True)
+    workspace_event_p.add_argument("--json-file")
+    workspace_event_p.add_argument("--summary")
+    workspace_event_p.set_defaults(func=command_workspace_event)
 
     checkpoint_p = sub.add_parser("checkpoint")
     checkpoint_p.add_argument("--run-id", required=True)
