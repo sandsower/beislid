@@ -66,6 +66,30 @@ SECRETISH_TEXT = re.compile(
 SECRETISH_ENV = re.compile(r"(?i)\$\{?(TOKEN|SECRET|PASSWORD|API[_-]?KEY|AUTH|GITHUB_TOKEN)\}?")
 
 KNOWN_ACTIONS: dict[str, dict[str, Any]] = {
+    "agent.workspace.transition": {
+        "classes": ["workspace-write"],
+        "description": "Associate the orchestrator task with a verified workspace",
+    },
+    "agent.delegate.provision": {
+        "classes": ["workspace-write", "git-local"],
+        "description": "Provision an isolated mutating-delegate worktree",
+    },
+    "agent.delegate.commit": {
+        "classes": ["workspace-write", "git-local"],
+        "description": "Commit a mutating delegate handoff",
+    },
+    "agent.runtime.lease": {
+        "classes": ["workspace-write"],
+        "description": "Allocate an isolated runtime profile lease",
+    },
+    "agent.runtime.release": {
+        "classes": ["workspace-write"],
+        "description": "Release an isolated runtime profile lease",
+    },
+    "agent.workspace.cleanup": {
+        "classes": ["workspace-write", "git-local"],
+        "description": "Clean up a verified owned workspace",
+    },
     "file.read": {"classes": ["read"], "description": "Read a workspace file"},
     "file.write": {"classes": ["workspace-write"], "description": "Create or modify a workspace file"},
     "git.status": {"classes": ["read"], "description": "Inspect git status"},

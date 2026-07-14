@@ -503,6 +503,43 @@ test_cli_dispatch_requires_python3() {
   grep -qF 'error: beislid action-policy requires python3' "$err" || { note_fail "expected python3 guard error"; return 1; }
 }
 
+test_agent_isolation_actions_are_known_and_centrally_authorized() {
+  local action out override
+  for action in \
+    agent.workspace.transition \
+    agent.delegate.provision \
+    agent.delegate.commit \
+    agent.runtime.lease \
+    agent.runtime.release \
+    agent.workspace.cleanup; do
+    out="$(python3 "$POLICY" evaluate --mode unattended-auto --action "$action" --sandbox-baseline separate-worktree)"
+    assert_decision "$out" ask || return 1
+    [[ "$(json_get "$out" known_action)" == "True" ]] || { note_fail "$action should be known"; return 1; }
+    assert_contains_json_text "$out" '"workspace-write"' || return 1
+  done
+
+  out="$(python3 "$POLICY" evaluate --mode supervised-auto --action agent.delegate.provision --sandbox-baseline separate-worktree)"
+  assert_contains_json_text "$out" '"git-local"' || return 1
+  out="$(python3 "$POLICY" evaluate --mode supervised-auto --action agent.workspace.cleanup --sandbox-baseline separate-worktree)"
+  assert_contains_json_text "$out" '"git-local"' || return 1
+
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "unattended-auto": {
+      "actions": {
+        "agent.workspace.cleanup": "allow"
+      }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode unattended-auto --action agent.workspace.cleanup --sandbox-baseline separate-worktree)"
+  assert_decision "$out" allow || return 1
+  assert_contains_json_text "$out" '"type": "action"'
+}
+
 run_test "supervised read allows" test_supervised_read_allows
 run_test "git status is read-only" test_git_status_is_read_only
 run_test "strictest class wins" test_strictest_class_wins
@@ -532,6 +569,7 @@ run_test "validate rejects invalid policy" test_validate_rejects_invalid_policy
 run_test "validate rejects invalid insufficient-baseline decision" test_validate_rejects_invalid_insufficient_baseline_decision
 run_test "CLI dispatch" test_cli_dispatch
 run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
+run_test "agent isolation actions are centrally authorized" test_agent_isolation_actions_are_known_and_centrally_authorized
 
 if (( fail > 0 )); then
   echo "$fail action policy test(s) failed:" >&2
