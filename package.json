@@ -1,6 +1,6 @@
 {
   "name": "beislid",
-  "version": "0.4.15",
+  "version": "0.4.16",
   "private": true,
   "type": "module",
   "description": "Opinionated, agent-agnostic workflow skills. Hard gates, not suggestions.",
