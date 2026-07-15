@@ -950,6 +950,31 @@ PY
 }
 
 
+test_beislid_repo_dogfoods_nopal_seam() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected repo workflow and generated modules to dogfood the Nopal seam"
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+workflow = (root / '.beislid/workflow.md').read_text(encoding='utf-8')
+required_text = ['```beislid:nopal_seam', 'binary: nopal']
+missing_text = [needle for needle in required_text if needle not in workflow]
+required_files = [
+    '.beislid/nopal-seam-protocol.md',
+    '.nopal/nopal.jsonc',
+    '.nopal/gates.jsonc',
+    '.nopal/policy.jsonc',
+    '.nopal/workflow.jsonc',
+    '.nopal/integrations.jsonc',
+    '.nopal/review_policy.jsonc',
+]
+missing_files = [relative for relative in required_files if not (root / relative).is_file()]
+if missing_text or missing_files:
+    raise SystemExit(f'missing Nopal dogfood contract: text={missing_text}, files={missing_files}')
+PY
+}
+
+
 test_beislid_repo_workflow_uses_single_pre_pr_mirror() {
   python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" || note_fail "expected repo workflow.md to use the optimized pre-PR policy"
 from pathlib import Path
@@ -2276,6 +2301,7 @@ run_test "pi babysit preserves args and token budgets"        test_pi_babysit_to
 run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "repo workflow dogfoods Nopal seam"                  test_beislid_repo_dogfoods_nopal_seam
 run_test "repo workflow uses one complete pre-PR mirror"       test_beislid_repo_workflow_uses_single_pre_pr_mirror
 run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default

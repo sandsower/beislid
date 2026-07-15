@@ -18,7 +18,7 @@ CLI = ROOT / "bin" / "beislid"
 RESOURCE_NAMES = {
     "action-policy-protocol": ".beislid/action-policy-protocol.md",
     "artifact-templates": ".beislid/artifact-templates.md",
-    "crust-seam-protocol": ".beislid/crust-seam-protocol.md",
+    "nopal-seam-protocol": ".beislid/nopal-seam-protocol.md",
     "doctor-templates": ".beislid/doctor-templates.md",
     "envelope-templates": ".beislid/envelope-templates.md",
     "kickoff-templates": ".beislid/kickoff-templates.md",
@@ -83,7 +83,8 @@ class ResourceResolverTests(unittest.TestCase):
         self.assertEqual(result.stdout, str((ROOT / RESOURCE_NAMES["workflow-md-format"]).resolve()) + "\n")
 
     def test_unknown_and_path_like_names_are_usage_errors(self) -> None:
-        for name in ("unknown", "../workflow-md-format", ".beislid/workflow-md-format.md", "workflow.md", ""):
+        retired_name = "cr" + "ust-seam-protocol"
+        for name in (retired_name, "unknown", "../workflow-md-format", ".beislid/workflow-md-format.md", "workflow.md", ""):
             with self.subTest(name=name):
                 args = [sys.executable, str(RESOLVER), "--root", str(ROOT)]
                 if name:

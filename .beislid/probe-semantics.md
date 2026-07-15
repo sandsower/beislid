@@ -47,17 +47,21 @@ Known multi-command logical capabilities:
 
 ### binary
 
-Capability declares a standalone CLI binary plus an optional minimum version (e.g. `crust_seam.binary: crust`, `crust_seam.min_version: 0.1.0`). This differs from `cli` in that the target is a versioned tool the host doesn't otherwise depend on, not a command whose first word is enough.
+Capability declares a standalone CLI binary plus an optional minimum version (e.g. `nopal_seam.binary: nopal`, `nopal_seam.min_version: 0.1.0`). This differs from `cli` in that the target is a versioned tool the host doesn't otherwise depend on, not a command whose first word is enough.
 
-**Probe:** run `command -v <binary>` via Bash. On success, prefer the binary's machine-readable info envelope when the capability documents one (e.g. `crust info --json`); fall back to parsing the trailing dotted version triple from `<binary> --version`'s plain-text output only when no envelope is documented, or when the documented envelope call itself fails (older binary, unknown subcommand). Compare component-by-component against `min_version` when configured, using whichever technique actually resolved a version.
+**Probe:** run `command -v <binary>` via Bash.
+When the capability documents a machine-readable info envelope, that envelope is the only accepted probe contract.
+Only capabilities without a documented envelope may parse the trailing dotted version triple from `<binary> --version`.
+Compare component by component against `min_version` when configured.
 
 | Status | Condition |
 |---|---|
-| `ok` | Binary resolves and, when `min_version` is configured, the resolved version meets or exceeds it. `probe_supported: true`. A probe that had to fall back to the plain-text `--version` technique after a documented envelope call failed still records `ok`, but qualified as a legacy/degraded result rather than a plain `ok` - see the capability's own special case for the exact fallback trigger and value wording. |
+| `ok` | Binary resolves, its documented probe contract succeeds, and any configured `min_version` is met. `probe_supported: true`. |
 | `missing` | `command -v` fails. `probe_supported: true`. Reason: `"binary '<name>' not on PATH"`. |
-| `failed` | Neither technique produces a parseable version, or the resolved version is below `min_version`. `probe_supported: true`. Reason names what was found and what was required. |
+| `failed` | The documented probe contract is malformed, incomplete, wrong-kind, exits non-zero, or reports a version below `min_version`. `probe_supported: true`. Reason names what was found and what was required. |
 
-Known `binary` capability: `crust_seam.binary` (default `crust`). See the **crust_seam validation and probe** special case below for the paired config shape, the concrete envelope/fallback techniques, and the legacy-result value wording.
+Known `binary` capability: `nopal_seam.binary` (default `nopal`).
+See the **nopal_seam validation and probe** special case below for its exact envelope contract.
 
 ### path
 
@@ -134,21 +138,31 @@ This is explicit ready-for-review project policy, not a probe. Doctor records `f
 
 No command, tool, path, skill, or network probe is run for this capability. Missing `action_policy` means built-in defaults apply; doctor may mention defaults in prose but should not write a disabled cache entry for an absent block.
 
-### crust_seam validation and probe
+### nopal_seam validation and probe
 
-`beislid:crust_seam` is validated as shape, then its `binary` field drives a `binary` probe (above). Fields: `mode` (`prefer` | `require` | `off`, default `prefer` when the block is absent), `binary` (default `crust`), `min_version` (optional dotted version string). Unknown `mode` values or a non-string `min_version` are a config failure.
+`beislid:nopal_seam` is validated as shape, then its `binary` field drives a `binary` probe (above). Fields: `mode` (`prefer` | `require` | `off`, default `prefer` when the block is absent), `binary` (default `nopal`), `min_version` (optional dotted version string). Unknown `mode` values or a non-string `min_version` are a config failure.
 
-The `binary` probe's rich technique for `crust_seam` is `crust info --json`, parsing the `crust.info/v1` envelope for `version`, `commit`, and `capabilities[]`. Confirm `kind` is exactly `crust.info/v1`; an unexpected `kind` is a hard integration failure, not a probe miss, matching the crust-seam-protocol rule that a wrong response shape is never a graceful fallback trigger. Feature-detection is capability-membership (e.g. `"cockpit" in capabilities`), never a version-string heuristic. An older `crust` without the `info` subcommand exits non-zero (clap's unknown-subcommand exit code 2); on that failure, the probe falls back to `command -v crust` plus `crust --version`'s plain-text triple parse and records the result as `ok` with `probe_mode: legacy` - a successful but degraded probe, not `failed`. See `crust-seam-protocol.md` for the exact call/envelope contract.
+The exact probe for `nopal_seam` is `nopal info --json`.
+Require a complete `nopal.info/v1` envelope containing `ok: true`, a dotted-triple `version`, a nullable `commit`, and a string `capabilities[]` list.
+Feature detection is capability membership, never a version-string heuristic.
+A non-zero exit or malformed, incomplete, or wrong-kind envelope is `failed`; there is no retired-binary or `--version` compatibility probe.
+See `nopal-seam-protocol.md` for the call and fallback contract.
 
 | Status | Condition |
 |---|---|
-| `ok` | `mode: off`, or the `binary` probe resolves (and meets `min_version` when set) via either the rich `crust info --json` technique or the legacy `--version` fallback. `probe_supported: true`. |
+| `ok` | `mode: off`, or the exact `nopal.info/v1` probe resolves and meets `min_version` when set. `probe_supported: true`. |
 | `missing` | `mode: prefer` or `require` and the `binary` probe is `missing`/`failed`. `probe_supported: true`. Reason names the binary and, for `require`, that the seam is hard-required. |
-| `failed` | Malformed `mode`/`min_version` shape, or the binary resolves but neither the rich envelope nor the legacy fallback resolves a usable version. `probe_supported: true`. |
+| `failed` | Malformed config, or the binary resolves but the exact envelope contract is unusable. `probe_supported: true`. |
 
-`mode: off` records `status: ok` without running the `binary` probe — it is explicit project policy to never call crust, not a probe result. `mode: prefer` (or an absent block) with the binary missing is a graceful, non-blocking miss: every seam falls back to its documented legacy path per `crust-seam-protocol.md`, and doctor should mention the install story (`cargo build --release -p crust-cli` from the crust repo; no published release yet) rather than treating it as a failure. `mode: require` with the binary missing should be surfaced as a real gap: seams that would otherwise delegate to crust hard-stop instead of silently falling back.
+`mode: off` records `status: ok` without running the binary probe because it is explicit project policy to never call Nopal.
+`mode: prefer` treats a missing or failed probe as a graceful miss and uses each seam's documented Beislið fallback.
+Doctor should direct installation to the current `sandsower/nopal` GitHub Release and its `SHA256SUMS`.
+`mode: require` surfaces the same condition as a blocking gap.
 
-Doctor's `.crust/` freshness check re-runs `crust import beislid-workflow --source .beislid/workflow.md --json` in preview mode (no `--write`) and diffs its `outputs[].content` per module against the committed `.crust/*.jsonc` files. Report drift with a re-import remediation (`crust import beislid-workflow --write --overwrite --json`) rather than editing `.crust/` itself. This check only runs when the `crust_seam` probe is `ok`; skip it silently otherwise.
+Doctor's `.nopal/` freshness check runs `nopal import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --check --json`.
+This compares module semantics and reports `beislid_import_drift` without writing.
+Remediation is `nopal import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --write --overwrite --json` followed by review and `nopal validate --json`.
+Run this check only when the `nopal_seam` probe is `ok`.
 
 ### workflow_signals validation
 

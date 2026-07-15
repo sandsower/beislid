@@ -27,7 +27,7 @@ Sections are H2 headings (`##`) with topic-based names. Doctor and orchestrators
 - `Lifecycle hooks`
 - `Pi handoff`
 - `Action policy`
-- `Crust seam`
+- `Nopal seam`
 - `Translation sync`
 - `Browser compat`
 - `Domain capture`
@@ -109,10 +109,10 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `pi_handoff` — Pi-extension-only context handoff policy. Fields: `enabled` (bool, default true when the Beislið Pi extension is active), `events` (`all` or list of lifecycle/checkpoint event names, default `all`; default `all` excludes planning approval events unless explicitly listed), and `exclude` (list of event names to suppress). Repo workflow declares team intent; local Pi extension settings are the final override. Portable skills do not execute this key directly.
 
 **Action policy:**
-- `action_policy` - optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_insufficient_baseline` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. `on_insufficient_baseline` defaults to `ask` and may be set to `deny` for a fail-closed isolation boundary. When the `crust_seam` capability probes `ok`, orchestrators evaluate through `crust policy decide` first per `crust-seam-protocol.md`; this fenced block remains the same override input for both the crust and beislid evaluator paths.
+- `action_policy` - optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_insufficient_baseline` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. `on_insufficient_baseline` defaults to `ask` and may be set to `deny` for a fail-closed isolation boundary. When the `nopal_seam` capability probes `ok`, orchestrators evaluate through `nopal policy decide` first per `nopal-seam-protocol.md`; this fenced block remains the same override input for both the nopal and beislid evaluator paths.
 
-**Crust seam:**
-- `crust_seam` — optional config for the crust delegation seam (`crust-seam-protocol.md`). Fields: `mode` (`prefer` / `require` / `off`, default `prefer` when the block is absent), `binary` (default `crust`), `min_version` (optional dotted version string). `prefer` uses crust when its `binary` probe is `ok` and falls back to each seam's legacy path otherwise; `require` hard-stops when the probe fails instead of falling back; `off` never probes or calls crust.
+**Nopal seam:**
+- `nopal_seam` — optional config for the nopal delegation seam (`nopal-seam-protocol.md`). Fields: `mode` (`prefer` / `require` / `off`, default `prefer` when the block is absent), `binary` (default `nopal`), `min_version` (optional dotted version string). `prefer` uses nopal when its `binary` probe is `ok` and falls back to each seam's legacy path otherwise; `require` hard-stops when the probe fails instead of falling back; `off` never probes or calls nopal.
 
 **Visual surfaces:**
 - `visual_surfaces` — optional visual-surface routing config. Fields: `provider` (`lavish-axi` in v1), `mode` (`off | suggest | prompt | auto`, default `suggest`), optional `command` (string override for the provider command), optional `artifact_root` (repo-relative path, default `.lavish`), optional `artifact_retention` (`local | discard | preserve-repo`, default `local`), and optional `workflows` map for per-workflow mode overrides. Workflow override keys are Beislið workflow/skill names such as `spec`, `blueprint`, `poke-holes`, `show-me`, `review`, `ready-for-review`, `walk-the-diff`, and `handoff`; override values use the same mode enum. Proactive routing requires repo `visual_surfaces` config; user-level plugin enablement alone is not enough.
@@ -372,7 +372,7 @@ approval_gates:
 
 ## Action policy shape
 
-Action policy controls how repo-aware orchestrators decide whether side effects may proceed. The deterministic evaluator lives behind `beislid action-policy evaluate`, or `crust policy decide` first when the `crust_seam` capability probes ok (see `crust-seam-protocol.md`); workflow config supplies the same optional overrides to both paths. Actions may carry multiple classes, and the strictest applicable decision wins (`deny` > `ask` > `allow`). Unknown or unclassified actions default to `ask` in both built-in modes.
+Action policy controls how repo-aware orchestrators decide whether side effects may proceed. The deterministic evaluator lives behind `beislid action-policy evaluate`, or `nopal policy decide` first when the `nopal_seam` capability probes ok (see `nopal-seam-protocol.md`); workflow config supplies the same optional overrides to both paths. Actions may carry multiple classes, and the strictest applicable decision wins (`deny` > `ask` > `allow`). Unknown or unclassified actions default to `ask` in both built-in modes.
 
 Example override:
 
@@ -481,21 +481,27 @@ Binding values are stored with mode `0600` under the external Beislið secret st
 The ledger stores only profile name, lease ID, expiry, binding names, and keyed fingerprints.
 The portable delivery wrapper is `beislid workspace exec --placement-id <id> --profile <name> -- <command...>` with the active run ID, flow, and repository supplied by the orchestrator.
 
-## Crust seam shape
+## Nopal seam shape
 
-`crust_seam` configures whether repo-aware orchestrators delegate deterministic decisions to the `crust` binary. All fields are optional; an absent block means `mode: prefer` with defaults.
+`nopal_seam` configures whether repo-aware orchestrators delegate deterministic decisions to the `nopal` binary. All fields are optional; an absent block means `mode: prefer` with defaults.
 
 ````markdown
-## Crust seam
+## Nopal seam
 
-```beislid:crust_seam
+```beislid:nopal_seam
 mode: prefer
-binary: crust
+binary: nopal
 min_version: 0.1.0
 ```
 ````
 
-`mode: prefer` uses crust for a seam when its `binary` probe is `ok`, and silently falls back to that seam's legacy Python/prose path otherwise. `mode: require` hard-stops naming the install story when the probe fails, instead of falling back. `mode: off` disables the seam entirely; every decision uses its legacy path unconditionally. `binary` names the executable to probe (default `crust`). `min_version` is an optional minimum dotted version compared against the `version` field of the `crust.info/v1` envelope (`crust info --json`); an older crust without that subcommand falls back to `crust --version`'s plain-text output for the same comparison and records the probe as legacy/degraded. See `crust-seam-protocol.md` for the full call contract, token normalization table, and per-seam fallback ladder.
+`mode: prefer` uses Nopal when its exact `nopal.info/v1` probe is `ok`, and silently falls back to that seam's Beislið path otherwise.
+`mode: require` blocks when the probe fails.
+`mode: off` disables the seam entirely.
+`binary` names the executable to probe and defaults to `nopal`.
+`min_version` is an optional dotted minimum compared against the envelope's `version`.
+There is no retired-binary or `--version` compatibility probe.
+See `nopal-seam-protocol.md` for the full call contract, token normalization table, and fallback ladder.
 
 ## Gate object shape
 
@@ -572,7 +578,7 @@ Setup/pre commands are prerequisites, not proof. Code generation, dependency dow
 
 `gate_sets` is the preferred model when a project needs deterministic changed-file-aware checks. It is optional and takes precedence over legacy `scopes` / top-level `gates` when configured; if absent, orchestrators keep the old fallback behavior.
 
-When the `crust_seam` capability probes `ok`, `crust gates select --stage <stage> --changed-files <files> --json` computes this same selection and orchestrators run its `selected[]`/`skipped[]` result directly (see `crust-seam-protocol.md`). The selector algorithm documented below is then the specification of what that command computes, not a step orchestrators re-derive by hand; it remains the literal fallback algorithm when the seam is unavailable.
+When the `nopal_seam` capability probes `ok`, `nopal gates select --stage <stage> --changed-files <files> --json` computes this same selection and orchestrators run its `selected[]`/`skipped[]` result directly (see `nopal-seam-protocol.md`). The selector algorithm documented below is then the specification of what that command computes, not a step orchestrators re-derive by hand; it remains the literal fallback algorithm when the seam is unavailable.
 
 ````markdown
 ```beislid:gate_sets

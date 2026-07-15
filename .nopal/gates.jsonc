@@ -1,0 +1,19 @@
+{
+  "gates": [
+    {
+      "command": "git diff --check origin/main...HEAD",
+      "id": "diff-whitespace",
+      "mutates": false,
+      "parallel_safe": true,
+      "stage": "pre_pr"
+    },
+    {
+      "command": "bash scripts/validate.sh",
+      "id": "local-ci-mirror",
+      "mutates": false,
+      "parallel_safe": false,
+      "stage": "pre_pr"
+    }
+  ],
+  "version": "nopal.gates/v1"
+}

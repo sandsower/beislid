@@ -46,6 +46,7 @@ DOC_FENCE_KEYS = {
     "knowledge_store.path",
     "lifecycle_actions",
     "model_routing",
+    "nopal_seam",
     "pi_handoff",
     "pr_review_source",
     "pr_review_update",

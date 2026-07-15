@@ -27,7 +27,7 @@
       "type": "mcp"
     }
   },
-  "version": "crust.integrations/v1",
+  "version": "nopal.integrations/v1",
   "workflow_signals": {
     "mode": "auto",
     "sinks": [

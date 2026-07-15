@@ -12,7 +12,7 @@ from pathlib import Path
 RESOURCE_REGISTRY = {
     "action-policy-protocol": ".beislid/action-policy-protocol.md",
     "artifact-templates": ".beislid/artifact-templates.md",
-    "crust-seam-protocol": ".beislid/crust-seam-protocol.md",
+    "nopal-seam-protocol": ".beislid/nopal-seam-protocol.md",
     "doctor-templates": ".beislid/doctor-templates.md",
     "envelope-templates": ".beislid/envelope-templates.md",
     "kickoff-templates": ".beislid/kickoff-templates.md",

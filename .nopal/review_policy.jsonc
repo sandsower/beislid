@@ -1,0 +1,29 @@
+{
+  "risk": {
+    "high_risk_file_count": 12,
+    "high_risk_paths": [
+      "**/config/**",
+      "**/.github/workflows/**",
+      "bin/**",
+      "packaging/**",
+      "scripts/test_install.sh",
+      "scripts/install*.sh",
+      "skills/**/SKILL.md",
+      "tests/agent-smoke/**",
+      ".beislid/**"
+    ],
+    "high_risk_total_changes": 500,
+    "low_risk_file_count": 3,
+    "low_risk_paths": [
+      "docs/**",
+      "**/*.md",
+      "**/*.markdown",
+      "**/*.mdx",
+      "README*",
+      "CHANGELOG.md"
+    ],
+    "low_risk_total_changes": 120,
+    "max_auto_closeout_risk": "low"
+  },
+  "version": "nopal.review_policy/v1"
+}

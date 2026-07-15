@@ -16,9 +16,9 @@ import sys
 # across platforms and good enough to prevent context bloat regressions.
 BUDGETS = {
     # ready-for-review/SKILL.md, phase-1-detect.md, and phase-4-submit.md were
-    # bumped by 300 bytes each (BEI-137) to fit the crust-seam-protocol.md
+    # bumped by 300 bytes each (BEI-137) to fit the nopal-seam-protocol.md
     # delegation pointers (run-ledger init/finalize, gate selection) required
-    # by the crust seam design; they were at ~100% of their prior caps.
+    # by the nopal seam design; they were at ~100% of their prior caps.
     "skills/ready-for-review/SKILL.md": 10_300,
     "skills/ready-for-review/phase-1-detect.md": 5_300,
     "skills/ready-for-review/phase-2-gates.md": 7_000,
@@ -32,7 +32,7 @@ BUDGETS = {
     "skills/envelope/step-4-export.md": 4_000,
     "skills/envelope/step-5-revise.md": 4_000,
     "skills/envelope/afk-rubric.md": 4_000,
-    # kickoff/SKILL.md bumped by 400 bytes (BEI-137) for the crust-seam
+    # kickoff/SKILL.md bumped by 400 bytes (BEI-137) for the nopal-seam
     # run-ledger delegation pointer; it was at ~100% of its prior cap.
     "skills/kickoff/SKILL.md": 7_400,
     "skills/kickoff/step-1-ticket.md": 4_000,
@@ -60,7 +60,7 @@ BUDGETS = {
     "skills/review-response/SKILL.md": 7_000,
     "skills/review-response/phase-1-detect.md": 6_000,
     "skills/review-response/phase-2-fix.md": 5_000,
-    # phase-3-push.md bumped by 300 bytes (BEI-137) for the crust-seam gate
+    # phase-3-push.md bumped by 300 bytes (BEI-137) for the nopal-seam gate
     # selection delegation pointer; it was at ~100% of its prior cap.
     "skills/review-response/phase-3-push.md": 5_300,
     "skills/walk-the-diff/SKILL.md": 6_000,

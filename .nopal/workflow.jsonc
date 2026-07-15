@@ -38,5 +38,5 @@
       }
     }
   },
-  "version": "crust.workflow/v1"
+  "version": "nopal.workflow/v1"
 }

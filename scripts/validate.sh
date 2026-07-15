@@ -58,14 +58,14 @@ skills/review-response/output-templates.md
 skills/review-response/review-response-templates.md
 skills/review-response/action-policy-protocol.md
 skills/ready-for-review/action-policy-protocol.md
-skills/kickoff/crust-seam-protocol.md
-skills/envelope/crust-seam-protocol.md
-skills/ready-for-review/crust-seam-protocol.md
-skills/review-response/crust-seam-protocol.md
-skills/implement/crust-seam-protocol.md
-skills/babysit/crust-seam-protocol.md
-skills/retro/crust-seam-protocol.md
-skills/doctor/crust-seam-protocol.md'
+skills/kickoff/nopal-seam-protocol.md
+skills/envelope/nopal-seam-protocol.md
+skills/ready-for-review/nopal-seam-protocol.md
+skills/review-response/nopal-seam-protocol.md
+skills/implement/nopal-seam-protocol.md
+skills/babysit/nopal-seam-protocol.md
+skills/retro/nopal-seam-protocol.md
+skills/doctor/nopal-seam-protocol.md'
 
 missing_or_not_symlink=$(printf '%s\n' "$required" | while read -r path; do
   [ -L "$path" ] || echo "$path"
@@ -86,7 +86,7 @@ stray_regular=$(find skills \( -name 'probe-semantics.md' \
                       -o -name 'kickoff-templates.md' \
                       -o -name 'review-response-templates.md' \
                       -o -name 'action-policy-protocol.md' \
-                      -o -name 'crust-seam-protocol.md' \) \
+                      -o -name 'nopal-seam-protocol.md' \) \
           | xargs -I{} sh -c '[ -L "{}" ] || echo "{}"')
 if [ -n "$stray_regular" ]; then
   echo "Found per-skill aux files that should be symlinks but are regular files:"
@@ -105,7 +105,8 @@ python3 scripts/check_planning_lifecycle_consistency.py
 python3 scripts/check_run_ledger_skill_examples_consistency.py
 python3 scripts/check_visual_surfaces_consistency.py
 python3 scripts/check_workflow_signals_consistency.py
-python3 scripts/check_crust_seam_consistency.py
+python3 scripts/check_nopal_seam_consistency.py
+python3 scripts/test_nopal_identity.py
 
 # --- validate-exports ------------------------------------------------------
 banner "validate-exports: committed export bundles"
