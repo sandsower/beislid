@@ -83,7 +83,7 @@ Usage:
   beislid update [--force]
   beislid migrate v0.2 [--with-security-hooks] [--force]
   beislid run-ledger <init|event|workspace-receipt|workspace-event|checkpoint|gate|interrupt|finalize|resume|dashboard> [...]
-  beislid workspace <probe|create|preflight|lease|exec|reconcile|release|cleanup> [...]
+  beislid workspace <probe|create|preflight|validate-handoff|lease|exec|reconcile|release|cleanup> [...]
   beislid action-policy <evaluate|validate> [...]
   beislid visual-feedback normalize [...]
   beislid export validate <bundle-dir>

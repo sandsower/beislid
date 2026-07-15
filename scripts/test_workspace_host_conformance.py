@@ -30,6 +30,21 @@ def run(*args: str, cwd: Path | None = None, env: dict[str, str] | None = None) 
 
 
 class WorkspaceHostConformanceTests(unittest.TestCase):
+    @staticmethod
+    def complete_evidence(**overrides: object) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "kind": "host-placement-evidence-v1",
+            "placement_verified": True,
+            "sha_verified": True,
+            "preparation_verified": True,
+            "runtime_isolation_verified": True,
+            "handoff_verified": True,
+            "integration_verified": True,
+            "cleanup_verified": True,
+        }
+        evidence.update(overrides)
+        return evidence
+
     def probe(self, host: str, operation: str, evidence: dict[str, object]) -> dict[str, object]:
         with tempfile.TemporaryDirectory() as tmp_name:
             evidence_file = Path(tmp_name) / "evidence.json"
@@ -52,12 +67,11 @@ class WorkspaceHostConformanceTests(unittest.TestCase):
         result = self.probe(
             "codex",
             "orchestrator",
-            {
-                "kind": "host-placement-evidence-v1",
-                "native_conformance_passed": True,
-                "fork_resolved": False,
-                "destination_acknowledged": False,
-            },
+            self.complete_evidence(
+                native_conformance_passed=True,
+                fork_resolved=False,
+                destination_acknowledged=False,
+            ),
         )
 
         self.assertEqual(result["capability"], "unavailable")
@@ -68,12 +82,11 @@ class WorkspaceHostConformanceTests(unittest.TestCase):
         result = self.probe(
             "pi",
             "orchestrator",
-            {
-                "kind": "host-placement-evidence-v1",
-                "manual_conformance_passed": True,
-                "cwd_enforced": True,
-                "relaunch_acknowledged": False,
-            },
+            self.complete_evidence(
+                manual_conformance_passed=True,
+                cwd_enforced=True,
+                relaunch_acknowledged=False,
+            ),
         )
 
         self.assertEqual(result["capability"], "unavailable")
@@ -96,6 +109,19 @@ class WorkspaceHostConformanceTests(unittest.TestCase):
         result = self.probe(
             "claude",
             "delegate",
+            self.complete_evidence(
+                native_conformance_passed=True,
+                destination_acknowledged=True,
+            ),
+        )
+
+        self.assertEqual(result["capability"], "verified-native")
+        self.assertEqual(result["disposition"], "ready")
+
+    def test_partial_evidence_cannot_claim_verified_native(self) -> None:
+        result = self.probe(
+            "claude",
+            "delegate",
             {
                 "kind": "host-placement-evidence-v1",
                 "native_conformance_passed": True,
@@ -104,8 +130,9 @@ class WorkspaceHostConformanceTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(result["capability"], "verified-native")
-        self.assertEqual(result["disposition"], "ready")
+        self.assertEqual(result["capability"], "unavailable")
+        self.assertEqual(result["disposition"], "sequential")
+        self.assertEqual(result["reason_code"], "conformance_evidence_incomplete")
 
     def test_host_owned_cleanup_never_removes_the_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_name:

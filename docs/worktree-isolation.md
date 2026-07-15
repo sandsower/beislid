@@ -56,7 +56,7 @@ Stop before mutation when the destination cannot acknowledge its path, branch, S
 Automatic placement requires a running external Beislið run ledger.
 The receipt lives at `artifacts/workspaces/<placement_id>/receipt.json` inside that run and uses `workspace-placement-receipt-v1`.
 
-The receipt records repository and workspace identity, expected and actual SHA, capability, clean state, creator, and cleanup owner.
+The receipt records repository and workspace identity, expected and actual SHA, declared `scope.write` patterns, capability, clean state, creator, and cleanup owner.
 Placement lifecycle events record runtime leases, handoff validation, integration, retention, and cleanup.
 No second workspace state directory is created.
 
@@ -76,6 +76,7 @@ Run delegated commands through `beislid workspace exec` so binding delivery stay
 
 Mutating delegates return committed changes from a clean worktree, with base SHA, final commits, changed paths, verification evidence, and cleanup disposition.
 The orchestrator rejects scope drift, dirty state, missing or unreachable commits, unexpected bases, and absent evidence.
+It passes that envelope to `beislid workspace validate-handoff` before integration.
 
 Parallel delegates start from one frozen SHA and declare integration order before dispatch.
 The orchestrator cherry-picks handoffs serially and verifies after each integration.
@@ -89,6 +90,7 @@ Beislið removes only manual worktrees it created.
 Unknown ownership is user-owned and never removed automatically.
 
 Automatic Beislið cleanup requires clean handoff, successful integration and verification, commit reachability, runtime release, and an allowed `agent.workspace.cleanup` action.
+The orchestrator supplies those facts as `workspace-cleanup-evidence-v1` to `beislid workspace cleanup --evidence-file <file>`.
 Retain failed, conflicted, interrupted, dirty, unknown, or unintegrated placements.
 
 Doctor may report stale worktrees, expired leases, and orphan candidates from receipts and read-only Git state.

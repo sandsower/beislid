@@ -82,7 +82,14 @@ class WorkspacePlacementTests(unittest.TestCase):
             "repo-sibling",
             "--label",
             "worker",
+            "--write-scope",
+            "README.md",
         )
+
+    def write_json(self, name: str, payload: dict[str, object]) -> Path:
+        path = Path(self.tmp.name) / name
+        path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+        return path
 
     def helper(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         command = list(args)
@@ -180,6 +187,7 @@ elif action == "verify" and mode == "verify-fail":
             self.assertEqual(receipt["workspace"]["cleanup_owner"], "beislid")
             self.assertEqual(receipt["workspace"]["created_by"], "beislid")
             self.assertTrue(receipt["workspace"]["clean"])
+            self.assertEqual(receipt["scope"]["write"], ["README.md"])
             self.assertEqual(receipt["ledger"]["run_id"], self.run_id)
             self.assertEqual(receipt["ledger"]["flow"], "implement")
 
@@ -201,6 +209,28 @@ elif action == "verify" and mode == "verify-fail":
         self.assertEqual(rejected.returncode, 2)
         self.assertIn("expected SHA", rejected.stderr)
         self.assertEqual(sorted(expected_root.iterdir()), before)
+
+    def test_environment_manual_root_takes_precedence_and_rejects_ephemeral_storage(self) -> None:
+        env = dict(self.env)
+        env["BEISLID_WORKTREE_ROOT"] = "/tmp/beislid-unsafe-worktrees"
+
+        rejected = self.helper(
+            "create",
+            "--repo",
+            str(self.repo),
+            "--expected-sha",
+            self.sha,
+            "--manual-root",
+            "repo-sibling",
+            "--label",
+            "worker",
+            "--write-scope",
+            "README.md",
+            env=env,
+        )
+
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("temporary system directory", rejected.stderr)
 
     def test_runtime_profile_lease_exec_reconcile_and_idempotent_release(self) -> None:
         created = self.create(self.sha)
@@ -414,6 +444,129 @@ elif action == "verify" and mode == "verify-fail":
         run_dir = Path(json.loads(run_json.read_text(encoding="utf-8"))["paths"]["run_dir"])
         evidence = (run_dir / "artifacts" / "workspaces" / placement_id / "events.jsonl").read_text(encoding="utf-8")
         self.assertIn('"type": "preflight_failed"', evidence)
+
+    def test_handoff_requires_clean_commits_and_enforces_declared_write_scope(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        receipt = json.loads(created.stdout)
+        placement_id = receipt["placement_id"]
+        workspace = Path(receipt["workspace"]["path"])
+        (workspace / "README.md").write_text("implemented\n", encoding="utf-8")
+        self.git("add", "README.md", cwd=workspace)
+        self.git("commit", "-q", "-m", "Implement scoped change", cwd=workspace)
+        scoped_commit = self.git("rev-parse", "HEAD", cwd=workspace).stdout.strip()
+        handoff = self.write_json(
+            "handoff.json",
+            {
+                "kind": "workspace-handoff-v1",
+                "expected_base_sha": self.sha,
+                "final_commits": [scoped_commit],
+                "changed_paths": ["README.md"],
+                "verification": ["fixture verification passed"],
+                "cleanup_disposition": "beislid-after-integration",
+            },
+        )
+
+        validated = self.helper(
+            "validate-handoff",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--handoff-file",
+            str(handoff),
+        )
+        self.assertEqual(validated.returncode, 0, validated.stderr)
+        self.assertEqual(json.loads(validated.stdout)["final_head"], scoped_commit)
+
+        (workspace / "OUTSIDE.txt").write_text("escaped\n", encoding="utf-8")
+        self.git("add", "OUTSIDE.txt", cwd=workspace)
+        self.git("commit", "-q", "-m", "Escape scope", cwd=workspace)
+        escaped_commit = self.git("rev-parse", "HEAD", cwd=workspace).stdout.strip()
+        escaped_handoff = self.write_json(
+            "escaped-handoff.json",
+            {
+                "kind": "workspace-handoff-v1",
+                "expected_base_sha": self.sha,
+                "final_commits": [scoped_commit, escaped_commit],
+                "changed_paths": ["OUTSIDE.txt", "README.md"],
+                "verification": ["fixture verification passed"],
+                "cleanup_disposition": "beislid-after-integration",
+            },
+        )
+
+        rejected = self.helper(
+            "validate-handoff",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--handoff-file",
+            str(escaped_handoff),
+        )
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("outside the declared write scope", rejected.stderr)
+
+    def test_beislid_cleanup_requires_integration_evidence_then_removes_worktree(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        receipt = json.loads(created.stdout)
+        placement_id = receipt["placement_id"]
+        branch = receipt["workspace"]["branch"]
+        workspace = Path(receipt["workspace"]["path"])
+        (workspace / "README.md").write_text("integrated\n", encoding="utf-8")
+        self.git("add", "README.md", cwd=workspace)
+        self.git("commit", "-q", "-m", "Implement integrated change", cwd=workspace)
+        delegate_commit = self.git("rev-parse", "HEAD", cwd=workspace).stdout.strip()
+        evidence = self.write_json(
+            "cleanup.json",
+            {
+                "kind": "workspace-cleanup-evidence-v1",
+                "integrated_commits": [delegate_commit],
+                "verification": ["handoff validation passed"],
+                "runtime_profiles_released": True,
+                "action_policy": {
+                    "decision": "allow",
+                    "mode": "supervised-auto",
+                    "action": "agent.workspace.cleanup",
+                    "classes": ["workspace-write", "git-local"],
+                    "matched_rules": [],
+                    "sandbox_status": {"baseline": "separate-worktree"},
+                    "requires_human": False,
+                    "log_level": "info",
+                    "reason": "fixture policy allows owned cleanup",
+                    "remediation": [],
+                },
+            },
+        )
+
+        retained = self.helper(
+            "cleanup",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--evidence-file",
+            str(evidence),
+        )
+        self.assertEqual(retained.returncode, 2)
+        self.assertIn("not reachable from the integration branch", retained.stderr)
+        self.assertTrue(workspace.is_dir())
+
+        self.git("merge", "--no-ff", "-q", "-m", "Integrate delegate", branch)
+        cleaned = self.helper(
+            "cleanup",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--evidence-file",
+            str(evidence),
+        )
+        self.assertEqual(cleaned.returncode, 0, cleaned.stderr)
+        self.assertEqual(json.loads(cleaned.stdout)["disposition"], "cleaned")
+        self.assertFalse(workspace.exists())
+        self.assertNotIn(branch, self.git("branch", "--format=%(refname:short)").stdout.splitlines())
 
 
 if __name__ == "__main__":

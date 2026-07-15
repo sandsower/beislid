@@ -41,7 +41,7 @@ Before mutation, require all of the following:
 Never adopt or reuse an existing path or branch automatically.
 Never keep sole progress under an ephemeral root.
 
-Use `beislid workspace create` for manual placement, `preflight` for preparation, and `exec` for runtime delivery inside the recorded worktree.
+Use `beislid workspace create --write-scope <pattern>` for manual placement, `preflight` for preparation, and `exec` for runtime delivery inside the recorded worktree.
 
 ## Receipt and handoff
 
@@ -51,7 +51,7 @@ Runtime events record profile, lease ID, expiry, binding names, and keyed finger
 
 A mutating delegate returns the base SHA, commit list, clean status, changed paths, verification evidence, worktree path, and cleanup disposition.
 
-Validate the handoff before integration.
+Validate the handoff with `beislid workspace validate-handoff` before integration.
 Reject wrong bases, scope drift, missing or unreachable commits, dirty state, or absent evidence.
 
 ## Integration
@@ -69,5 +69,5 @@ Release is idempotent and reconciliation may reclaim only confirmed owned resour
 
 `cleanup_owner` is `host`, `beislid`, or `user`.
 Use the host lifecycle for host-owned worktrees.
-Beislið removes only its manual worktrees after integration, verification, reachability, clean handoff, lease release, and authorization pass.
+`beislid workspace cleanup --evidence-file <file>` removes only Beislið manual worktrees after integration, verification, reachability, clean handoff, lease release, and authorization pass.
 Retain failed, conflicted, interrupted, unknown, dirty, or unintegrated placements for explicit recovery.

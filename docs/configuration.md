@@ -368,7 +368,7 @@ runtime_profiles:
 These are requested strategies, while adapters report only end-to-end verified capability states: `verified-native`, `verified-manual`, or `unavailable`.
 
 The portable manual root is `repo-sibling`, which resolves to `<repo-parent>/<repo-name>-worktrees`.
-An absolute durable path may be configured instead, and `BEISLID_WORKTREE_ROOT` may provide the root when the workflow omits it.
+`BEISLID_WORKTREE_ROOT` takes precedence when set by the runtime, then an absolute durable workflow path may override the portable default.
 Every placement receives a fresh unique child path and branch.
 
 Orchestrator fallback is `manual-transition-required` because a host task that cannot acknowledge its destination must return control before mutation.
@@ -415,6 +415,7 @@ Automatic placement and runtime leasing require a running external run ledger.
 Missing ledger state, missing bindings, verification failure, or failed path anchoring stops dispatch and follows the configured manual or sequential fallback.
 
 Placement receipts use `cleanup_owner: host`, `beislid`, or `user`.
+Manual placement also records each `--write-scope` pattern as `scope.write`, and `workspace validate-handoff` checks the committed diff against it.
 Host-owned worktrees use the host lifecycle, Beislið removes only fresh manual worktrees it created, and unknown ownership is never cleaned automatically.
 Cleanup waits for integration, verification, commit reachability, clean handoff, runtime release, and action-policy authorization.
 

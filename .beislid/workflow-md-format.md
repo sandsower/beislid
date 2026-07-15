@@ -448,7 +448,7 @@ runtime_profiles:
 Native and manual delegate placement remain unavailable until the selected host adapter passes end-to-end conformance for path anchoring, exact SHA, clean state, handoff, integration, and cleanup.
 
 `manual_root` accepts `repo-sibling` or an absolute path.
-The runtime `BEISLID_WORKTREE_ROOT` environment variable may supply the manual root when workflow configuration omits it, and the portable default is `<repo-parent>/<repo-name>-worktrees`.
+The runtime `BEISLID_WORKTREE_ROOT` environment variable takes precedence when set, then workflow configuration applies, and the portable default is `<repo-parent>/<repo-name>-worktrees`.
 Manual placements always allocate a fresh child path and branch and never adopt an existing one.
 
 `fallback.orchestrator` is `manual-transition-required` because an unresolved top-level host transition must return control to the user before mutation.

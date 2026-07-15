@@ -14,7 +14,7 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import run_ledger
@@ -27,6 +27,15 @@ MAX_ALLOCATION_ATTEMPTS = 20
 RUNTIME_PROFILE_KIND = "runtime-profile-v1"
 RUNTIME_LEASE_KIND = "runtime-lease-v1"
 BINDING_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+CONFORMANCE_PROOFS = (
+    "placement_verified",
+    "sha_verified",
+    "preparation_verified",
+    "runtime_isolation_verified",
+    "handoff_verified",
+    "integration_verified",
+    "cleanup_verified",
+)
 
 
 class PlacementError(Exception):
@@ -69,7 +78,7 @@ def slug(value: str) -> str:
 
 
 def resolve_manual_root(repo: Path, configured: str | None) -> Path:
-    value = configured or os.environ.get("BEISLID_WORKTREE_ROOT") or "repo-sibling"
+    value = os.environ.get("BEISLID_WORKTREE_ROOT") or configured or "repo-sibling"
     if value == "repo-sibling":
         root = repo.parent / f"{repo.name}-worktrees"
     else:
@@ -79,9 +88,68 @@ def resolve_manual_root(repo: Path, configured: str | None) -> Path:
         root = expanded
 
     root = root.resolve()
+    if value != "repo-sibling":
+        ephemeral_roots = {
+            Path("/tmp").resolve(),
+            Path("/private/tmp").resolve(),
+            Path("/var/tmp").resolve(),
+            Path("/private/var/folders").resolve(),
+        }
+        if any(root == ephemeral or ephemeral in root.parents for ephemeral in ephemeral_roots):
+            raise PlacementError("manual root must be durable and cannot use a temporary system directory")
     if root == repo or repo in root.parents:
         raise PlacementError("manual root must be outside the source repository")
     return root
+
+
+def validate_write_scopes(values: list[str]) -> list[str]:
+    if not values:
+        raise PlacementError("at least one declared write scope is required")
+    scopes: list[str] = []
+    for value in values:
+        normalized = value.replace("\\", "/").strip()
+        parts = PurePosixPath(normalized).parts
+        if not normalized or normalized.startswith("/") or ".." in parts:
+            raise PlacementError(f"write scope must be a repository-relative path pattern: {value}")
+        if normalized == ".git" or normalized.startswith(".git/"):
+            raise PlacementError("write scope cannot authorize Git metadata")
+        if normalized not in scopes:
+            scopes.append(normalized)
+    return scopes
+
+
+def scope_regex(pattern: str) -> re.Pattern[str]:
+    chunks: list[str] = ["^"]
+    index = 0
+    while index < len(pattern):
+        character = pattern[index]
+        if character == "*":
+            if index + 1 < len(pattern) and pattern[index + 1] == "*":
+                chunks.append(".*")
+                index += 2
+                continue
+            chunks.append("[^/]*")
+        elif character == "?":
+            chunks.append("[^/]")
+        else:
+            chunks.append(re.escape(character))
+        index += 1
+    chunks.append("$")
+    return re.compile("".join(chunks))
+
+
+def path_in_scope(path: str, scopes: list[str]) -> bool:
+    return any(scope_regex(pattern).fullmatch(path) for pattern in scopes)
+
+
+def read_evidence(path_value: str, expected_kind: str, label: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(Path(path_value).expanduser().resolve().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PlacementError(f"{label} is unreadable: {exc}") from exc
+    if not isinstance(payload, dict) or payload.get("kind") != expected_kind:
+        raise PlacementError(f"{label} kind must be {expected_kind}")
+    return payload
 
 
 def require_source_preflight(repo: Path, expected_sha: str) -> str:
@@ -573,19 +641,20 @@ def command_preflight(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def command_probe(args: argparse.Namespace) -> dict[str, Any]:
-    try:
-        evidence = json.loads(Path(args.evidence_file).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise PlacementError(f"host placement evidence is unreadable: {exc}") from exc
-    if not isinstance(evidence, dict) or evidence.get("kind") != "host-placement-evidence-v1":
-        raise PlacementError("host placement evidence kind must be host-placement-evidence-v1")
+    evidence = read_evidence(
+        args.evidence_file,
+        "host-placement-evidence-v1",
+        "host placement evidence",
+    )
 
     adapter = args.host if args.host in {"codex", "claude", "pi"} else "generic"
-    native = evidence.get("native_conformance_passed") is True
-    manual = evidence.get("manual_conformance_passed") is True
+    complete = all(evidence.get(proof) is True for proof in CONFORMANCE_PROOFS)
+    native_claim = evidence.get("native_conformance_passed") is True
+    manual_claim = evidence.get("manual_conformance_passed") is True
+    native = native_claim and complete
+    manual = manual_claim and complete
     acknowledged = evidence.get("destination_acknowledged") is True
     cwd_enforced = evidence.get("cwd_enforced") is True
-    runtime = evidence.get("runtime_isolation_verified") is True
     capability = "unavailable"
     disposition = "manual-transition-required" if args.operation == "orchestrator" else "sequential"
     reason_code = "manual_path_unverified"
@@ -602,10 +671,18 @@ def command_probe(args: argparse.Namespace) -> dict[str, Any]:
             capability, disposition, reason_code = "verified-manual", "ready", "manual_conformance_verified"
         else:
             reason_code = "pi_relaunch_required"
-    elif adapter == "claude" and native and acknowledged and (args.operation == "orchestrator" or runtime):
+    elif adapter == "claude" and native and acknowledged:
         capability, disposition, reason_code = "verified-native", "ready", "native_conformance_verified"
-    elif manual and cwd_enforced and acknowledged and (args.operation == "orchestrator" or runtime):
+    elif manual and cwd_enforced and acknowledged:
         capability, disposition, reason_code = "verified-manual", "ready", "manual_conformance_verified"
+
+    if (
+        capability == "unavailable"
+        and reason_code == "manual_path_unverified"
+        and (native_claim or manual_claim)
+        and not complete
+    ):
+        reason_code = "conformance_evidence_incomplete"
 
     return {
         "kind": "host-placement-probe-v1",
@@ -616,6 +693,125 @@ def command_probe(args: argparse.Namespace) -> dict[str, Any]:
         "disposition": disposition,
         "reason_code": reason_code,
     }
+
+
+def require_string_list(
+    payload: dict[str, Any],
+    key: str,
+    label: str,
+    *,
+    allow_empty: bool = False,
+) -> list[str]:
+    values = payload.get(key)
+    if not isinstance(values, list) or any(not isinstance(value, str) or not value for value in values):
+        raise PlacementError(f"{label} must be a list of non-empty strings")
+    if not allow_empty and not values:
+        raise PlacementError(f"{label} must not be empty")
+    if len(values) != len(set(values)):
+        raise PlacementError(f"{label} must not contain duplicates")
+    return values
+
+
+def command_validate_handoff(args: argparse.Namespace) -> dict[str, Any]:
+    repo = git_root(Path(args.repo).expanduser().resolve())
+    run_dir = require_run_ledger(repo, args.run_id, args.flow)
+    placement_dir = require_placement(run_dir, args.placement_id)
+    receipt = run_ledger.read_json(placement_dir / "receipt.json")
+    workspace = placement_workspace(run_dir, args.placement_id)
+    handoff = read_evidence(args.handoff_file, "workspace-handoff-v1", "workspace handoff")
+
+    repository = receipt.get("repository")
+    scope = receipt.get("scope")
+    if not isinstance(repository, dict) or not isinstance(scope, dict):
+        raise PlacementError("workspace receipt lacks repository or write-scope evidence")
+    expected_base = repository.get("expected_sha")
+    if handoff.get("expected_base_sha") != expected_base:
+        raise PlacementError("handoff expected base SHA does not match the placement receipt")
+    scopes = scope.get("write")
+    if not isinstance(scopes, list) or any(not isinstance(scope, str) for scope in scopes):
+        raise PlacementError("workspace receipt lacks a valid declared write scope")
+
+    status = require_git(workspace, "status", "--porcelain", context="handoff clean-state check failed")
+    if status:
+        raise PlacementError("handoff workspace must be clean, including untracked files")
+    final_head = require_git(workspace, "rev-parse", "HEAD", context="handoff HEAD check failed")
+    if run_git(workspace, "merge-base", "--is-ancestor", str(expected_base), final_head).returncode != 0:
+        raise PlacementError("handoff expected base is not an ancestor of final HEAD")
+    final_commits = require_string_list(handoff, "final_commits", "handoff final_commits")
+    for commit in final_commits:
+        resolved = require_git(
+            workspace,
+            "rev-parse",
+            "--verify",
+            f"{commit}^{{commit}}",
+            context=f"handoff commit does not exist: {commit}",
+        )
+        if resolved != commit:
+            raise PlacementError(f"handoff commit must be a full canonical SHA: {commit}")
+        if run_git(workspace, "merge-base", "--is-ancestor", commit, final_head).returncode != 0:
+            raise PlacementError(f"handoff commit is not reachable from final HEAD: {commit}")
+    if final_commits[-1] != final_head:
+        raise PlacementError("handoff final commit does not match workspace HEAD")
+
+    actual_commits_output = require_git(
+        workspace,
+        "rev-list",
+        "--reverse",
+        f"{expected_base}..{final_head}",
+        context="handoff commit range check failed",
+    )
+    actual_commits = actual_commits_output.splitlines() if actual_commits_output else []
+    if final_commits != actual_commits:
+        raise PlacementError("handoff final_commits must exactly describe the placement commit range")
+
+    changed_output = require_git(
+        workspace,
+        "diff",
+        "--no-renames",
+        "--name-only",
+        "--diff-filter=ACDMRTUXB",
+        f"{expected_base}..{final_head}",
+        context="handoff changed-path check failed",
+    )
+    actual_paths = sorted(changed_output.splitlines()) if changed_output else []
+    reported_paths = sorted(require_string_list(handoff, "changed_paths", "handoff changed_paths"))
+    if reported_paths != actual_paths:
+        raise PlacementError("handoff changed_paths must exactly match the committed diff")
+    escaped = [path for path in actual_paths if not path_in_scope(path, scopes)]
+    if escaped:
+        raise PlacementError(f"handoff contains paths outside the declared write scope: {', '.join(escaped)}")
+
+    require_string_list(handoff, "verification", "handoff verification")
+    cleanup_disposition = handoff.get("cleanup_disposition")
+    if cleanup_disposition != "beislid-after-integration":
+        raise PlacementError("manual handoff cleanup_disposition must be beislid-after-integration")
+    result = {
+        "placement_id": args.placement_id,
+        "expected_base_sha": expected_base,
+        "final_head": final_head,
+        "final_commits": final_commits,
+        "changed_paths": actual_paths,
+        "write_scope": scopes,
+        "cleanup_disposition": cleanup_disposition,
+    }
+    record_runtime_event(run_dir, args.placement_id, "handoff_validated", result)
+    return result
+
+
+def runtime_leases_released(run_dir: Path, placement_id: str) -> bool:
+    run = run_ledger.read_json(run_dir / "run.json")
+    workspace_runtime_root = (
+        run_ledger.state_dir()
+        / "secrets"
+        / run["repo_hash"]
+        / run["run_id"]
+        / "workspaces"
+        / placement_id
+    )
+    if not workspace_runtime_root.is_dir():
+        return True
+    leases = list(workspace_runtime_root.glob("*/lease.json"))
+    return all(run_ledger.read_json(lease).get("status") == "released" for lease in leases)
 
 
 def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
@@ -633,8 +829,102 @@ def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
         payload = {"cleanup_owner": "user", "disposition": "user-cleanup-required"}
         record_runtime_event(run_dir, args.placement_id, "cleanup_deferred", payload)
         return payload
-    payload = {"cleanup_owner": "beislid", "disposition": "retained", "reason": "cleanup-evidence-required"}
-    record_runtime_event(run_dir, args.placement_id, "cleanup_retained", payload)
+
+    if not args.evidence_file:
+        raise PlacementError("Beislid-owned cleanup requires an evidence file")
+    evidence = read_evidence(
+        args.evidence_file,
+        "workspace-cleanup-evidence-v1",
+        "workspace cleanup evidence",
+    )
+    policy = evidence.get("action_policy")
+    policy_fields = {
+        "decision",
+        "mode",
+        "action",
+        "classes",
+        "matched_rules",
+        "sandbox_status",
+        "requires_human",
+        "log_level",
+        "reason",
+        "remediation",
+    }
+    if not isinstance(policy, dict) or not policy_fields.issubset(policy):
+        raise PlacementError("cleanup evidence requires a complete action-policy envelope")
+    if policy.get("action") != "agent.workspace.cleanup":
+        raise PlacementError("cleanup action-policy envelope is for the wrong action")
+    if policy.get("decision") != "allow" or policy.get("requires_human") is not False:
+        raise PlacementError("cleanup action policy did not allow deletion")
+    require_string_list(evidence, "verification", "cleanup verification")
+    if evidence.get("runtime_profiles_released") is not True:
+        raise PlacementError("cleanup evidence must confirm runtime profile release")
+    if not runtime_leases_released(run_dir, args.placement_id):
+        raise PlacementError("one or more runtime profile leases remain active")
+
+    workspace_path = Path(workspace.get("path", "")).resolve() if isinstance(workspace, dict) else Path()
+    branch = workspace.get("branch") if isinstance(workspace, dict) else None
+    if not workspace_path.is_dir() or not isinstance(branch, str) or not branch:
+        raise PlacementError("workspace receipt lacks a live path or branch for cleanup")
+    listing = require_git(repo, "worktree", "list", "--porcelain", context="worktree registration check failed")
+    if f"worktree {workspace_path}" not in listing.splitlines():
+        raise PlacementError("cleanup target is not a registered worktree of the source repository")
+    actual_branch = require_git(
+        workspace_path,
+        "branch",
+        "--show-current",
+        context="cleanup branch check failed",
+    )
+    if actual_branch != branch:
+        raise PlacementError(f"cleanup branch mismatch: expected {branch}, got {actual_branch}")
+    status = require_git(workspace_path, "status", "--porcelain", context="cleanup clean-state check failed")
+    if status:
+        raise PlacementError("cleanup target must be clean, including untracked files")
+    workspace_head = require_git(workspace_path, "rev-parse", "HEAD", context="cleanup HEAD check failed")
+    integrated_commits = require_string_list(
+        evidence,
+        "integrated_commits",
+        "cleanup integrated_commits",
+    )
+    if workspace_head not in integrated_commits:
+        raise PlacementError("cleanup evidence must include the workspace HEAD commit")
+    integration_head = require_git(repo, "rev-parse", "HEAD", context="integration HEAD check failed")
+    for commit in integrated_commits:
+        resolved = require_git(
+            repo,
+            "rev-parse",
+            "--verify",
+            f"{commit}^{{commit}}",
+            context=f"integrated commit does not exist: {commit}",
+        )
+        if resolved != commit:
+            raise PlacementError(f"integrated commit must be a full canonical SHA: {commit}")
+        if run_git(repo, "merge-base", "--is-ancestor", commit, integration_head).returncode != 0:
+            raise PlacementError(f"integrated commit is not reachable from the integration branch: {commit}")
+
+    authorized = {
+        "cleanup_owner": "beislid",
+        "workspace_head": workspace_head,
+        "integration_head": integration_head,
+        "branch": branch,
+    }
+    record_runtime_event(run_dir, args.placement_id, "cleanup_authorized", authorized)
+    removed = run_git(repo, "worktree", "remove", str(workspace_path))
+    if removed.returncode != 0:
+        detail = removed.stderr.strip() or removed.stdout.strip() or "git worktree remove failed"
+        raise PlacementError(f"automatic cleanup failed: {detail}")
+    deleted = run_git(repo, "branch", "-d", branch)
+    if deleted.returncode != 0:
+        detail = deleted.stderr.strip() or deleted.stdout.strip() or "git branch deletion failed"
+        raise PlacementError(f"workspace was removed but cleanup branch remains: {detail}")
+    payload = {
+        "cleanup_owner": "beislid",
+        "disposition": "cleaned",
+        "workspace_head": workspace_head,
+        "integration_head": integration_head,
+        "branch_deleted": branch,
+    }
+    record_runtime_event(run_dir, args.placement_id, "cleanup_completed", payload)
     return payload
 
 
@@ -736,6 +1026,7 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
     expected_sha = require_source_preflight(repo, args.expected_sha)
+    write_scopes = validate_write_scopes(args.write_scope)
     root = resolve_manual_root(repo, args.manual_root)
     placement_id, branch, path = allocate_identity(repo, root, args.label)
     root.mkdir(parents=True, exist_ok=True)
@@ -776,6 +1067,9 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
             "expected_sha": expected_sha,
             "actual_sha": actual_sha,
         },
+        "scope": {
+            "write": write_scopes,
+        },
         "workspace": {
             "path": str(path.resolve()),
             "branch": branch,
@@ -806,6 +1100,12 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--expected-sha", required=True, help="full commit SHA for the new worktree")
     create.add_argument("--manual-root", help="repo-sibling or an absolute worktree root")
     create.add_argument("--label", default="placement", help="human-readable placement label")
+    create.add_argument(
+        "--write-scope",
+        action="append",
+        required=True,
+        help="repository-relative authorized path pattern; repeat for multiple scopes",
+    )
     create.add_argument("--run-id", required=True, help="initialized external run-ledger id")
     create.add_argument("--flow", required=True, help="run-ledger flow containing the placement receipt")
 
@@ -815,6 +1115,13 @@ def build_parser() -> argparse.ArgumentParser:
     preflight.add_argument("--preparation-file")
     preflight.add_argument("--run-id", required=True)
     preflight.add_argument("--flow", required=True)
+
+    handoff = subparsers.add_parser("validate-handoff", help="validate a committed delegate handoff")
+    handoff.add_argument("--repo", required=True)
+    handoff.add_argument("--placement-id", required=True)
+    handoff.add_argument("--handoff-file", required=True)
+    handoff.add_argument("--run-id", required=True)
+    handoff.add_argument("--flow", required=True)
 
     lease = subparsers.add_parser("lease", help="allocate and verify an atomic runtime profile")
     lease.add_argument("--repo", required=True)
@@ -848,6 +1155,7 @@ def build_parser() -> argparse.ArgumentParser:
     cleanup = subparsers.add_parser("cleanup", help="route cleanup through the recorded ownership boundary")
     cleanup.add_argument("--repo", required=True)
     cleanup.add_argument("--placement-id", required=True)
+    cleanup.add_argument("--evidence-file")
     cleanup.add_argument("--run-id", required=True)
     cleanup.add_argument("--flow", required=True)
     return parser
@@ -862,6 +1170,8 @@ def main() -> int:
             payload = create_manual_placement(args)
         elif args.command == "preflight":
             payload = command_preflight(args)
+        elif args.command == "validate-handoff":
+            payload = command_validate_handoff(args)
         elif args.command == "lease":
             payload = command_lease(args)
         elif args.command == "exec":
