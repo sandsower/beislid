@@ -181,6 +181,79 @@ fallback:
         )
         self.assertTrue(all(error["code"] == "invalid_value" for error in envelope["errors"]))
 
+    def test_agent_isolation_normalizes_atomic_runtime_profile_contract(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: current
+delegate: manual
+manual_root: /srv/beislid/worktrees
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+      - REDIS_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        isolation = envelope["sections"]["agent_isolation"]
+        self.assertEqual(isolation["fallback"]["delegate"], "sequential")
+        self.assertEqual(
+            isolation["runtime_profiles"]["integration"]["required_bindings"],
+            ["PRIMARY_DATABASE_URL", "SHADOW_DATABASE_URL", "REDIS_URL"],
+        )
+        self.assertEqual(
+            isolation["runtime_profiles"]["integration"]["provider"]["reconcile"],
+            "python3 scripts/runtime_provider.py reconcile",
+        )
+
+    def test_agent_isolation_rejects_ephemeral_root_and_invalid_runtime_profile(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: manual
+delegate: manual
+manual_root: /tmp/beislid-worktrees
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - primary_database_url
+      - PRIMARY_DATABASE_URL
+    provider:
+      allocate: ''
+      verify: 42
+      release: 'python3 provider.py release'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [(error["code"], error["path"]) for error in envelope["errors"]],
+            [
+                ("invalid_value", "sections.agent_isolation.manual_root"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.required_bindings"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.allocate"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.verify"),
+                ("missing_required_field", "sections.agent_isolation.runtime_profiles.integration.provider.reconcile"),
+            ],
+        )
+
     def test_d1_comments_and_inline_lists_follow_yaml_comment_rules(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->

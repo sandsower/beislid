@@ -70,6 +70,9 @@ ALLOWED_ORCHESTRATOR_PLACEMENTS = {"current", "native", "manual"}
 ALLOWED_DELEGATE_PLACEMENTS = {"native", "manual", "sequential"}
 ALLOWED_ORCHESTRATOR_FALLBACKS = {"manual-transition-required"}
 ALLOWED_DELEGATE_FALLBACKS = {"manual", "sequential"}
+RUNTIME_BINDING_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+RUNTIME_PROFILE_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+EPHEMERAL_MANUAL_ROOTS = tuple(Path(value) for value in ("/tmp", "/private/tmp", "/var/tmp", "/private/var/folders"))
 
 FENCE_OPEN_RE = re.compile(r"^```beislid:([^\s`]+)\s*$")
 SIMPLE_KEY = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -391,9 +394,10 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                 )
             )
         manual_root = isolation.get("manual_root")
-        if not isinstance(manual_root, str) or (
-            manual_root != "repo-sibling" and not Path(manual_root).expanduser().is_absolute()
-        ):
+        manual_root_valid = isinstance(manual_root, str) and (
+            manual_root == "repo-sibling" or Path(manual_root).expanduser().is_absolute()
+        )
+        if not manual_root_valid:
             errors.append(
                 Diagnostic(
                     "invalid_value",
@@ -401,6 +405,16 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                     "manual_root must be repo-sibling or an absolute path",
                 )
             )
+        elif manual_root != "repo-sibling":
+            resolved_root = Path(manual_root).expanduser()
+            if any(resolved_root == root or root in resolved_root.parents for root in EPHEMERAL_MANUAL_ROOTS):
+                errors.append(
+                    Diagnostic(
+                        "invalid_value",
+                        "sections.agent_isolation.manual_root",
+                        "manual_root must be durable and cannot be under a temporary system directory",
+                    )
+                )
         fallback = isolation.get("fallback")
         if isinstance(fallback, dict):
             if fallback.get("orchestrator") not in ALLOWED_ORCHESTRATOR_FALLBACKS:
@@ -419,6 +433,76 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                         "delegate fallback must be manual or sequential",
                     )
                 )
+        runtime_profiles = isolation.get("runtime_profiles")
+        if runtime_profiles is not None:
+            if not isinstance(runtime_profiles, dict):
+                errors.append(
+                    Diagnostic(
+                        "invalid_section_shape",
+                        "sections.agent_isolation.runtime_profiles",
+                        "runtime_profiles must be a mapping",
+                    )
+                )
+            else:
+                for profile_name, profile in runtime_profiles.items():
+                    profile_path = f"sections.agent_isolation.runtime_profiles.{profile_name}"
+                    if not isinstance(profile_name, str) or not RUNTIME_PROFILE_NAME.fullmatch(profile_name):
+                        errors.append(
+                            Diagnostic(
+                                "invalid_value",
+                                profile_path,
+                                "runtime profile names must be lowercase path-safe segments",
+                            )
+                        )
+                    if not isinstance(profile, dict):
+                        errors.append(
+                            Diagnostic("invalid_section_shape", profile_path, "runtime profile must be a mapping")
+                        )
+                        continue
+                    bindings = profile.get("required_bindings")
+                    bindings_valid = (
+                        isinstance(bindings, list)
+                        and bool(bindings)
+                        and len(bindings) == len(set(str(item) for item in bindings))
+                        and all(isinstance(item, str) and RUNTIME_BINDING_NAME.fullmatch(item) for item in bindings)
+                    )
+                    if not bindings_valid:
+                        errors.append(
+                            Diagnostic(
+                                "invalid_value",
+                                f"{profile_path}.required_bindings",
+                                "required_bindings must be a non-empty unique list of uppercase environment names",
+                            )
+                        )
+                    provider = profile.get("provider")
+                    if not isinstance(provider, dict):
+                        errors.append(
+                            Diagnostic(
+                                "invalid_section_shape",
+                                f"{profile_path}.provider",
+                                "runtime profile provider must be a mapping",
+                            )
+                        )
+                        continue
+                    for action in ("allocate", "verify", "release", "reconcile"):
+                        command = provider.get(action)
+                        command_path = f"{profile_path}.provider.{action}"
+                        if action not in provider:
+                            errors.append(
+                                Diagnostic(
+                                    "missing_required_field",
+                                    command_path,
+                                    f"runtime provider {action} command is required",
+                                )
+                            )
+                        elif not isinstance(command, str) or not command.strip():
+                            errors.append(
+                                Diagnostic(
+                                    "invalid_value",
+                                    command_path,
+                                    f"runtime provider {action} must be a non-empty command string",
+                                )
+                            )
 
     _validate_gates(sections.get("gates") or [], "sections.gates", warnings)
     gate_sets = sections.get("gate_sets") or {}

@@ -1,0 +1,101 @@
+{
+  "errors": [
+    {
+      "code": "invalid_value",
+      "message": "orchestrator must be current, native, or manual",
+      "path": "sections.agent_isolation.orchestrator"
+    },
+    {
+      "code": "invalid_value",
+      "message": "delegate must be native, manual, or sequential",
+      "path": "sections.agent_isolation.delegate"
+    },
+    {
+      "code": "invalid_value",
+      "message": "manual_root must be durable and cannot be under a temporary system directory",
+      "path": "sections.agent_isolation.manual_root"
+    },
+    {
+      "code": "invalid_value",
+      "message": "orchestrator fallback must be manual-transition-required",
+      "path": "sections.agent_isolation.fallback.orchestrator"
+    },
+    {
+      "code": "invalid_value",
+      "message": "delegate fallback must be manual or sequential",
+      "path": "sections.agent_isolation.fallback.delegate"
+    },
+    {
+      "code": "invalid_value",
+      "message": "required_bindings must be a non-empty unique list of uppercase environment names",
+      "path": "sections.agent_isolation.runtime_profiles.integration.required_bindings"
+    },
+    {
+      "code": "invalid_value",
+      "message": "runtime provider allocate must be a non-empty command string",
+      "path": "sections.agent_isolation.runtime_profiles.integration.provider.allocate"
+    },
+    {
+      "code": "invalid_value",
+      "message": "runtime provider verify must be a non-empty command string",
+      "path": "sections.agent_isolation.runtime_profiles.integration.provider.verify"
+    },
+    {
+      "code": "missing_required_field",
+      "message": "runtime provider reconcile command is required",
+      "path": "sections.agent_isolation.runtime_profiles.integration.provider.reconcile"
+    }
+  ],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "agent_isolation": {
+      "delegate": "shared",
+      "fallback": {
+        "delegate": "manual-transition-required",
+        "orchestrator": "sequential"
+      },
+      "manual_root": "/private/tmp/beislid",
+      "orchestrator": "automatic",
+      "runtime_profiles": {
+        "integration": {
+          "provider": {
+            "allocate": "",
+            "release": "python3 provider.py release",
+            "verify": 42
+          },
+          "required_bindings": [
+            "primary_database_url",
+            "primary_database_url"
+          ]
+        }
+      }
+    },
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/20-agent-isolation-invalid/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "be94a0427c7dd61622f457e32fe4c8a9d022e2a1"
+  },
+  "status": "error",
+  "warnings": []
+}
