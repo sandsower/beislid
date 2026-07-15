@@ -166,7 +166,7 @@ PY
 }
 
 test_gate_proof_integration() {
-  local state="$TMP/state" init_out run_id run_dir base request envelope raw out
+  local state="$TMP/state" init_out run_id run_dir base request envelope raw out proof_key
   init_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill ready-for-review --flow ready-for-review --branch feature/proof)"
   run_id="$(python3 - <<'PY' "$init_out"
 import json, sys
@@ -202,18 +202,33 @@ payload = {
 with open(path, "w", encoding="utf-8") as target:
     json.dump(payload, target)
 PY
-  python3 - <<'PY' "$envelope" "$raw"
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$REPO_DIR/scripts/gate_proof.py" lookup --request-file "$request")"
+  proof_key="$(python3 - <<'PY' "$out"
 import json, sys
-path, raw = sys.argv[1:]
+print(json.loads(sys.argv[1])["proof_key"])
+PY
+)"
+  python3 - <<'PY' "$envelope" "$raw" "$proof_key"
+import json, sys
+path, raw, proof_key = sys.argv[1:]
 payload = {
     "gate": {"name": "validate", "scope": "repo", "cwd": ".", "command": "python3 scripts/validate.py"},
     "status": "pass",
+    "proof_key": proof_key,
     "raw_logs": {"path": raw},
 }
 with open(path, "w", encoding="utf-8") as target:
     json.dump(payload, target)
 PY
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow ready-for-review --name validate --scope repo --envelope-file "$envelope" --proof-request-file "$request")"
+  python3 - <<'PY' "$out" || return 1
+import json, pathlib, sys
+payload = json.loads(sys.argv[1])
+assert payload["proof"]["status"] == "skipped", payload
+assert payload["proof"]["reason"] == "expected_proof_key_missing", payload
+assert pathlib.Path(payload["gate_log"]).is_file(), payload
+PY
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow ready-for-review --name validate --scope repo --envelope-file "$envelope" --proof-request-file "$request" --expected-proof-key "$proof_key")"
   python3 - <<'PY' "$out"
 import json, sys
 payload = json.loads(sys.argv[1])

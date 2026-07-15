@@ -588,7 +588,13 @@ def command_gate(args: argparse.Namespace) -> int:
 
         try:
             proof_request = gate_proof.read_json(Path(args.proof_request_file))
-            proof_result = gate_proof.record(proof_request, repo_root(Path.cwd()), envelope_path, args.run_id)
+            proof_result = gate_proof.record(
+                proof_request,
+                repo_root(Path.cwd()),
+                envelope_path,
+                args.run_id,
+                args.expected_proof_key,
+            )
         except (OSError, json.JSONDecodeError, gate_proof.ProofUnavailable) as exc:
             code = exc.code if isinstance(exc, gate_proof.ProofUnavailable) else "request_invalid"
             message = exc.message if isinstance(exc, gate_proof.ProofUnavailable) else str(exc)
@@ -995,6 +1001,7 @@ def build_parser() -> argparse.ArgumentParser:
     gate_p.add_argument("--scope")
     gate_p.add_argument("--envelope-file", required=True)
     gate_p.add_argument("--proof-request-file")
+    gate_p.add_argument("--expected-proof-key")
     gate_p.add_argument("--resume-hint")
     gate_p.set_defaults(func=command_gate)
 

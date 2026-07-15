@@ -78,7 +78,15 @@ class GateProofTest(unittest.TestCase):
         attempt_dir = self.run_dir / "artifacts" / "gates" / "repo" / "validate" / "1"
         attempt_dir.mkdir(parents=True)
         (self.run_dir / "run.json").write_text(
-            json.dumps({"kind": "run-ledger-v1", "run_id": "run-1"}) + "\n",
+            json.dumps(
+                {
+                    "kind": "run-ledger-v1",
+                    "run_id": "run-1",
+                    "repo": str(self.repo),
+                    "repo_hash": repository_id,
+                }
+            )
+            + "\n",
             encoding="utf-8",
         )
         self.gate_log = attempt_dir / "envelope.json"
@@ -105,6 +113,10 @@ class GateProofTest(unittest.TestCase):
             "BEISLID_STATE_DIR": str(self.state),
             "TEST_GATE_PROOF_ENV": "stable",
         }
+        decision = self.invoke("lookup")
+        envelope = json.loads(self.gate_log.read_text(encoding="utf-8"))
+        envelope["proof_key"] = decision["proof_key"]
+        self.gate_log.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -128,13 +140,18 @@ class GateProofTest(unittest.TestCase):
     def write_request(self, payload: dict[str, object]) -> None:
         self.request.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
-    def record(self) -> dict[str, object]:
+    def record(self, expected_proof_key: str | None = None) -> dict[str, object]:
+        if expected_proof_key is None:
+            decision = self.invoke("lookup")
+            expected_proof_key = str(decision["proof_key"])
         return self.invoke(
             "record",
             "--envelope-file",
             str(self.gate_log),
             "--run-id",
             "run-1",
+            "--expected-proof-key",
+            expected_proof_key,
         )
 
     def test_exact_miss_record_hit(self) -> None:
@@ -143,7 +160,7 @@ class GateProofTest(unittest.TestCase):
         self.assertEqual("rerun", miss["decision"])
         self.assertEqual("proof_missing", miss["reason"])
 
-        recorded = self.record()
+        recorded = self.record(str(miss["proof_key"]))
         self.assertEqual("gate-proof-record-v1", recorded["kind"])
         self.assertEqual("recorded", recorded["status"])
         self.assertTrue(recorded["proof_key"])
@@ -189,6 +206,62 @@ class GateProofTest(unittest.TestCase):
         result = self.invoke("lookup")
         self.assertEqual("proof_missing", result["reason"])
         self.assertNotEqual(recorded["proof_key"], result["proof_key"])
+
+    def test_record_rejects_head_change_since_lookup(self) -> None:
+        miss = self.invoke("lookup")
+        (self.repo / "next.txt").write_text("next\n", encoding="utf-8")
+        run("git", "add", "next.txt", cwd=self.repo)
+        run("git", "commit", "-q", "-m", "next", cwd=self.repo)
+        result = self.record(str(miss["proof_key"]))
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("identity_changed", result["reason"])
+
+    def test_record_rejects_workflow_change_since_lookup(self) -> None:
+        miss = self.invoke("lookup")
+        workflow = self.repo / ".beislid" / "workflow.md"
+        workflow.write_text("# changed workflow\n", encoding="utf-8")
+        run("git", "add", ".beislid/workflow.md", cwd=self.repo)
+        run("git", "commit", "-q", "-m", "workflow", cwd=self.repo)
+        result = self.record(str(miss["proof_key"]))
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("identity_changed", result["reason"])
+
+    def test_record_rejects_environment_change_since_lookup(self) -> None:
+        miss = self.invoke("lookup")
+        self.env["TEST_GATE_PROOF_ENV"] = "changed"
+        result = self.record(str(miss["proof_key"]))
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("identity_changed", result["reason"])
+
+    def test_record_rejects_ledger_from_distinct_clone(self) -> None:
+        clone = self.root / "clone"
+        run("git", "clone", "-q", str(self.repo), str(clone), cwd=self.root)
+        run_payload = json.loads((self.run_dir / "run.json").read_text(encoding="utf-8"))
+        run_payload["repo"] = str(clone)
+        (self.run_dir / "run.json").write_text(json.dumps(run_payload) + "\n", encoding="utf-8")
+        result = self.record()
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("ledger_repository_mismatch", result["reason"])
+
+    def test_record_without_expected_key_fails_closed(self) -> None:
+        result = self.invoke(
+            "record",
+            "--envelope-file",
+            str(self.gate_log),
+            "--run-id",
+            "run-1",
+        )
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("expected_proof_key_missing", result["reason"])
+
+    def test_record_rejects_envelope_with_different_proof_key(self) -> None:
+        envelope = json.loads(self.gate_log.read_text(encoding="utf-8"))
+        envelope["proof_key"] = "different"
+        self.gate_log.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
+        decision = self.invoke("lookup")
+        result = self.record(str(decision["proof_key"]))
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("envelope_proof_key_mismatch", result["reason"])
 
     def test_distinct_clone_does_not_reuse_local_repository_proof(self) -> None:
         recorded = self.record()
@@ -254,26 +327,38 @@ class GateProofTest(unittest.TestCase):
         self.assertEqual("artifact_missing", missing["reason"])
 
         raw_log.write_text("ok\n", encoding="utf-8")
-        self.record()
+        repaired_missing = self.record(str(missing["proof_key"]))
+        self.assertEqual("recorded", repaired_missing["status"])
+        self.assertEqual("reuse", self.invoke("lookup")["decision"])
         raw_log.write_text("changed\n", encoding="utf-8")
         changed = self.invoke("lookup")
         self.assertEqual("artifact_changed", changed["reason"])
+        raw_log.write_text("ok\n", encoding="utf-8")
+        repaired_changed = self.record(str(changed["proof_key"]))
+        self.assertEqual("recorded", repaired_changed["status"])
+        self.assertEqual("reuse", self.invoke("lookup")["decision"])
 
     def test_corrupt_proof_forces_rerun(self) -> None:
         recorded = self.record()
         Path(str(recorded["proof_path"])).write_text("{broken\n", encoding="utf-8")
         result = self.invoke("lookup")
         self.assertEqual("proof_corrupt", result["reason"])
+        repaired = self.record(str(result["proof_key"]))
+        self.assertEqual("recorded", repaired["status"])
+        self.assertEqual("reuse", self.invoke("lookup")["decision"])
 
     def test_record_rejects_envelope_outside_the_run_ledger(self) -> None:
         outside = self.root / "outside-envelope.json"
         outside.write_text(self.gate_log.read_text(encoding="utf-8"), encoding="utf-8")
+        decision = self.invoke("lookup")
         result = self.invoke(
             "record",
             "--envelope-file",
             str(outside),
             "--run-id",
             "run-1",
+            "--expected-proof-key",
+            str(decision["proof_key"]),
         )
         self.assertEqual("skipped", result["status"])
         self.assertEqual("envelope_not_ledger", result["reason"])

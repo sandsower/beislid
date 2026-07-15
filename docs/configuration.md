@@ -239,10 +239,12 @@ Dirty worktrees, mutating gates, failed probes, old envelopes, corrupt proof sta
 Clean evaluation and inferential review always remain independent.
 
 Proof records live under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/gate-proofs/<repo_hash>/` and are content-addressed.
-`beislid run-ledger gate --proof-request-file <request.json>` records eligible proof only after it stores the normal immutable passing envelope.
+`beislid run-ledger gate --proof-request-file <request.json> --expected-proof-key <proof_key>` records eligible proof only after it stores the normal immutable passing envelope containing that same pre-execution key.
+Legacy callers that omit the expected key keep their normal ledger evidence but safely skip reusable proof recording.
 Existing `run-ledger gate` invocations and workflows without `evidence_reuse` behave exactly as before.
 
 When orchestrators run gates, they summarize each result as an agent-readable envelope with canonical top-level keys: `gate` (object with `name`, `scope`, `cwd`, and `command` strings), `status` (`pass`, `fail`, `skipped`, or `error`), `duration_ms` (integer), `summary` (string), `failures` (array), `retryable` (boolean), `environment_failure` (boolean), `suggested_next_action` (string), and `raw_logs` (object with optional `path` and `transcript_safe_summary` strings).
+An exact evidence-reuse attempt also carries the pre-execution `proof_key` as a top-level string.
 
 ```json
 {

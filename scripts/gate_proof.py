@@ -278,9 +278,14 @@ def artifact_record(path: Path) -> dict[str, str]:
     return {"path": str(resolved), "sha256": sha256_file(resolved)}
 
 
-def validate_envelope(envelope: dict[str, Any], labels: dict[str, str]) -> None:
+def validate_envelope(envelope: dict[str, Any], labels: dict[str, str], expected_proof_key: str) -> None:
     if envelope.get("status") != "pass":
         raise ProofUnavailable("gate_not_passing", "only passing gate evidence can be recorded")
+    envelope_proof_key = envelope.get("proof_key")
+    if not isinstance(envelope_proof_key, str) or not envelope_proof_key:
+        raise ProofUnavailable("envelope_proof_key_missing", "gate envelope is not bound to a pre-execution proof key")
+    if envelope_proof_key != expected_proof_key:
+        raise ProofUnavailable("envelope_proof_key_mismatch", "gate envelope proof key does not match the expected proof key")
     gate = envelope.get("gate")
     if not isinstance(gate, dict):
         raise ProofUnavailable("envelope_invalid", "gate envelope is missing gate metadata")
@@ -289,7 +294,29 @@ def validate_envelope(envelope: dict[str, Any], labels: dict[str, str]) -> None:
             raise ProofUnavailable("envelope_mismatch", f"gate envelope {key} does not match the proof request")
 
 
-def ledger_run_dir(envelope_path: Path, run_id: str) -> Path:
+def ledger_repository_common_dir_sha256(run: dict[str, Any]) -> str:
+    raw_repo = run.get("repo")
+    if not isinstance(raw_repo, str) or not raw_repo:
+        raise ProofUnavailable("ledger_repository_unverifiable", "run ledger has no repository provenance")
+    ledger_repo = Path(raw_repo).resolve()
+    if not ledger_repo.is_dir():
+        raise ProofUnavailable("ledger_repository_unverifiable", "run ledger repository is unavailable")
+    try:
+        common_dir_value = git_output(ledger_repo, "rev-parse", "--git-common-dir")
+    except ProofUnavailable as exc:
+        raise ProofUnavailable("ledger_repository_unverifiable", "run ledger repository cannot be verified") from exc
+    common_dir = Path(common_dir_value)
+    if not common_dir.is_absolute():
+        common_dir = ledger_repo / common_dir
+    return sha256_bytes(str(common_dir.resolve()).encode("utf-8"))
+
+
+def ledger_run_dir(
+    envelope_path: Path,
+    run_id: str,
+    repository_id: str,
+    common_dir_sha256: str,
+) -> Path:
     if not RUN_ID_SEGMENT.fullmatch(run_id) or run_id in {".", ".."}:
         raise ProofUnavailable("request_invalid", "run id must be a path-safe segment")
     resolved = envelope_path.resolve()
@@ -310,6 +337,10 @@ def ledger_run_dir(envelope_path: Path, run_id: str) -> Path:
     run = read_json(run_dir / "run.json")
     if run.get("kind") != "run-ledger-v1" or run.get("run_id") != run_id:
         raise ProofUnavailable("envelope_not_ledger", "gate envelope does not belong to the declared run")
+    if run.get("repo_hash") != repository_id:
+        raise ProofUnavailable("ledger_repository_mismatch", "run ledger belongs to a different repository history")
+    if ledger_repository_common_dir_sha256(run) != common_dir_sha256:
+        raise ProofUnavailable("ledger_repository_mismatch", "run ledger belongs to different shared Git storage")
     return run_dir
 
 
@@ -375,19 +406,39 @@ def lookup(request: dict[str, Any], repo: Path) -> dict[str, Any]:
     }
 
 
-def record(request: dict[str, Any], repo: Path, envelope_path: Path, run_id: str) -> dict[str, Any]:
+def record(
+    request: dict[str, Any],
+    repo: Path,
+    envelope_path: Path,
+    run_id: str,
+    expected_proof_key: str | None,
+) -> dict[str, Any]:
+    if not isinstance(expected_proof_key, str) or not expected_proof_key:
+        return {
+            "kind": RECORD_KIND,
+            "status": "skipped",
+            "reason": "expected_proof_key_missing",
+            "summary": "recording requires the proof key captured before gate execution",
+        }
     try:
         identity, repository_id, labels = compute_identity(request, repo)
+        key = sha256_bytes(canonical_json(identity))
+        if key != expected_proof_key:
+            raise ProofUnavailable("identity_changed", "proof identity changed after the gate decision")
         envelope = read_json(envelope_path)
-        run_dir = ledger_run_dir(envelope_path, run_id)
-        validate_envelope(envelope, labels)
+        run_dir = ledger_run_dir(
+            envelope_path,
+            run_id,
+            repository_id,
+            identity["repository"]["common_dir_sha256"],
+        )
+        validate_envelope(envelope, labels, expected_proof_key)
         artifacts = artifact_records(envelope_path, envelope, run_dir)
     except (OSError, json.JSONDecodeError) as exc:
         return {"kind": RECORD_KIND, "status": "skipped", "reason": "artifact_invalid", "summary": str(exc)}
     except ProofUnavailable as exc:
         return {"kind": RECORD_KIND, "status": "skipped", "reason": exc.code, "summary": exc.message}
 
-    key = sha256_bytes(canonical_json(identity))
     path = proof_path(repository_id, key)
     proof = {
         "artifacts": artifacts,
@@ -417,6 +468,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_parser.add_argument("--request-file", required=True)
     record_parser.add_argument("--envelope-file", required=True)
     record_parser.add_argument("--run-id", required=True)
+    record_parser.add_argument("--expected-proof-key")
     return parser
 
 
@@ -438,7 +490,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "lookup":
             payload = lookup(request, repo)
         else:
-            payload = record(request, repo, Path(args.envelope_file), args.run_id)
+            payload = record(request, repo, Path(args.envelope_file), args.run_id, args.expected_proof_key)
     print(json.dumps(payload, sort_keys=True))
     return 0
 
