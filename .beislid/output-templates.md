@@ -86,6 +86,25 @@ Parser rules:
 
 Failure prompts must show `summary`, key `failures`, `retryable`, `environment_failure`, `suggested_next_action`, and raw-log path/summary. Do not dump full raw logs into the prompt unless the user asks.
 
+## Gate proof reuse decision envelope
+
+Exact gate-proof lookup returns one transcript-safe decision before a configured gate runs:
+
+```yaml
+kind: gate-proof-decision-v1
+decision: reuse | rerun
+reason: exact_match | proof_missing | reuse_not_enabled | gate_mutates | dirty_worktree | workflow_missing | environment_probe_failed | proof_corrupt | proof_mismatch | artifact_missing | artifact_changed | request_invalid
+proof_key: "<sha256 when identity computation succeeded>"
+proof_path: "<local proof path only on reuse>"
+source: {run_id: "<source run>", envelope_path: "<immutable gate envelope>"}
+summary: "short decision explanation"
+```
+
+Only `decision: reuse` with `reason: exact_match` satisfies the configured computational gate without executing it again.
+Every other response runs the gate normally.
+Do not convert a reuse decision into a claim that the command ran in the current phase.
+This envelope never satisfies clean evaluation or inferential review.
+
 ## Model routing status envelope
 
 When a host/orchestrator evaluates `beislid:model_routing`, summarize the result before invoking the routed skill or subagent:

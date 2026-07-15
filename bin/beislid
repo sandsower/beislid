@@ -22,6 +22,7 @@ BEISLID_ROOT="$(cd "$BEISLID_BIN_SELF_DIR/.." && pwd)"
 if [[ -n "${BEISLID_HOME:-}" ]] && \
    { [[ ! -f "$BEISLID_ROOT/scripts/install_lib.sh" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/run_ledger.py" ]] || \
+     [[ ! -f "$BEISLID_ROOT/scripts/gate_proof.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/workspace_placement.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/action_policy.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/validate_export.py" ]] || \
@@ -44,6 +45,7 @@ _validate_runtime_layout() {
   [[ -d "$root/skills" ]] || missing+=("skills/")
   [[ -f "$root/install.sh" ]] || missing+=("install.sh")
   [[ -f "$root/scripts/run_ledger.py" ]] || missing+=("scripts/run_ledger.py")
+  [[ -f "$root/scripts/gate_proof.py" ]] || missing+=("scripts/gate_proof.py")
   [[ -f "$root/scripts/workspace_placement.py" ]] || missing+=("scripts/workspace_placement.py")
   [[ -f "$root/scripts/action_policy.py" ]] || missing+=("scripts/action_policy.py")
   [[ -f "$root/scripts/validate_export.py" ]] || missing+=("scripts/validate_export.py")
@@ -83,6 +85,7 @@ Usage:
   beislid update [--force]
   beislid migrate v0.2 [--with-security-hooks] [--force]
   beislid run-ledger <init|event|workspace-receipt|workspace-event|checkpoint|gate|interrupt|finalize|resume|dashboard> [...]
+  beislid gate-proof <lookup|record> [...]
   beislid workspace <probe|create|preflight|validate-handoff|lease|exec|reconcile|release|cleanup> [...]
   beislid action-policy <evaluate|validate> [...]
   beislid visual-feedback normalize [...]
@@ -304,6 +307,14 @@ case "$cmd" in
       exit 1
     fi
     python3 "$BEISLID_ROOT/scripts/run_ledger.py" "$@"
+    ;;
+  gate-proof)
+    shift
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "error: beislid gate-proof requires python3" >&2
+      exit 1
+    fi
+    python3 "$BEISLID_ROOT/scripts/gate_proof.py" "$@"
     ;;
   workspace)
     shift

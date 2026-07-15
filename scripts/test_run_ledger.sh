@@ -22,8 +22,10 @@ setup_fixture() {
   git -C "$TMP/repo" init -q
   git -C "$TMP/repo" config user.email test@example.invalid
   git -C "$TMP/repo" config user.name Test
+  mkdir -p "$TMP/repo/.beislid"
+  printf '# workflow\n' > "$TMP/repo/.beislid/workflow.md"
   printf 'hello\n' > "$TMP/repo/README.md"
-  git -C "$TMP/repo" add README.md
+  git -C "$TMP/repo" add .beislid/workflow.md README.md
   git -C "$TMP/repo" commit -q -m init
 }
 
@@ -160,6 +162,69 @@ import json, sys
 payload = json.loads(sys.argv[1])
 assert payload['run_id']
 assert payload['run_dir']
+PY
+}
+
+test_gate_proof_integration() {
+  local state="$TMP/state" init_out run_id run_dir base request envelope raw out
+  init_out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" init --skill ready-for-review --flow ready-for-review --branch feature/proof)"
+  run_id="$(python3 - <<'PY' "$init_out"
+import json, sys
+print(json.loads(sys.argv[1])['run_id'])
+PY
+)"
+  run_dir="$(python3 - <<'PY' "$init_out"
+import json, sys
+print(json.loads(sys.argv[1])['run_dir'])
+PY
+)"
+  base="$(git -C "$TMP/repo" rev-parse HEAD)"
+  request="$TMP/request.json"
+  envelope="$TMP/envelope.json"
+  raw="$run_dir/artifacts/raw.log"
+  mkdir -p "$(dirname "$raw")"
+  printf 'ok\n' > "$raw"
+  python3 - <<'PY' "$request" "$base"
+import json, sys
+path, base = sys.argv[1:]
+payload = {
+    "kind": "gate-proof-request-v1",
+    "gate": {
+        "name": "validate",
+        "scope": "repo",
+        "cwd": ".",
+        "command": "python3 scripts/validate.py",
+        "mutates": False,
+        "evidence_reuse": {"mode": "exact", "environment": {}},
+    },
+    "selection": {"base": base},
+}
+with open(path, "w", encoding="utf-8") as target:
+    json.dump(payload, target)
+PY
+  python3 - <<'PY' "$envelope" "$raw"
+import json, sys
+path, raw = sys.argv[1:]
+payload = {
+    "gate": {"name": "validate", "scope": "repo", "cwd": ".", "command": "python3 scripts/validate.py"},
+    "status": "pass",
+    "raw_logs": {"path": raw},
+}
+with open(path, "w", encoding="utf-8") as target:
+    json.dump(payload, target)
+PY
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow ready-for-review --name validate --scope repo --envelope-file "$envelope" --proof-request-file "$request")"
+  python3 - <<'PY' "$out"
+import json, sys
+payload = json.loads(sys.argv[1])
+assert payload["proof"]["status"] == "recorded", payload
+assert payload["proof"]["proof_key"], payload
+PY
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$REPO_DIR/scripts/gate_proof.py" lookup --request-file "$request")"
+  python3 - <<'PY' "$out"
+import json, sys
+payload = json.loads(sys.argv[1])
+assert payload["decision"] == "reuse", payload
 PY
 }
 
@@ -653,6 +718,7 @@ run_test "legacy active resume without flow" test_legacy_active_resume_without_f
 run_test "policy secret parity redaction" test_policy_secret_parity_redaction
 run_test "compound secret redaction" test_compound_secret_redaction
 run_test "beislid CLI dispatch" test_cli_dispatch
+run_test "gate-proof ledger integration" test_gate_proof_integration
 run_test "CLI dispatch requires python3" test_cli_dispatch_requires_python3
 run_test "run-ledger skill-example consistency check" test_run_ledger_skill_examples_consistency_check
 run_test "dashboard active runs" test_dashboard_active_runs

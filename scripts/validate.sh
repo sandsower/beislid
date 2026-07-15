@@ -134,6 +134,8 @@ bash scripts/test_bump_version.sh
 # --- run-ledger ---------------------------------------------------------
 banner "run-ledger: bash scripts/test_run_ledger.sh"
 bash scripts/test_run_ledger.sh
+banner "gate-proof: python3 scripts/test_gate_proof.py"
+python3 scripts/test_gate_proof.py
 
 # --- script-tests ------------------------------------------------------
 banner "script-tests: bash scripts/test_validate_export.sh"

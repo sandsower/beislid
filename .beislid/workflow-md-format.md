@@ -523,6 +523,12 @@ Rich gates may add harness metadata. `name` is always required. `command` is req
   mutates: false
   accepts_files: false
   required_tools: ['python']
+  evidence_reuse:
+    mode: exact
+    environment:
+      variables: ['CI']
+      commands:
+        - ['python', '--version']
   changed_file_selector:
     include: ['memento/**/*.py', 'hooks/**/*.py', 'tests/**/*.py']
   output:
@@ -541,6 +547,16 @@ Supported stage values are `preflight`, `per-edit`, `pre-commit`, `pre-pr`, `pos
 `kind` currently recognizes `sensor` for gates that observe readiness. Future guide/feedforward artifacts are tracked separately from gate lists. P0 command execution runs only gates where `kind` is absent or `sensor`; other `kind` values are metadata declarations that are reported as non-sensor and not executed. `execution` may be `computational`, `inferential`, or `human`; P0 command execution supports `computational` gates directly and reports `inferential`/`human` entries as non-command metadata declarations unless a future orchestrator owns them.
 
 `cost` is free-form but recommended values are `cheap`, `medium`, and `expensive`. `required_tools` is a list of additional CLI binaries the gate depends on beyond the command's first word; doctor and gate-running orchestrators probe each with `command -v` before treating the gate as runnable. `mutates: true` means the gate may edit files or external state and must not be auto-batched as read-only. `parallel_safe: true` remains the fast-path batching flag and is only honored when the gate has no `autofix` and `mutates` is not true.
+
+`evidence_reuse` is optional and defaults to off.
+`mode: exact` is an explicit assertion that the gate is deterministic and non-mutating, and it enables content-addressed reuse only when every trusted identity input matches.
+The identity includes local shared Git storage, root history, exact commit and tree, whole workflow hash, normalized command and working directory, base selection and changed files, host fingerprint, and every declared environment input.
+`environment.variables` lists variable names whose set/unset state and value hash affect the identity.
+`environment.commands` contains argv lists for deterministic version or environment probes, never shell strings.
+Unavailable probes, dirty trees, missing or changed artifacts, legacy envelopes, malformed state, and any mismatch run the gate normally.
+Only passing immutable ledger envelopes populate proof state.
+Do not enable exact reuse for time-dependent, network-dependent, flaky, secret-producing, or otherwise incompletely fingerprinted gates.
+The setting affects computational gate execution only and never replaces clean evaluation, inferential review, or human proof.
 
 Selectors may use `changed_file_selector.include` / `exclude` glob lists (or legacy draft `selector.paths`) to describe when the gate is relevant. Gate-level selectors are advisory metadata unless a selected gate set includes the gate; the changed-file-aware selector model is `gate_sets`.
 

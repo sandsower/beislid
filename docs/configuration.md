@@ -194,6 +194,12 @@ Rich gate metadata can describe where a check belongs in the harness and how age
   timeout_seconds: 600
   cost: expensive
   mutates: false
+  evidence_reuse:
+    mode: exact
+    environment:
+      variables: ['CI']
+      commands:
+        - ['python3', '--version']
   output:
     parser: pytest
   failure:
@@ -203,6 +209,21 @@ Rich gate metadata can describe where a check belongs in the harness and how age
 ````
 
 `ready-for-review` and `review-response` currently execute legacy gates and computational `stage: pre-pr` sensor gates. Other stages (`preflight`, `per-edit`, `pre-commit`, `post-pr`, `continuous`, and `human-interrupt`) plus non-computational/non-sensor pre-pr declarations are valid metadata for Rondo/future orchestrators; current skills report them rather than running them at the wrong lifecycle point. `required_tools` entries are probed as CLI binaries before a gate is treated as runnable.
+
+Exact gate evidence reuse is additive and off by default.
+Set `evidence_reuse.mode: exact` only for a deterministic non-mutating gate whose relevant environment can be completely fingerprinted.
+List environment variable names under `environment.variables` and safe argv-style version probes under `environment.commands`.
+Beislið hashes values and probe output rather than storing them in proof metadata.
+
+Before execution, `ready-for-review` asks `beislid gate-proof lookup` for a structured decision.
+Reuse occurs only for an exact passing proof bound to the local repository's shared Git storage and root history, commit, tree, whole workflow file, normalized gate command and working directory, base selection, changed files, declared environment, and immutable ledger artifacts.
+Every mismatch or validation problem returns `rerun` and executes the configured gate normally.
+Dirty worktrees, mutating gates, failed probes, old envelopes, corrupt proof state, and missing or changed artifacts cannot satisfy reuse.
+Clean evaluation and inferential review always remain independent.
+
+Proof records live under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/gate-proofs/<repo_hash>/` and are content-addressed.
+`beislid run-ledger gate --proof-request-file <request.json>` records eligible proof only after it stores the normal immutable passing envelope.
+Existing `run-ledger gate` invocations and workflows without `evidence_reuse` behave exactly as before.
 
 When orchestrators run gates, they summarize each result as an agent-readable envelope with canonical top-level keys: `gate` (object with `name`, `scope`, `cwd`, and `command` strings), `status` (`pass`, `fail`, `skipped`, or `error`), `duration_ms` (integer), `summary` (string), `failures` (array), `retryable` (boolean), `environment_failure` (boolean), `suggested_next_action` (string), and `raw_logs` (object with optional `path` and `transcript_safe_summary` strings).
 

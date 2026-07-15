@@ -343,6 +343,54 @@ preparation:
         self.assertEqual(envelope["warnings"], [])
         self.assertEqual(envelope["errors"], [])
 
+    def test_gate_exact_evidence_reuse_is_preserved(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: test
+  command: python3 -m unittest
+  mutates: false
+  evidence_reuse:
+    mode: exact
+    environment:
+      variables: [CI]
+      commands:
+        - [python3, --version]
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        reuse = envelope["sections"]["gates"][0]["evidence_reuse"]
+        self.assertEqual("exact", reuse["mode"])
+        self.assertEqual(["CI"], reuse["environment"]["variables"])
+        self.assertEqual([["python3", "--version"]], reuse["environment"]["commands"])
+        self.assertEqual([], envelope["warnings"])
+
+    def test_invalid_gate_evidence_reuse_is_warned(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: test
+  command: python3 -m unittest
+  evidence_reuse:
+    mode: maybe
+    environment:
+      variables: CI
+      commands: [python3 --version]
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+        paths = {warning["path"] for warning in envelope["warnings"]}
+        self.assertIn("sections.gates[0].evidence_reuse.mode", paths)
+        self.assertIn("sections.gates[0].evidence_reuse.environment.variables", paths)
+        self.assertIn("sections.gates[0].evidence_reuse.environment.commands", paths)
+
     def test_d2_flow_maps_are_rejected_even_inside_registered_scopes(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->

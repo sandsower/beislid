@@ -615,6 +615,43 @@ def _validate_gates(gates: Any, path: str, warnings: list[Diagnostic]) -> None:
             warnings.append(
                 Diagnostic("reserved_value", f"{path}[{index}].execution", f"unknown gate execution {gate['execution']!r}")
             )
+        reuse = gate.get("evidence_reuse")
+        reuse_path = f"{path}[{index}].evidence_reuse"
+        if reuse is None:
+            continue
+        if not isinstance(reuse, dict):
+            warnings.append(Diagnostic("invalid_section_shape", reuse_path, "evidence_reuse must be a mapping"))
+            continue
+        if reuse.get("mode") != "exact":
+            warnings.append(Diagnostic("invalid_value", f"{reuse_path}.mode", "evidence_reuse mode must be exact"))
+        environment = reuse.get("environment", {})
+        if not isinstance(environment, dict):
+            warnings.append(
+                Diagnostic("invalid_section_shape", f"{reuse_path}.environment", "environment must be a mapping")
+            )
+            continue
+        variables = environment.get("variables", [])
+        if not isinstance(variables, list) or not all(isinstance(item, str) and item for item in variables):
+            warnings.append(
+                Diagnostic(
+                    "invalid_value",
+                    f"{reuse_path}.environment.variables",
+                    "environment variables must be a list of non-empty names",
+                )
+            )
+        commands = environment.get("commands", [])
+        commands_valid = isinstance(commands, list) and all(
+            isinstance(argv, list) and bool(argv) and all(isinstance(item, str) and item for item in argv)
+            for argv in commands
+        )
+        if not commands_valid:
+            warnings.append(
+                Diagnostic(
+                    "invalid_value",
+                    f"{reuse_path}.environment.commands",
+                    "environment commands must be a list of non-empty argv lists",
+                )
+            )
 
 
 def _parse_workflow_yaml(body_lines: list[tuple[int, str]]) -> Any:
