@@ -13,7 +13,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from harness.fixtures import commit_only, init_plain_repo, run, write
-from harness.verification import fail
+from harness.verification import collect_agent_output, fail, require_stamp_sequence
+
+REQUIRED_STAMPS = [
+    "✓ setup/router v1 loaded",
+    "✓ setup/first-run v1 loaded",
+    "✓ setup/write-and-report v1 loaded",
+    "✓ setup/agents-integration v1 loaded",
+]
 
 
 def load_metadata(run_dir: Path) -> dict:
@@ -77,6 +84,15 @@ def verify(run_dir: Path) -> list[str]:
     if re.search(r"gh issue view \d", gh_text):
         fail(errors, "product", "setup fetched a real ticket during configuration; it should only configure ticket_source, not use it")
 
+    host_text = collect_agent_output(run_dir, skip_names={"gh.log"}, strip_tokens=True)
+    require_stamp_sequence(
+        errors,
+        text=host_text,
+        stamps=REQUIRED_STAMPS,
+        label="agent output",
+        kind="verifier",
+    )
+
     return errors
 
 
@@ -117,6 +133,7 @@ ttl_hours: 24
             "gh_log": str(gh_log),
         }
         write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
+        write(run_dir / "agent.log", "\n".join(REQUIRED_STAMPS) + "\n")
 
         errors = verify(run_dir)
         if errors:
@@ -124,6 +141,13 @@ ttl_hours: 24
             for error in errors:
                 print(f"- {error}", file=sys.stderr)
             return 1
+
+        write(run_dir / "agent.log", "✓ setup/router v1 loaded\n✓ setup/first-run v1 loaded\n")
+        missing_stamp_errors = verify(run_dir)
+        if not any("expected aux load stamps" in error for error in missing_stamp_errors):
+            print("self-test failed: missing setup aux stamps should fail", file=sys.stderr)
+            return 1
+        write(run_dir / "agent.log", "\n".join(REQUIRED_STAMPS) + "\n")
 
         # Negative 1: pr_base leaked into workflow.md despite the silent 'main' default.
         write(repo / ".beislid" / "workflow.md", workflow_path_text(repo) + "\n```beislid:pr_base.default\nmain\n```\n")

@@ -8,6 +8,8 @@ description: "Use when you have an approved design or requirements for a multi-s
 Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm.
 When `beislid:agent_isolation` is configured, load [workspace placement](workspace-placement-protocol.md) plus the current host adapter.
 Only with that block present, run `ensure_orchestrator_workspace` before the first repo write and `place_mutating_delegate` before each mutating dispatch.
+When the current host is Codex and a subagent dispatch is planned, load [Codex delegate context](codex-delegate-context.md) just before dispatch even when agent isolation is not configured.
+Also load it when a smoke fixture explicitly requests protocol proof.
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, if the matching `blueprint_approved` latest pointer entry for the current ticket/branch resolves to a readable artifact, read that artifact as your primary input; if not, use the workflow-configured artifact path template when present, then look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
@@ -15,7 +17,7 @@ If the handoff includes an approved `execution-envelope-v0`, treat its autonomy 
 
 If the user is resuming with phrases such as `continue this ticket`, `continue implementation`, or `continue from checkpoint`, read `.beislid/checkpoints/latest.json` when present. Prefer an `implementation_plan_created` checkpoint matching the current branch and ticket ID when known; otherwise fall back to a matching `kickoff_context_ready` checkpoint or ask the user to choose among matching latest entries. Read the referenced checkpoint artifact as primary context before falling back to conversation context. Missing, unreadable, or malformed latest pointers are non-blocking; warn when malformed, then ignore the pointer and fall back to a matching checkpoint artifact or conversation context. If durable run-ledger state is available, `beislid run-ledger resume --flow implement --ticket-id <id> --branch <branch>` may identify the latest running/interrupted/failed external run, but checkpoint artifacts/design artifacts remain the primary content seed for implementation planning.
 
-Action-risk decisions follow `action-policy-protocol.md`; read it before checkpoint writes, workspace edits, dependency installs, local git operations, or configured side-effect hooks. For durable run evidence, `probe(crust_seam)` per `crust-seam-protocol.md`; on ok, best-effort `crust ledger init --skill implement --flow implement --json`, else `beislid run-ledger init --skill implement --flow implement`, when ticket/branch context is known. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add a checkpoint through the same seam (`crust ledger checkpoint` or `beislid run-ledger checkpoint`) with `--run-id <run_id> --flow implement --name implementation_plan_created --resume-hint <resume_hint>` so the resume hint stays attached to the run. Ledger failures warn but never replace task tracking, verification, or checkpoint artifact behavior.
+Action-risk decisions follow `action-policy-protocol.md`; read it before checkpoint writes, workspace edits, dependency installs, local git operations, or configured side-effect hooks. For durable run evidence when ticket/branch context is known, follow the `nopal-seam-protocol.md` fallback ladder. With `mode: off`, use `beislid run-ledger init --skill implement --flow implement`. Otherwise `probe(nopal_seam)` and, only when the probe is ok and `capabilities[]` contains `ledger`, call `nopal ledger init --skill implement --flow implement --json`. Under `mode: prefer`, an unavailable probe, missing `ledger` capability, or failed Nopal call warns and falls back to `beislid run-ledger init`; under `mode: require`, the same condition blocks instead of falling back. Record transcript-safe events for plan creation, task-batch starts/completions, verification results, and interruptions. When a workflow checkpoint artifact is written, add a checkpoint through the same seam (`nopal ledger checkpoint --json` or `beislid run-ledger checkpoint`) with `--run-id <run_id> --flow implement --name implementation_plan_created --resume-hint <resume_hint>` so the resume hint stays attached to the run. Ledger failures warn only on a fallback-eligible Beislid path and never replace task tracking, verification, or checkpoint artifact behavior.
 
 If the repo declares custom lifecycle hooks, read `../lifecycle-hooks.md` and honor any phase-boundary hooks before and after implementation.
 
@@ -41,7 +43,7 @@ Break work into bite-sized tasks (2-5 minutes each). Each task specifies:
 2. Run it — confirm it fails (red)
 3. Write minimal code to pass (green)
 4. Refactor if needed
-5. Commit the task or batch before starting the next one or handing off
+5. Commit the verified logical batch before starting the next batch or handing off
 
 **TDD exceptions** — mark tasks as non-TDD only when testing doesn't apply:
 - CSS/styling changes
@@ -98,11 +100,14 @@ Create an item for every task in the host agent's todo/task mechanism. If the ho
 ## Phase 3: Execute
 
 ### Single tasks
-Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group before starting the next task or handing off; if policy allows, do it immediately after verification. If policy asks or denies, stop at the commit boundary before advancing.
+Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit verified logical batches by default before starting the next batch or handing off. Task-level commits are exceptions for isolated handoffs, high-risk boundaries, configuration migrations, or an explicit user preference. A batch boundary never skips task tracking, TDD checkpoints, verification, or policy evaluation. If policy asks or denies, stop at the commit boundary before advancing.
 
 ### Parallel batches
 When a batch has 3+ independent tasks, dispatch subagents:
-- Give each subagent focused scope, context, and success criteria.
+- Before any parallel dispatch, load `workspace-placement-protocol.md` plus the current host adapter and satisfy its placement-readiness checks.
+- If placement readiness cannot be established, execute the batch sequentially in one owned worktree.
+- Give each subagent focused scope, context, success criteria, required gates, and a handoff contract.
+- On Codex, load and satisfy `codex-delegate-context.md` immediately before dispatch.
 - Treat generators, builds, formatters, database commands, and artifact-writing tests as mutation.
 - Every parallel mutating agent must have a different dedicated worktree and branch before dispatch.
 - Follow the loaded protocol for fresh placement, runtime leases, acknowledgment, handoff, integration, and cleanup.

@@ -37,12 +37,14 @@ Probe each selected gate once, plus `required_tools[]` via `command -v`. On fail
 
 Execution:
 
-1. If `fast_path_eligible=true`, batch only gates with `parallel_safe: true`, no `autofix`, and `mutates` not true. Run concurrently when supported; otherwise run sequentially and record `parallel_unavailable`.
-2. Run non-batched gates once in configured order. Normal mode treats every selected gate as non-batched.
-3. For each run, capture duration and parse stdout/stderr into the shared Gate result envelope from `output-templates.md`. Store raw logs by path when possible, else a safe summary.
-4. Autofix when `fail` and not environment: if `approval_gates.autofix_commit` is `auto`, policy-check `gate.autofix`, record diff to transcript/ledger, commit without prompt (unless action policy denies). Else policy-check `gate.autofix`, show diff as context, and ask the approval question once in the final blocking response.
-5. For `error`, environment failure, or no autofix: emit `waiting`. If `approval_gates.gate_failure` is `auto` and not environment: record failure envelope to transcript/ledger with `auto-accept-risk`, continue. Else prompt from envelope + context in the final blocking response. Surface all failure envelopes together.
-6. Re-run applicable gate after fixes. User proceed-without-passing (or auto accept-risk) → record.
+1. Before batching, gates with `evidence_reuse.mode: exact` follow [the exact gate proof protocol](gate-proof-protocol.md); unreadable protocol means warn and run normally.
+2. Fast path batches only gates still needing execution with `parallel_safe: true`, no `autofix`, and `mutates` not true; record `parallel_unavailable` when concurrency is unsupported.
+3. Run other gates once in configured order; normal mode treats every non-reused gate as non-batched.
+4. Capture duration, parse the shared Gate result envelope, and store raw logs or a safe summary.
+5. On non-environment failure with auto autofix approval, policy-check, record the diff, and commit unless denied.
+6. Otherwise policy-check autofix, show the diff, and ask once in the final blocking response.
+7. For errors, environment failures, or no autofix, emit `waiting` and follow configured failure approval.
+8. Re-run after fixes and record decisions to proceed without passing.
 
 Probe/cache rule: first use of a configured gate, ticket source, formatter, domain/memory hook, or PR-provider capability updates run-memory probe state. Plain git checks are not probe-cache entries.
 
@@ -99,6 +101,8 @@ If the user explicitly asks for a durable visual proof/review artifact, suggest 
 
 - Run only applicable gates: `gate_sets` selection when configured, otherwise touched scopes when scoped, otherwise top-level gates only when scopes are absent.
 - Fast-path parallelism requires `parallel_safe: true`; absence of `autofix` alone is not enough, and `mutates: true` gates are never parallel candidates.
+- Exact evidence reuse is opt-in and fail-closed; every missing, stale, malformed, dirty, mutating, or ambiguous proof result runs the gate normally.
+- Reused computational gate evidence never replaces inferential review or the required clean evaluator.
 - Only configured `autofix` commands may run after policy; other failures need user direction.
 - Clean evaluator is policy-driven: `mode: off` skips it; `mode: require` must run a clean surface and classify failures instead of silently falling back to the working tree.
 - Walkthrough is optional and `show-me` requires an explicit user request; neither is an automatic blocker.

@@ -580,21 +580,71 @@ def command_gate(args: argparse.Namespace) -> int:
     safe_name = slug(args.name, "gate")
     attempt_dir = next_attempt_dir(rdir, rdir / "artifacts" / "gates" / scope / safe_name)
     envelope_path = attempt_dir / "envelope.json"
+    proof_result = None
     with run_lock(rdir):
         write_json(envelope_path, redact_json(envelope))
+    if args.proof_request_file:
+        import gate_proof
+
+        try:
+            proof_request = gate_proof.read_json(Path(args.proof_request_file))
+            proof_result = gate_proof.record(
+                proof_request,
+                repo_root(Path.cwd()),
+                envelope_path,
+                args.run_id,
+                args.expected_proof_key,
+            )
+        except (OSError, json.JSONDecodeError, gate_proof.ProofUnavailable) as exc:
+            code = exc.code if isinstance(exc, gate_proof.ProofUnavailable) else "request_invalid"
+            message = exc.message if isinstance(exc, gate_proof.ProofUnavailable) else str(exc)
+            proof_result = {
+                "kind": gate_proof.RECORD_KIND,
+                "status": "skipped",
+                "reason": code,
+                "summary": message,
+            }
+    with run_lock(rdir):
         run = read_json(rdir / "run.json")
         artifact = {"name": args.name, "path": str(envelope_path), "kind": "gate", "scope": scope}
+        if proof_result is not None:
+            artifact["proof"] = proof_result
         run.setdefault("artifacts", []).append(artifact)
         run.setdefault("logs", []).append(artifact)
         write_json(rdir / "run.json", run)
+    checkpoint_data = {
+        "name": args.name,
+        "scope": scope,
+        "path": str(envelope_path),
+        "status": envelope.get("status"),
+        "envelope": envelope,
+    }
+    if proof_result is not None:
+        checkpoint_data["proof"] = proof_result
     checkpoint_path = record_checkpoint(
         rdir,
         f"gate-{scope}-{safe_name}",
-        {"name": args.name, "scope": scope, "path": str(envelope_path), "status": envelope.get("status"), "envelope": envelope},
+        checkpoint_data,
         args.resume_hint or "continue after reviewing gate result",
     )
-    append_event(rdir, "gate_result", {"name": args.name, "scope": scope, "path": str(envelope_path), "checkpoint": str(checkpoint_path), "envelope": envelope})
-    print(json.dumps({"run_id": args.run_id, "gate_log": str(envelope_path), "checkpoint": str(checkpoint_path)}, sort_keys=True))
+    event_data = {
+        "name": args.name,
+        "scope": scope,
+        "path": str(envelope_path),
+        "checkpoint": str(checkpoint_path),
+        "envelope": envelope,
+    }
+    if proof_result is not None:
+        event_data["proof"] = proof_result
+    append_event(
+        rdir,
+        "gate_result",
+        event_data,
+    )
+    output = {"run_id": args.run_id, "gate_log": str(envelope_path), "checkpoint": str(checkpoint_path)}
+    if proof_result is not None:
+        output["proof"] = proof_result
+    print(json.dumps(output, sort_keys=True))
     return 0
 
 
@@ -954,6 +1004,8 @@ def build_parser() -> argparse.ArgumentParser:
     gate_p.add_argument("--name", required=True)
     gate_p.add_argument("--scope")
     gate_p.add_argument("--envelope-file", required=True)
+    gate_p.add_argument("--proof-request-file")
+    gate_p.add_argument("--expected-proof-key")
     gate_p.add_argument("--resume-hint")
     gate_p.set_defaults(func=command_gate)
 

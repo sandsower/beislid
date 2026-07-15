@@ -197,14 +197,14 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_kind": "validation",
       "value": "goal: 50k; review-response loop: on; gates before push: on; merge/memento/retro: ask/ask/ask"
     },
-    "crust_seam": {
+    "nopal_seam": {
       "status": "ok",
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "binary",
       "probe_mode": "rich",
       "capabilities": ["ask","cli","cockpit","export","gates","herd","import","info","ledger","placement","policy","preflights","rondo","run","status","validate","workflow"],
-      "value": "mode: prefer; crust 0.1.0 (rich); .crust/ fresh; seams delegated: gates, policy, workflow, ledger"
+      "value": "mode: prefer; nopal 0.1.0 (rich); .nopal/ fresh; seams delegated: gates, policy, workflow, ledger"
     }
   }
 }
@@ -220,8 +220,8 @@ Field rules:
 - `value` — what was probed or validated (tool name, command binary, path, artifact runtime policy, action-policy summary, etc.). Omitted on `disabled` entries. For MCP-backed tools, prefer an `exact:<tool>` or `alias:<resolved> ← <configured>` prefix so the cache distinguishes a direct registration from a host-adapter alias. For reserved checkpoint artifact events, records a validation message such as `(reserved checkpoint artifact; not executed by P0 skills)` when their shape is valid but no P0 skill executes them. For `action_policy`, summarize effective modes, sandbox minimums, action overrides, fallback decisions when configured, and known-action registry size; do not store the whole policy table in the cache.
 - `reason` — only on `missing` and `failed`. Always omitted on `ok` and `disabled`.
 - `probed_at`, `probe_kind`, `value` — omitted on `disabled` entries (no probe was run).
-- `probe_mode` — only on `crust_seam`. `rich` when `crust info --json` resolved the `crust.info/v1` envelope; `legacy` when an older `crust` (no `info` subcommand, clap exit 2) forced the `command -v crust` + `crust --version` plain-text fallback. Omitted when `crust_seam` is `missing`, `failed`, or `disabled`.
-- `capabilities` — only on `crust_seam` when `probe_mode: rich`. The sorted `capabilities[]` array from the `crust.info/v1` envelope; orchestrators check membership here rather than parsing `value`. Omitted in `probe_mode: legacy` (no capability list exists in plain-text `--version` output) and on `missing`/`failed`/`disabled`.
+- `probe_mode` — only on `nopal_seam`. Always `rich` after the configured binary's `info --json` command resolves a valid `nopal.info/v1` envelope. Omitted when `nopal_seam` is `missing`, `failed`, or `disabled`; there is no plain-text or retired-binary fallback.
+- `capabilities` — only on `nopal_seam` when `probe_mode: rich`. The sorted `capabilities[]` array from the `nopal.info/v1` envelope; orchestrators check membership here rather than parsing `value`. Omitted on `missing`/`failed`/`disabled`.
 
 Orchestrators (ready-for-review, kickoff, review-response) write back individual capability entries when they probe lazily. They do NOT write `(b)`-skipped entries — those are session-only by contract; the next run re-prompts. They do NOT update top-level fields except `workflow_hash` and `cache_ttl_hours` (read from workflow.md). Doctor remains the only writer of `doctor_run_at`.
 
@@ -255,7 +255,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ ship_time_artifacts validation                            ok (mode: remind; planning-artifact summary only)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
 ✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)
-✓ crust_seam binary:crust                                   ok (0.1.0, rich; .crust/ fresh; delegated: gates, policy, workflow, ledger)
+✓ nopal_seam binary:nopal                                   ok (0.1.0, rich; .nopal/ fresh; delegated: gates, policy, workflow, ledger)
 cache file:        <path>
 cache valid until: <ISO-8601>
 workflow_hash:     <hash>

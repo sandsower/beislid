@@ -950,6 +950,73 @@ PY
 }
 
 
+test_beislid_repo_dogfoods_nopal_seam() {
+  python3 - <<'PY' "$REPO_DIR" || note_fail "expected repo workflow and generated modules to dogfood the Nopal seam"
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+workflow = (root / '.beislid/workflow.md').read_text(encoding='utf-8')
+required_text = ['```beislid:nopal_seam', 'binary: nopal']
+missing_text = [needle for needle in required_text if needle not in workflow]
+required_files = [
+    '.beislid/nopal-seam-protocol.md',
+    '.nopal/nopal.jsonc',
+    '.nopal/gates.jsonc',
+    '.nopal/policy.jsonc',
+    '.nopal/workflow.jsonc',
+    '.nopal/integrations.jsonc',
+    '.nopal/review_policy.jsonc',
+]
+missing_files = [relative for relative in required_files if not (root / relative).is_file()]
+if missing_text or missing_files:
+    raise SystemExit(f'missing Nopal dogfood contract: text={missing_text}, files={missing_files}')
+PY
+}
+
+
+test_beislid_repo_workflow_uses_single_pre_pr_mirror() {
+  python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" || note_fail "expected repo workflow.md to use the optimized pre-PR policy"
+from pathlib import Path
+import re, sys
+
+text = Path(sys.argv[1]).read_text(encoding='utf-8')
+
+def block(name):
+    match = re.search(rf'```beislid:{name}\n(.*?)\n```', text, re.DOTALL)
+    if not match:
+        raise SystemExit(f'missing beislid:{name} block')
+    return match.group(1)
+
+gates = block('gates')
+gate_names = re.findall(r'^- name: (.+)$', gates, re.MULTILINE)
+expected_names = ['diff-whitespace', 'local-ci-mirror']
+if gate_names != expected_names:
+    raise SystemExit(f'expected only {expected_names}, got {gate_names}')
+if "command: 'bash scripts/validate.sh'" not in gates:
+    raise SystemExit('local-ci-mirror must run the complete scripts/validate.sh mirror')
+
+ready = block('ready_for_review')
+expected_approvals = {
+    'pr_title_body': 'auto',
+    'gate_failure': 'prompt',
+    'autofix_commit': 'auto',
+    'clean_eval_failure': 'prompt',
+    'reduced_review_coverage': 'prompt',
+}
+actual_approvals = dict(re.findall(r'^  ([a-z_]+): (auto|prompt)$', ready, re.MULTILINE))
+if actual_approvals != expected_approvals:
+    raise SystemExit(f'expected approval policy {expected_approvals}, got {actual_approvals}')
+
+clean_eval = block('clean_eval')
+if 'mode: require' not in clean_eval:
+    raise SystemExit('clean evaluator must remain required')
+if 'Run Codex agent smoke now?' not in text:
+    raise SystemExit('conditional Codex agent-smoke approval gate must remain configured')
+PY
+}
+
+
 test_rondo_step_hints_configured() {
   python3 - <<'PY' "$REPO_DIR/WORKFLOW.md" || note_fail "expected WORKFLOW.md to dogfood step_hints"
 from pathlib import Path
@@ -1117,11 +1184,13 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   cp "$REPO_DIR/bin/beislid" "$libexec/bin/beislid"
   cp "$REPO_DIR/scripts/install_lib.sh" "$libexec/scripts/install_lib.sh"
   cp "$REPO_DIR/scripts/run_ledger.py" "$libexec/scripts/run_ledger.py"
+  cp "$REPO_DIR/scripts/gate_proof.py" "$libexec/scripts/gate_proof.py"
   cp "$REPO_DIR/scripts/workspace_placement.py" "$libexec/scripts/workspace_placement.py"
   cp "$REPO_DIR/scripts/action_policy.py" "$libexec/scripts/action_policy.py"
   cp "$REPO_DIR/scripts/validate_export.py" "$libexec/scripts/validate_export.py"
   cp "$REPO_DIR/scripts/schema_check.py" "$libexec/scripts/schema_check.py"
   cp "$REPO_DIR/scripts/visual_feedback.py" "$libexec/scripts/visual_feedback.py"
+  cp "$REPO_DIR/scripts/resource_resolver.py" "$libexec/scripts/resource_resolver.py"
   cp "$REPO_DIR/scripts/workflow_normalizer.py" "$libexec/scripts/workflow_normalizer.py"
   cp "$REPO_DIR/install.sh" "$libexec/install.sh"
   chmod +x "$libexec/bin/beislid"
@@ -1131,6 +1200,8 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   assert_stdout_contains "beislid install user"
   assert_stdout_contains "beislid install project"
   assert_file_contains "$libexec/skills/kickoff/workflow-md-format.md" "Version stamp"
+  run_packaged_cli "$cellar/bin/beislid" "" resource resolve workflow-md-format
+  assert_stdout_contains "$libexec/.beislid/workflow-md-format.md"
 
   local expected_skill_target
   expected_skill_target="$(python3 - <<'PY' "$libexec/skills/verify"
@@ -1154,12 +1225,14 @@ test_homebrew_formula_installs_runtime_subset() {
   assert_file_contains "$formula" "skills"
   assert_file_contains "$formula" "scripts/install_lib.sh"
   assert_file_contains "$formula" "scripts/run_ledger.py"
+  assert_file_contains "$formula" "scripts/gate_proof.py"
   assert_file_contains "$formula" "scripts/workspace_placement.py"
   assert_file_contains "$formula" "scripts/action_policy.py"
   assert_file_contains "$formula" "scripts/validate_export.py"
   assert_file_contains "$formula" "scripts/schema_check.py"
   assert_file_contains "$formula" "schemas"
   assert_file_contains "$formula" "scripts/visual_feedback.py"
+  assert_file_contains "$formula" "scripts/resource_resolver.py"
   assert_file_contains "$formula" "scripts/workflow_normalizer.py"
   assert_file_contains "$formula" "install.sh"
   assert_file_contains "$formula" "brew upgrade beislid"
@@ -1607,6 +1680,10 @@ test_cli_project_copy_install_explicit_path() {
     assert_not_symlink "$project/.$host/skills/show-me/visual-surface-protocol.md"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "Show Me deck routing"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
+    assert_file_exists "$project/.$host/skills/setup/first-run.md"
+    assert_not_symlink "$project/.$host/skills/setup/first-run.md"
+    assert_file_exists "$project/.$host/skills/setup/sections/lifecycle-actions.md"
+    assert_not_symlink "$project/.$host/skills/setup/sections/lifecycle-actions.md"
     for artifact_skill in blueprint fresh-eyes implement ready-for-review review-response review spec verify; do
       assert_file_exists "$project/.$host/skills/$artifact_skill/artifact-templates.md"
       assert_not_symlink "$project/.$host/skills/$artifact_skill/artifact-templates.md"
@@ -2224,6 +2301,8 @@ run_test "pi babysit preserves args and token budgets"        test_pi_babysit_to
 run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "repo workflow dogfoods Nopal seam"                  test_beislid_repo_dogfoods_nopal_seam
+run_test "repo workflow uses one complete pre-PR mirror"       test_beislid_repo_workflow_uses_single_pre_pr_mirror
 run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump

@@ -100,6 +100,23 @@ Equivalent host-adapter aliases are fine for MCP-backed sources: the probe shoul
 
 Full format reference: [`.beislid/workflow-md-format.md`](../.beislid/workflow-md-format.md).
 
+### Distribution resource resolution
+
+Use the additive resource command when an integration needs the canonical installed path to a Beislið protocol or template:
+
+```bash
+beislid resource resolve workflow-md-format
+beislid resource resolve probe-semantics
+```
+
+The command accepts only registered logical names and prints one absolute path.
+It uses the CLI's validated runtime root, including supported symlinked, packaged-copy, and explicit `BEISLID_HOME` layouts.
+It never searches the current repository, ancestor directories, home-directory skill roots, or unrelated host installations.
+Unknown names, path-like input, missing files, and resources that escape the runtime root fail closed.
+
+The setup skill uses this resolver just in time and retains its shipped sibling files as a disclosed fallback when the CLI is unavailable.
+Its first-run, update, menu, AGENTS integration, parse recovery, and optional-section instructions are separate auxiliary protocols, so a host loads only the selected setup route.
+
 ### Read-only workflow normalization
 
 Use the normalizer command when a tool needs typed derived state without making JSON a second source of truth:
@@ -194,6 +211,13 @@ Rich gate metadata can describe where a check belongs in the harness and how age
   timeout_seconds: 600
   cost: expensive
   mutates: false
+  evidence_reuse:
+    mode: exact
+    environment:
+      variables: ['CI']
+      commands:
+        - ['.venv/bin/python', '--version']
+        - ['.venv/bin/python', '-m', 'pip', 'freeze', '--all']
   output:
     parser: pytest
   failure:
@@ -204,7 +228,24 @@ Rich gate metadata can describe where a check belongs in the harness and how age
 
 `ready-for-review` and `review-response` currently execute legacy gates and computational `stage: pre-pr` sensor gates. Other stages (`preflight`, `per-edit`, `pre-commit`, `post-pr`, `continuous`, and `human-interrupt`) plus non-computational/non-sensor pre-pr declarations are valid metadata for Rondo/future orchestrators; current skills report them rather than running them at the wrong lifecycle point. `required_tools` entries are probed as CLI binaries before a gate is treated as runnable.
 
+Exact gate evidence reuse is additive and off by default.
+Set `evidence_reuse.mode: exact` only for a deterministic non-mutating gate whose relevant environment can be completely fingerprinted.
+List environment variable names under `environment.variables` and safe argv-style version probes under `environment.commands`.
+Beislið hashes values and probe output rather than storing them in proof metadata.
+
+Before execution, `ready-for-review` asks `beislid gate-proof lookup` for a structured decision.
+Reuse occurs only for an exact passing proof bound to the local repository's shared Git storage and root history, commit, tree, whole workflow file, normalized gate command and working directory, base selection, changed files, declared environment, and immutable ledger artifacts.
+Every mismatch or validation problem returns `rerun` and executes the configured gate normally.
+Dirty worktrees, mutating gates, failed probes, old envelopes, corrupt proof state, and missing or changed artifacts cannot satisfy reuse.
+Clean evaluation and inferential review always remain independent.
+
+Proof records live under `${BEISLID_STATE_DIR:-~/.local/state/beislid}/gate-proofs/<repo_hash>/` and are content-addressed.
+`beislid run-ledger gate --proof-request-file <request.json> --expected-proof-key <proof_key>` records eligible proof only after it stores the normal immutable passing envelope containing that same pre-execution key.
+Legacy callers that omit the expected key keep their normal ledger evidence but safely skip reusable proof recording.
+Existing `run-ledger gate` invocations and workflows without `evidence_reuse` behave exactly as before.
+
 When orchestrators run gates, they summarize each result as an agent-readable envelope with canonical top-level keys: `gate` (object with `name`, `scope`, `cwd`, and `command` strings), `status` (`pass`, `fail`, `skipped`, or `error`), `duration_ms` (integer), `summary` (string), `failures` (array), `retryable` (boolean), `environment_failure` (boolean), `suggested_next_action` (string), and `raw_logs` (object with optional `path` and `transcript_safe_summary` strings).
+An exact evidence-reuse attempt also carries the pre-execution `proof_key` as a top-level string.
 
 ```json
 {
@@ -431,23 +472,30 @@ Strategy remains in `agent_isolation`, while authorization remains centralized i
 `/doctor` validates configuration and reports adapter conformance state, stale worktrees, retained failures, expired leases, and orphan candidates.
 Doctor is read-only for these resources and never releases, reconciles, reclaims, or removes them.
 
-## Crust seam
+## Nopal seam
 
-`crust` is a standalone Rust binary (from the separate crust repo) that computes the same deterministic decisions Beislið's Python tools compute, from a committed `.crust/` config generated by `crust import beislid-workflow --write --json`. Beislið skills call it first for five decision families — gate selection, action-policy verdict + placement, workflow normalization (`.crust/` drift), and run-ledger writes — and fall back to today's Python/prose paths when it isn't available. Crust is optional in v1: there is no published release yet, so `crust_seam.mode: prefer` (the default) degrades silently when the binary isn't built. Build it locally with `cargo build --release -p crust-cli` from the crust repo; the binary lands at `target/release/crust`.
+`nopal` is a standalone Rust binary from the separate `sandsower/nopal` repository.
+It computes deterministic gate selection, action-policy verdicts, runtime placement, workflow normalization, and run-ledger writes from committed `.nopal/` configuration.
+Beislið calls it first when the exact `nopal.info/v1` probe succeeds and preserves its Python and prose fallbacks when Nopal is unavailable.
+Nopal remains optional in v1, and `nopal_seam.mode: prefer` is the default.
+Install a current archive from the repository's GitHub Releases page, verify it with the published `SHA256SUMS`, and place `nopal` on `PATH`.
 
 ````markdown
-## Crust seam
+## Nopal seam
 
-```beislid:crust_seam
+```beislid:nopal_seam
 mode: prefer
-binary: crust
+binary: nopal
 min_version: 0.1.0
 ```
 ````
 
-`mode: prefer` (default when the block is absent) uses crust for a seam when its `binary` probe resolves, and falls back per-seam otherwise with no extra friction. `mode: require` hard-stops naming the install story when the probe fails, instead of falling back. `mode: off` disables the seam entirely.
+`mode: prefer` (default when the block is absent) uses nopal for a seam when its `binary` probe resolves, and falls back per-seam otherwise with no extra friction. `mode: require` hard-stops naming the install story when the probe fails, instead of falling back. `mode: off` disables the seam entirely.
 
-Doctor probes `crust_seam` as a `binary` capability (presence + `--version` parse against optional `min_version`) and, when it resolves, re-runs `crust import beislid-workflow` in preview mode to diff against the committed `.crust/*.jsonc` files, reporting drift with a re-import remediation. `review_policy`, `ready_for_review`, `clean_eval`, and `babysit` have no crust v1 module and always stay on the Python/prose path regardless of `crust_seam` status; the same is true for risk classification, fast-path eligibility, split-policy checks, and sandbox-baseline evaluation, which have no crust vocabulary yet. See `.beislid/crust-seam-protocol.md` for the full call contract, token normalization table (crust's vocabulary is snake_case; beislid's kebab-case modes/classes/stages must be converted before calling), exit-code semantics, and per-seam fallback ladder.
+Doctor probes `nopal_seam` with `nopal info --json` and requires the exact `nopal.info/v1` envelope.
+It checks semantic drift with `nopal import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --check --json`.
+Nopal can import `review_policy` and `split_policy`, but this cutover does not change Beislið's ready-for-review, clean-eval, babysit, or sandbox-baseline behavior.
+See `.beislid/nopal-seam-protocol.md` for the full call contract, token normalization table, exit-code semantics, and fallback ladder.
 
 ## Work Contract v1
 
@@ -1480,7 +1528,7 @@ Release process:
 4. Users then update with `brew upgrade beislid`.
 
 The CLI validates its runtime layout before loading installer code.
-It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/workspace_placement.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `scripts/workflow_normalizer.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root.
+It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/workspace_placement.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `scripts/resource_resolver.py`, `scripts/workflow_normalizer.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root.
 The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
@@ -1494,6 +1542,7 @@ beislid repair project [path] [--force] [--strict]
 beislid status
 beislid status project [path]
 beislid workflow normalize --json
+beislid resource resolve <name>
 beislid workflow-signal status
 beislid workflow-signal emit waiting --skill ready-for-review
 beislid update

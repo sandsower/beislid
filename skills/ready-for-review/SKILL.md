@@ -35,7 +35,7 @@ workflow_hash=$(git hash-object .beislid/workflow.md)
 
 Read `${BEISLID_STATE_DIR:-$HOME/.local/state/beislid}/probes/<repo_hash>.json` if present. Missing means `cold`; workflow hash mismatch means `stale` (start with empty in-memory state); matching hash means `fresh` (load capability entries). Per-cap freshness uses `probe_cache.ttl_hours`, default 24.
 
-After config/cache setup, init transcript. `probe(crust_seam)`; on ok, init the ledger with `crust ledger init --skill ready-for-review --json`, else `beislid run-ledger init --skill ready-for-review` (`crust-seam-protocol.md`). Record events, and if active checkpoint with the same seam's `ledger checkpoint --run-id <run_id> --name <phase_name>`. Ledger and `workflow-signal` calls are best-effort: warn and continue on missing CLI or failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
+After config/cache setup, init transcript. `probe(nopal_seam)`; on ok, init the ledger with `nopal ledger init --skill ready-for-review --json`, else `beislid run-ledger init --skill ready-for-review` (`nopal-seam-protocol.md`). Record events, and if active checkpoint with the same seam's `ledger checkpoint --run-id <run_id> --name <phase_name>`. Ledger and `workflow-signal` calls are best-effort: warn and continue on missing CLI or failure; never replace approvals, transcript, or memory marker. Then load Phase 1 and print orientation after branch/base/fast-path are known.
 
 ## Internal: probe(<cap>)
 

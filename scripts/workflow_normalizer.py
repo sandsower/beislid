@@ -46,6 +46,7 @@ DOC_FENCE_KEYS = {
     "knowledge_store.path",
     "lifecycle_actions",
     "model_routing",
+    "nopal_seam",
     "pi_handoff",
     "pr_review_source",
     "pr_review_update",
@@ -614,6 +615,51 @@ def _validate_gates(gates: Any, path: str, warnings: list[Diagnostic]) -> None:
         if "execution" in gate and gate["execution"] not in ALLOWED_GATE_EXECUTIONS:
             warnings.append(
                 Diagnostic("reserved_value", f"{path}[{index}].execution", f"unknown gate execution {gate['execution']!r}")
+            )
+        if "evidence_reuse" not in gate:
+            continue
+        reuse = gate["evidence_reuse"]
+        reuse_path = f"{path}[{index}].evidence_reuse"
+        if not isinstance(reuse, dict):
+            warnings.append(Diagnostic("invalid_section_shape", reuse_path, "evidence_reuse must be a mapping"))
+            continue
+        if reuse.get("mode") != "exact":
+            warnings.append(Diagnostic("invalid_value", f"{reuse_path}.mode", "evidence_reuse mode must be exact"))
+        if gate.get("kind", "sensor") != "sensor":
+            warnings.append(Diagnostic("invalid_value", f"{path}[{index}].kind", "exact reuse requires a sensor gate"))
+        if gate.get("execution", "computational") != "computational":
+            warnings.append(
+                Diagnostic("invalid_value", f"{path}[{index}].execution", "exact reuse requires computational execution")
+            )
+        if gate.get("mutates", False) is not False:
+            warnings.append(Diagnostic("invalid_value", f"{path}[{index}].mutates", "exact reuse requires mutates: false"))
+        environment = reuse.get("environment", {})
+        if not isinstance(environment, dict):
+            warnings.append(
+                Diagnostic("invalid_section_shape", f"{reuse_path}.environment", "environment must be a mapping")
+            )
+            continue
+        variables = environment.get("variables", [])
+        if not isinstance(variables, list) or not all(isinstance(item, str) and item for item in variables):
+            warnings.append(
+                Diagnostic(
+                    "invalid_value",
+                    f"{reuse_path}.environment.variables",
+                    "environment variables must be a list of non-empty names",
+                )
+            )
+        commands = environment.get("commands", [])
+        commands_valid = isinstance(commands, list) and all(
+            isinstance(argv, list) and bool(argv) and all(isinstance(item, str) and item for item in argv)
+            for argv in commands
+        )
+        if not commands_valid:
+            warnings.append(
+                Diagnostic(
+                    "invalid_value",
+                    f"{reuse_path}.environment.commands",
+                    "environment commands must be a list of non-empty argv lists",
+                )
             )
 
 

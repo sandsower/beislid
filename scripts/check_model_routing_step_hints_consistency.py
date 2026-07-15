@@ -50,7 +50,7 @@ REQUIRED_REFERENCES = {
         "WORKFLOW.md",
         "validation-only",
     ],
-    "skills/setup/SKILL.md": [
+    "skills/setup/sections/model-routing.md": [
         "step_hints",
         "WORKFLOW.md",
         "frontier",

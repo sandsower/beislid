@@ -58,14 +58,14 @@ skills/review-response/output-templates.md
 skills/review-response/review-response-templates.md
 skills/review-response/action-policy-protocol.md
 skills/ready-for-review/action-policy-protocol.md
-skills/kickoff/crust-seam-protocol.md
-skills/envelope/crust-seam-protocol.md
-skills/ready-for-review/crust-seam-protocol.md
-skills/review-response/crust-seam-protocol.md
-skills/implement/crust-seam-protocol.md
-skills/babysit/crust-seam-protocol.md
-skills/retro/crust-seam-protocol.md
-skills/doctor/crust-seam-protocol.md'
+skills/kickoff/nopal-seam-protocol.md
+skills/envelope/nopal-seam-protocol.md
+skills/ready-for-review/nopal-seam-protocol.md
+skills/review-response/nopal-seam-protocol.md
+skills/implement/nopal-seam-protocol.md
+skills/babysit/nopal-seam-protocol.md
+skills/retro/nopal-seam-protocol.md
+skills/doctor/nopal-seam-protocol.md'
 
 missing_or_not_symlink=$(printf '%s\n' "$required" | while read -r path; do
   [ -L "$path" ] || echo "$path"
@@ -86,8 +86,8 @@ stray_regular=$(find skills \( -name 'probe-semantics.md' \
                       -o -name 'kickoff-templates.md' \
                       -o -name 'review-response-templates.md' \
                       -o -name 'action-policy-protocol.md' \
-                      -o -name 'crust-seam-protocol.md' \) \
-          | xargs -I{} sh -c '[ -L "{}" ] || echo "{}"')
+                      -o -name 'nopal-seam-protocol.md' \) \
+          ! -type l -print)
 if [ -n "$stray_regular" ]; then
   echo "Found per-skill aux files that should be symlinks but are regular files:"
   echo "$stray_regular"
@@ -105,7 +105,8 @@ python3 scripts/check_planning_lifecycle_consistency.py
 python3 scripts/check_run_ledger_skill_examples_consistency.py
 python3 scripts/check_visual_surfaces_consistency.py
 python3 scripts/check_workflow_signals_consistency.py
-python3 scripts/check_crust_seam_consistency.py
+python3 scripts/check_nopal_seam_consistency.py
+python3 scripts/test_nopal_identity.py
 
 # --- validate-exports ------------------------------------------------------
 banner "validate-exports: committed export bundles"
@@ -134,6 +135,8 @@ bash scripts/test_bump_version.sh
 # --- run-ledger ---------------------------------------------------------
 banner "run-ledger: bash scripts/test_run_ledger.sh"
 bash scripts/test_run_ledger.sh
+banner "gate-proof: python3 scripts/test_gate_proof.py"
+python3 scripts/test_gate_proof.py
 
 # --- script-tests ------------------------------------------------------
 banner "script-tests: bash scripts/test_validate_export.sh"
@@ -146,6 +149,10 @@ banner "script-tests: python3 scripts/test_workspace_placement.py"
 python3 scripts/test_workspace_placement.py
 banner "script-tests: python3 scripts/test_workspace_host_conformance.py"
 python3 scripts/test_workspace_host_conformance.py
+banner "script-tests: python3 scripts/test_resource_resolver.py"
+python3 scripts/test_resource_resolver.py
+banner "script-tests: python3 scripts/test_setup_skill_routing.py"
+python3 scripts/test_setup_skill_routing.py
 banner "script-tests: python3 scripts/test_visual_feedback.py"
 python3 scripts/test_visual_feedback.py
 banner "script-tests: python3 scripts/test_agent_smoke_harness.py (self-test only, no live agents)"

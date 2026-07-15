@@ -72,8 +72,10 @@ REQUIRED_REFERENCES = {
         "provider/command/mode/artifact_root/artifact_retention/workflow",
         "Lavish plugin state",
     ],
-    "skills/setup/SKILL.md": [
-        "**Visual surfaces** — *Configure optional Lavish visual-surface routing",
+    "skills/setup/menu.md": [
+        "**Visual surfaces** - *Configure optional Lavish visual-surface routing",
+    ],
+    "skills/setup/sections/visual-surfaces.md": [
         "beislid:visual_surfaces",
         "off / suggest / prompt / auto",
         "artifact_retention",

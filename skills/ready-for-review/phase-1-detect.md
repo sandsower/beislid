@@ -52,7 +52,7 @@ Store files/stats. If the diff touches `skills/**` or `.beislid/**`, emit the sk
 
 If `review_policy.agentic_reviewer.mode: opt_in_final_review`, classify risk: `high` for high path/threshold match; `low` only when every file is low-risk and low thresholds hold; else `medium` (unknown stats cannot be low). Store `agentic_reviewer_required = risk > max_auto_closeout_risk` using `low < medium < high`. Missing policy preserves old behavior.
 
-`probe(crust_seam)`; if ok, select gates via `crust gates select --stage pre_pr --changed-files <files> --json` (`crust-seam-protocol.md`) and use its `selected`/`skipped`. Else if `gate_sets` exists, match selectors to changed files, apply `exclude`, union deterministically, de-dupe by gate identity, and record selected/skipped reasons. Else mark touched scopes; else create repo-root scope for top-level `gates`; else no gate scopes.
+`probe(nopal_seam)`; when ok with the `gates` capability, use `nopal gates select --stage pre_pr --changed-files <files> --json` and its `selected`/`skipped`. If `gates` is unavailable, follow the seam fallback ladder; `mode: require` blocks. When fallback is allowed and `gate_sets` exists, match selectors to files, apply `exclude`, union/de-dupe gates, and record reasons. Else mark touched scopes; else use top-level `gates`; else no gate scopes.
 
 ### 1d. Apply split policy
 
@@ -79,7 +79,7 @@ Fast-path is for small, low-risk new PRs. Set `fast_path_eligible=true` only whe
 
 - not `existing_pr_fast_path`
 - changed lines (additions + deletions from `--shortstat`) are known and ≤100
-- one touched scope/repo-root, or `gate_sets` where all selected executable gates are parallel-safe and no-fix (crust-selected gates carry no `parallel_safe`/`mutates` metadata — read that from workflow.md's own gate objects, not the crust selection response, per the carve-out in `crust-seam-protocol.md`)
+- one touched scope/repo-root, or `gate_sets` where all selected executable gates are parallel-safe and no-fix (nopal-selected gates carry no `parallel_safe`/`mutates` metadata — read that from workflow.md's own gate objects, not the nopal selection response, per the carve-out in `nopal-seam-protocol.md`)
 - no split-policy violation
 - `freshness=fresh` and `needs_merge=false`
 

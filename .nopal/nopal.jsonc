@@ -1,11 +1,11 @@
 {
-  // Crust project manifest for this repo, generated alongside `crust import
+  // Nopal project manifest for this repo, generated alongside `nopal import
   // beislid-workflow --write`. The importer drafts module files only; the
-  // manifest itself is hand-authored per BEI-137 (crust has no `init`
+  // manifest itself is hand-authored per BEI-137 (nopal has no `init`
   // subcommand yet). Profile "portable" requires gates + policy; this repo's
   // .beislid/workflow.md also yields workflow and integrations modules, which
   // portable accepts as additive extras.
-  "version": "crust.project/v1",
+  "version": "nopal.project/v1",
   "project": { "name": "beislid" },
   "profile": "portable"
 }

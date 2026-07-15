@@ -18,14 +18,14 @@ Read-only inspection can be `read` / `network-read`; if an action is not classif
 
 Use the configured run mode when known; otherwise default human-in-the-loop orchestrator runs to `supervised-auto`. Use `unattended-auto` only for explicitly unattended/fast-path rails.
 
-`probe(crust_seam)` first (see `crust-seam-protocol.md`). On `ok`, call the crust seam:
+`probe(nopal_seam)` first (see `nopal-seam-protocol.md`). On `ok`, call the nopal seam:
 
 ```bash
-crust policy decide --mode <supervised_auto|unattended_auto> --action <stable-action-id> \
+nopal policy decide --mode <supervised_auto|unattended_auto> --action <stable-action-id> \
   [--class <class> ...] --json
 ```
 
-Normalize `mode` and every `class` to crust's snake_case vocabulary per `crust-seam-protocol.md` before calling — the kebab forms below are silently accepted but match no rule. Parse `decision`, `placement`, and `matched_rules` from the `crust.policy_decision/v1` envelope; the `placement` field is runtime isolation guidance (stronger-isolation demands map to worktree-isolation guidance) and should be recorded alongside `decision`. Sandbox baseline/uncommitted-changes have no crust v1 representation — record them as evidence alongside the crust envelope; they no longer influence the crust decision. Fall back to the beislid evaluator below when the probe is missing/stale, `mode: off` is configured, or the crust call returns `ok: false`.
+Normalize `mode` and every `class` to nopal's snake_case vocabulary per `nopal-seam-protocol.md` before calling — the kebab forms below are silently accepted but match no rule. Parse `decision`, `placement`, and `matched_rules` from the `nopal.policy_decision/v1` envelope; the `placement` field is runtime isolation guidance (stronger-isolation demands map to worktree-isolation guidance) and should be recorded alongside `decision`. Sandbox baseline/uncommitted-changes have no nopal v1 representation — record them as evidence alongside the nopal envelope; they no longer influence the nopal decision. Fall back to the beislid evaluator below when the probe is missing/stale, `mode: off` is configured, or the nopal call returns `ok: false`.
 
 Beislið evaluator fallback call shape:
 
@@ -38,7 +38,7 @@ beislid action-policy evaluate \
   [--default-branch] [--uncommitted-changes]
 ```
 
-Stable action ids should be specific enough for summaries, e.g. `git.merge`, `git.commit`, `git.push`, `gh.pr.create`, `ticket.comment`, `ticket.update`, `pr.review.reply`, `gate.autofix`, `dependency.install`, or `lifecycle.<event>.<name>`. Use the same stable action id for both the crust and beislid evaluator paths.
+Stable action ids should be specific enough for summaries, e.g. `git.merge`, `git.commit`, `git.push`, `gh.pr.create`, `ticket.comment`, `ticket.update`, `pr.review.reply`, `gate.autofix`, `dependency.install`, or `lifecycle.<event>.<name>`. Use the same stable action id for both the nopal and beislid evaluator paths.
 
 ## Decision handling
 
@@ -50,7 +50,7 @@ A prior blanket approval does not satisfy an `ask` decision. Ask once per policy
 
 ## Recording
 
-Run summaries and durable ledger events should preserve the evaluator envelope fields: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When the crust seam produced the decision, also preserve `placement`. Add separate fields for `human_outcome`, `side_effect_status`, and artifact/log paths. Never include secrets, auth headers, hidden reasoning, or raw unredacted command output.
+Run summaries and durable ledger events should preserve the evaluator envelope fields: `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. When the nopal seam produced the decision, also preserve `placement`. Add separate fields for `human_outcome`, `side_effect_status`, and artifact/log paths. Never include secrets, auth headers, hidden reasoning, or raw unredacted command output.
 
 ## Sandbox status
 
