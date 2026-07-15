@@ -41,7 +41,7 @@ Before mutation, require all of the following:
 Never adopt or reuse an existing path or branch automatically.
 Never keep sole progress under an ephemeral root.
 
-Use `beislid workspace create` for manual placement and `beislid workspace exec` for runtime delivery inside the recorded worktree.
+Use `beislid workspace create` for manual placement, `preflight` for preparation, and `exec` for runtime delivery inside the recorded worktree.
 
 ## Receipt and handoff
 

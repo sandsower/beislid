@@ -345,6 +345,10 @@ manual_root: repo-sibling
 fallback:
   orchestrator: manual-transition-required
   delegate: sequential
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
 runtime_profiles:
   integration:
     required_bindings:
@@ -374,6 +378,10 @@ Use `sequential` whenever the host cannot enforce the assigned working directory
 Runtime profiles are atomic.
 A profile may contain several database entrypoints and other services, but the delegate receives none of them unless every required binding allocates and verifies successfully.
 The provider owns allocation semantics, while the orchestrator owns lease, delivery, reconcile, and release lifecycle.
+
+Preparation is optional and runs after exact-SHA destination preflight.
+Its command must exit zero and leave tracked state unchanged before every configured readiness command passes.
+Preparation failure retains the placement for inspection and prevents delegate dispatch.
 
 Provider commands receive these environment variables:
 
@@ -405,6 +413,16 @@ beislid workspace exec \
 
 Automatic placement and runtime leasing require a running external run ledger.
 Missing ledger state, missing bindings, verification failure, or failed path anchoring stops dispatch and follows the configured manual or sequential fallback.
+
+Placement receipts use `cleanup_owner: host`, `beislid`, or `user`.
+Host-owned worktrees use the host lifecycle, Beislið removes only fresh manual worktrees it created, and unknown ownership is never cleaned automatically.
+Cleanup waits for integration, verification, commit reachability, clean handoff, runtime release, and action-policy authorization.
+
+The stable action IDs are `agent.workspace.transition`, `agent.delegate.provision`, `agent.delegate.commit`, `agent.runtime.lease`, `agent.runtime.release`, and `agent.workspace.cleanup`.
+Strategy remains in `agent_isolation`, while authorization remains centralized in `action_policy`.
+
+`/doctor` validates configuration and reports adapter conformance state, stale worktrees, retained failures, expired leases, and orphan candidates.
+Doctor is read-only for these resources and never releases, reconciles, reclaims, or removes them.
 
 ## Crust seam
 

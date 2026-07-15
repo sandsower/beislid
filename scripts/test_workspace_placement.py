@@ -346,6 +346,75 @@ elif action == "verify" and mode == "verify-fail":
         self.assertIn('"type": "runtime_lease_failed"', evidence)
         self.assertNotIn("primary-secret", evidence)
 
+    def test_preflight_runs_preparation_and_readiness_without_tracked_changes(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        receipt = json.loads(created.stdout)
+        placement_id = receipt["placement_id"]
+        workspace = Path(receipt["workspace"]["path"])
+        prepare = Path(self.tmp.name) / "prepare.py"
+        prepare.write_text("from pathlib import Path\nPath('.prepared').write_text('ok\\n', encoding='utf-8')\n", encoding="utf-8")
+        readiness = Path(self.tmp.name) / "ready.py"
+        readiness.write_text("from pathlib import Path\nraise SystemExit(0 if Path('.prepared').is_file() else 1)\n", encoding="utf-8")
+        preparation = Path(self.tmp.name) / "preparation.json"
+        preparation.write_text(
+            json.dumps(
+                {
+                    "command": f"{sys.executable} {prepare}",
+                    "readiness": [f"{sys.executable} {readiness}"],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        checked = self.helper(
+            "preflight",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--preparation-file",
+            str(preparation),
+        )
+
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertTrue((workspace / ".prepared").is_file())
+        self.assertEqual(self.git("status", "--porcelain", "--untracked-files=no", cwd=workspace).stdout, "")
+        self.assertEqual(json.loads(checked.stdout)["readiness_checks"], 1)
+
+    def test_preflight_rejects_preparation_that_changes_tracked_files(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        receipt = json.loads(created.stdout)
+        placement_id = receipt["placement_id"]
+        workspace = Path(receipt["workspace"]["path"])
+        prepare = Path(self.tmp.name) / "dirty_prepare.py"
+        prepare.write_text("from pathlib import Path\nPath('README.md').write_text('changed\\n', encoding='utf-8')\n", encoding="utf-8")
+        preparation = Path(self.tmp.name) / "dirty-preparation.json"
+        preparation.write_text(
+            json.dumps({"command": f"{sys.executable} {prepare}", "readiness": []}) + "\n",
+            encoding="utf-8",
+        )
+
+        checked = self.helper(
+            "preflight",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--preparation-file",
+            str(preparation),
+        )
+
+        self.assertEqual(checked.returncode, 2)
+        self.assertIn("preparation changed tracked files", checked.stderr)
+        self.assertNotEqual(self.git("status", "--porcelain", "--untracked-files=no", cwd=workspace).stdout, "")
+        run_json = Path(self.env["BEISLID_STATE_DIR"]) / "runs" / "implement" / self.repo_hash() / self.run_id / "run.json"
+        run_dir = Path(json.loads(run_json.read_text(encoding="utf-8"))["paths"]["run_dir"])
+        evidence = (run_dir / "artifacts" / "workspaces" / placement_id / "events.jsonl").read_text(encoding="utf-8")
+        self.assertIn('"type": "preflight_failed"', evidence)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -458,6 +458,120 @@ def command_lease(args: argparse.Namespace) -> dict[str, Any]:
     return metadata
 
 
+def read_preparation(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        preparation = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PlacementError(f"preparation contract is unreadable: {exc}") from exc
+    if not isinstance(preparation, dict):
+        raise PlacementError("preparation contract must be a mapping")
+    command = preparation.get("command")
+    if not isinstance(command, str) or not shlex.split(command):
+        raise PlacementError("preparation command must be a non-empty string")
+    readiness = preparation.get("readiness", [])
+    if not isinstance(readiness, list) or any(
+        not isinstance(item, str) or not shlex.split(item) for item in readiness
+    ):
+        raise PlacementError("preparation readiness must be a list of non-empty command strings")
+    return {"command": command, "readiness": readiness}
+
+
+def run_preparation_command(command: str, workspace: Path) -> int:
+    return subprocess.run(
+        shlex.split(command),
+        cwd=workspace,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    ).returncode
+
+
+def command_preflight(args: argparse.Namespace) -> dict[str, Any]:
+    repo = git_root(Path(args.repo).expanduser().resolve())
+    run_dir = require_run_ledger(repo, args.run_id, args.flow)
+    placement_dir = require_placement(run_dir, args.placement_id)
+    workspace = placement_workspace(run_dir, args.placement_id)
+    receipt = run_ledger.read_json(placement_dir / "receipt.json")
+    expected_sha = receipt.get("repository", {}).get("expected_sha")
+    actual_sha = require_git(workspace, "rev-parse", "HEAD", context="preflight SHA check failed")
+    status = require_git(workspace, "status", "--porcelain", context="preflight clean-state check failed")
+    if actual_sha != expected_sha:
+        raise PlacementError(f"preflight SHA mismatch: expected {expected_sha}, got {actual_sha}")
+    if status:
+        raise PlacementError("preflight destination is not clean")
+
+    preparation = read_preparation(
+        Path(args.preparation_file).expanduser().resolve() if args.preparation_file else None
+    )
+    if preparation is not None:
+        rc = run_preparation_command(preparation["command"], workspace)
+        if rc != 0:
+            record_runtime_event(
+                run_dir,
+                args.placement_id,
+                "preflight_failed",
+                {"stage": "preparation", "provider_exit": rc},
+            )
+            raise PlacementError(f"preparation command failed with exit {rc}")
+
+        tracked_status = require_git(
+            workspace,
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            context="preparation tracked-state check failed",
+        )
+        prepared_sha = require_git(workspace, "rev-parse", "HEAD", context="preparation SHA check failed")
+        if tracked_status or prepared_sha != expected_sha:
+            record_runtime_event(
+                run_dir,
+                args.placement_id,
+                "preflight_failed",
+                {"stage": "preparation", "tracked_changes": bool(tracked_status), "sha_changed": prepared_sha != expected_sha},
+            )
+            raise PlacementError("preparation changed tracked files or the expected SHA")
+
+        for index, command in enumerate(preparation["readiness"]):
+            rc = run_preparation_command(command, workspace)
+            if rc != 0:
+                record_runtime_event(
+                    run_dir,
+                    args.placement_id,
+                    "preflight_failed",
+                    {"stage": "readiness", "check_index": index, "provider_exit": rc},
+                )
+                raise PlacementError(f"readiness check {index + 1} failed with exit {rc}")
+
+        final_tracked_status = require_git(
+            workspace,
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            context="readiness tracked-state check failed",
+        )
+        final_sha = require_git(workspace, "rev-parse", "HEAD", context="readiness SHA check failed")
+        if final_tracked_status or final_sha != expected_sha:
+            record_runtime_event(
+                run_dir,
+                args.placement_id,
+                "preflight_failed",
+                {"stage": "readiness", "tracked_changes": bool(final_tracked_status), "sha_changed": final_sha != expected_sha},
+            )
+            raise PlacementError("readiness checks changed tracked files or the expected SHA")
+
+    result = {
+        "placement_id": args.placement_id,
+        "expected_sha": expected_sha,
+        "actual_sha": expected_sha,
+        "preparation": preparation is not None,
+        "readiness_checks": len(preparation["readiness"]) if preparation else 0,
+    }
+    record_runtime_event(run_dir, args.placement_id, "preflight_passed", result)
+    return result
+
+
 def runtime_lease_for(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
@@ -624,6 +738,13 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--run-id", required=True, help="initialized external run-ledger id")
     create.add_argument("--flow", required=True, help="run-ledger flow containing the placement receipt")
 
+    preflight = subparsers.add_parser("preflight", help="verify a placement and run configured preparation")
+    preflight.add_argument("--repo", required=True)
+    preflight.add_argument("--placement-id", required=True)
+    preflight.add_argument("--preparation-file")
+    preflight.add_argument("--run-id", required=True)
+    preflight.add_argument("--flow", required=True)
+
     lease = subparsers.add_parser("lease", help="allocate and verify an atomic runtime profile")
     lease.add_argument("--repo", required=True)
     lease.add_argument("--placement-id", required=True)
@@ -660,6 +781,8 @@ def main() -> int:
     try:
         if args.command == "create":
             payload = create_manual_placement(args)
+        elif args.command == "preflight":
+            payload = command_preflight(args)
         elif args.command == "lease":
             payload = command_lease(args)
         elif args.command == "exec":

@@ -5,7 +5,9 @@ description: "Use when you have an approved design or requirements for a multi-s
 
 # Implementation Plan
 
-Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm. Before mutation, use [worktree isolation](../../docs/worktree-isolation.md) to verify that the active checkout is owned by this slice. Parallel mutating delegation requires one distinct worktree and branch per agent.
+Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm.
+When `beislid:agent_isolation` is configured or a mutating delegate is possible, load [workspace placement](workspace-placement-protocol.md) plus the current host adapter.
+Before the first repo write run `ensure_orchestrator_workspace`; before each mutating dispatch run `place_mutating_delegate`.
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, if the matching `blueprint_approved` latest pointer entry for the current ticket/branch resolves to a readable artifact, read that artifact as your primary input; if not, use the workflow-configured artifact path template when present, then look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
@@ -52,7 +54,7 @@ If a task is non-TDD, explicitly note why. If a run ledger is active, record the
 
 ### Batch Independent Tasks
 
-Group tasks that have no dependencies on each other into batches. Parallelism is permitted only after classifying each delegate as read-only or mutating and satisfying the worktree and runtime isolation contract below.
+Group tasks that have no dependencies on each other into batches. Parallelism is permitted only after classifying each delegate as read-only or mutating and satisfying the loaded workspace-placement protocol.
 
 Mark dependencies explicitly:
 ```
@@ -100,18 +102,13 @@ Work through the todo list in order. Evaluate action policy before workspace wri
 
 ### Parallel batches
 When a batch has 3+ independent tasks, dispatch subagents:
-- Each subagent gets: focused scope, full context for their task, specific success criteria
-- Classify each subagent as read-only or mutating before dispatch
-- Every parallel mutating agent must have a different dedicated worktree and branch before dispatch
-- Verify and record each mutating agent's absolute `git rev-parse --show-toplevel`, branch, clean starting state, and cleanup path
-- Give each mutating agent isolated runtime resources for ports, database identity, generated artifacts, and hard-unique migration identifiers
-- Never dispatch two mutating agents into the same worktree, even when their file lists do not overlap
-- Never use `/tmp` or another ephemeral directory for the sole copy of uncommitted progress
-- After all return: review diffs, verify no conflicts, run full test suite
-- Don't dispatch parallel agents for fewer than 3 tasks — the overhead isn't worth it
-- If the host cannot provision distinct worktrees, execute the batch sequentially in one owned worktree
-- If the host cannot spawn subagents, execute the batch sequentially in plan order; parallelism is an optimization, never a requirement
-- Treat read-only agents as mutating if they may run generators, builds, formatters, database commands, or tests that write artifacts
+- Give each subagent focused scope, context, and success criteria.
+- Treat generators, builds, formatters, database commands, and artifact-writing tests as mutation.
+- Follow the loaded protocol for fresh placement, runtime leases, acknowledgment, handoff, integration, and cleanup.
+- Never dispatch overlapping write scopes or nested mutating delegates.
+- After all return, validate handoffs, integrate in declared order, and run the full suite.
+- Do not dispatch fewer than three tasks in parallel.
+- If the host cannot prove isolation or spawn subagents, execute sequentially in plan order.
 
 ### Escalation
 - If a task fails 3 times, stop. Question the approach, not the implementation

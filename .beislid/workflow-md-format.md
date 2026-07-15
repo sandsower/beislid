@@ -423,6 +423,10 @@ manual_root: repo-sibling
 fallback:
   orchestrator: manual-transition-required
   delegate: sequential
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
 runtime_profiles:
   integration:
     required_bindings:
@@ -453,6 +457,11 @@ Manual placements always allocate a fresh child path and branch and never adopt 
 The normalized defaults for a present partial block are `current`, `sequential`, `repo-sibling`, and the fail-closed fallbacks above.
 Capability results use only `verified-native`, `verified-manual`, or `unavailable`; configuration values are requests, not capability evidence.
 Action authorization remains in `action_policy` and is not duplicated here.
+
+`preparation` is optional and contains one required non-empty `command` plus an optional list of non-empty `readiness` commands.
+Preparation runs inside the acknowledged destination after clean exact-SHA preflight.
+It must exit zero and leave tracked state unchanged before readiness checks run.
+Any failure retains the placement and stops dispatch.
 
 `runtime_profiles` is an optional mapping of atomic runtime environments.
 Each profile requires a unique list of uppercase `required_bindings` and provider commands for `allocate`, `verify`, `release`, and `reconcile`.

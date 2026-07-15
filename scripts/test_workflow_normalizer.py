@@ -189,6 +189,10 @@ fallback:
 orchestrator: current
 delegate: manual
 manual_root: /srv/beislid/worktrees
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
 runtime_profiles:
   integration:
     required_bindings:
@@ -209,6 +213,7 @@ runtime_profiles:
         self.assertEqual(envelope["status"], "ok")
         isolation = envelope["sections"]["agent_isolation"]
         self.assertEqual(isolation["fallback"]["delegate"], "sequential")
+        self.assertEqual(isolation["preparation"]["command"], "python3 scripts/prepare_workspace.py")
         self.assertEqual(
             isolation["runtime_profiles"]["integration"]["required_bindings"],
             ["PRIMARY_DATABASE_URL", "SHADOW_DATABASE_URL", "REDIS_URL"],
@@ -251,6 +256,31 @@ runtime_profiles:
                 ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.allocate"),
                 ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.verify"),
                 ("missing_required_field", "sections.agent_isolation.runtime_profiles.integration.provider.reconcile"),
+            ],
+        )
+
+    def test_agent_isolation_rejects_invalid_preparation_contract(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: current
+delegate: sequential
+preparation:
+  command: 42
+  readiness: 'python3 scripts/check_ready.py'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [(error["code"], error["path"]) for error in envelope["errors"]],
+            [
+                ("invalid_value", "sections.agent_isolation.preparation.command"),
+                ("invalid_value", "sections.agent_isolation.preparation.readiness"),
             ],
         )
 

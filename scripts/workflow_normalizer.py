@@ -279,6 +279,11 @@ def _normalize_section(
             fallback.setdefault("orchestrator", defaults["fallback"]["orchestrator"])
             fallback.setdefault("delegate", defaults["fallback"]["delegate"])
             out["fallback"] = fallback
+        preparation = out.get("preparation")
+        if isinstance(preparation, dict):
+            preparation = dict(preparation)
+            preparation.setdefault("readiness", [])
+            out["preparation"] = preparation
         return out
 
     if key in {"gates", "review_feedback_profiles"}:
@@ -433,6 +438,45 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                         "delegate fallback must be manual or sequential",
                     )
                 )
+        preparation = isolation.get("preparation")
+        if preparation is not None:
+            if not isinstance(preparation, dict):
+                errors.append(
+                    Diagnostic(
+                        "invalid_section_shape",
+                        "sections.agent_isolation.preparation",
+                        "preparation must be a mapping",
+                    )
+                )
+            else:
+                command = preparation.get("command")
+                if "command" not in preparation:
+                    errors.append(
+                        Diagnostic(
+                            "missing_required_field",
+                            "sections.agent_isolation.preparation.command",
+                            "preparation command is required",
+                        )
+                    )
+                elif not isinstance(command, str) or not command.strip():
+                    errors.append(
+                        Diagnostic(
+                            "invalid_value",
+                            "sections.agent_isolation.preparation.command",
+                            "preparation command must be a non-empty string",
+                        )
+                    )
+                readiness = preparation.get("readiness", [])
+                if not isinstance(readiness, list) or any(
+                    not isinstance(item, str) or not item.strip() for item in readiness
+                ):
+                    errors.append(
+                        Diagnostic(
+                            "invalid_value",
+                            "sections.agent_isolation.preparation.readiness",
+                            "preparation readiness must be a list of non-empty command strings",
+                        )
+                    )
         runtime_profiles = isolation.get("runtime_profiles")
         if runtime_profiles is not None:
             if not isinstance(runtime_profiles, dict):
