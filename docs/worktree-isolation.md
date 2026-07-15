@@ -1,6 +1,7 @@
 # Worktree isolation for agent work
 
 Beislið uses Git worktrees as one layer of isolation for repository-mutating agent work.
+A worktree does not isolate external mutable state.
 A worktree does not isolate databases, ports, services, generated artifacts, or host task association, so those concerns have separate gates.
 
 ## Two placement boundaries
@@ -35,6 +36,7 @@ Do not use `/tmp`, `/private/tmp`, `/var/tmp`, another ephemeral root, or a loca
 
 ## Hard gates before mutation
 
+Every parallel mutating agent must have a different dedicated worktree and branch before dispatch.
 Require and record:
 
 - the absolute destination from `git rev-parse --show-toplevel`

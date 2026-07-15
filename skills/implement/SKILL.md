@@ -104,11 +104,13 @@ Work through the todo list in order. Evaluate action policy before workspace wri
 When a batch has 3+ independent tasks, dispatch subagents:
 - Give each subagent focused scope, context, and success criteria.
 - Treat generators, builds, formatters, database commands, and artifact-writing tests as mutation.
+- Every parallel mutating agent must have a different dedicated worktree and branch before dispatch.
 - Follow the loaded protocol for fresh placement, runtime leases, acknowledgment, handoff, integration, and cleanup.
 - Never dispatch overlapping write scopes or nested mutating delegates.
 - After all return, validate handoffs, integrate in declared order, and run the full suite.
 - Do not dispatch fewer than three tasks in parallel.
-- If the host cannot prove isolation or spawn subagents, execute sequentially in plan order.
+- If the host cannot provision distinct worktrees, execute the batch sequentially in one owned worktree.
+- If the host cannot spawn subagents, execute the batch sequentially in plan order.
 
 ### Escalation
 - If a task fails 3 times, stop. Question the approach, not the implementation
