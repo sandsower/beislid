@@ -1123,6 +1123,7 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   cp "$REPO_DIR/scripts/validate_export.py" "$libexec/scripts/validate_export.py"
   cp "$REPO_DIR/scripts/schema_check.py" "$libexec/scripts/schema_check.py"
   cp "$REPO_DIR/scripts/visual_feedback.py" "$libexec/scripts/visual_feedback.py"
+  cp "$REPO_DIR/scripts/resource_resolver.py" "$libexec/scripts/resource_resolver.py"
   cp "$REPO_DIR/scripts/workflow_normalizer.py" "$libexec/scripts/workflow_normalizer.py"
   cp "$REPO_DIR/install.sh" "$libexec/install.sh"
   chmod +x "$libexec/bin/beislid"
@@ -1132,6 +1133,8 @@ test_packaged_cli_supports_homebrew_symlink_layout() {
   assert_stdout_contains "beislid install user"
   assert_stdout_contains "beislid install project"
   assert_file_contains "$libexec/skills/kickoff/workflow-md-format.md" "Version stamp"
+  run_packaged_cli "$cellar/bin/beislid" "" resource resolve workflow-md-format
+  assert_stdout_contains "$libexec/.beislid/workflow-md-format.md"
 
   local expected_skill_target
   expected_skill_target="$(python3 - <<'PY' "$libexec/skills/verify"
@@ -1162,6 +1165,7 @@ test_homebrew_formula_installs_runtime_subset() {
   assert_file_contains "$formula" "scripts/schema_check.py"
   assert_file_contains "$formula" "schemas"
   assert_file_contains "$formula" "scripts/visual_feedback.py"
+  assert_file_contains "$formula" "scripts/resource_resolver.py"
   assert_file_contains "$formula" "scripts/workflow_normalizer.py"
   assert_file_contains "$formula" "install.sh"
   assert_file_contains "$formula" "brew upgrade beislid"
@@ -1609,6 +1613,10 @@ test_cli_project_copy_install_explicit_path() {
     assert_not_symlink "$project/.$host/skills/show-me/visual-surface-protocol.md"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "Show Me deck routing"
     assert_file_contains "$project/.$host/skills/show-me/visual-surface-protocol.md" "BEISLID_VISUAL_PROMPT_V1"
+    assert_file_exists "$project/.$host/skills/setup/first-run.md"
+    assert_not_symlink "$project/.$host/skills/setup/first-run.md"
+    assert_file_exists "$project/.$host/skills/setup/sections/lifecycle-actions.md"
+    assert_not_symlink "$project/.$host/skills/setup/sections/lifecycle-actions.md"
     for artifact_skill in blueprint fresh-eyes implement ready-for-review review-response review spec verify; do
       assert_file_exists "$project/.$host/skills/$artifact_skill/artifact-templates.md"
       assert_not_symlink "$project/.$host/skills/$artifact_skill/artifact-templates.md"

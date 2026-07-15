@@ -27,6 +27,7 @@ if [[ -n "${BEISLID_HOME:-}" ]] && \
      [[ ! -f "$BEISLID_ROOT/scripts/action_policy.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/validate_export.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/visual_feedback.py" ]] || \
+     [[ ! -f "$BEISLID_ROOT/scripts/resource_resolver.py" ]] || \
      [[ ! -f "$BEISLID_ROOT/scripts/workflow_normalizer.py" ]] || \
      [[ ! -d "$BEISLID_ROOT/skills" ]] || \
      [[ ! -f "$BEISLID_ROOT/install.sh" ]]; }; then
@@ -50,6 +51,7 @@ _validate_runtime_layout() {
   [[ -f "$root/scripts/action_policy.py" ]] || missing+=("scripts/action_policy.py")
   [[ -f "$root/scripts/validate_export.py" ]] || missing+=("scripts/validate_export.py")
   [[ -f "$root/scripts/visual_feedback.py" ]] || missing+=("scripts/visual_feedback.py")
+  [[ -f "$root/scripts/resource_resolver.py" ]] || missing+=("scripts/resource_resolver.py")
   [[ -f "$root/scripts/workflow_normalizer.py" ]] || missing+=("scripts/workflow_normalizer.py")
 
   if (( ${#missing[@]} > 0 )); then
@@ -89,6 +91,7 @@ Usage:
   beislid workspace <probe|create|preflight|validate-handoff|lease|exec|reconcile|release|cleanup> [...]
   beislid action-policy <evaluate|validate> [...]
   beislid visual-feedback normalize [...]
+  beislid resource resolve <name>
   beislid export validate <bundle-dir>
   beislid help
 USAGE
@@ -351,6 +354,34 @@ case "$cmd" in
         ;;
       *)
         echo "Unknown visual-feedback subcommand: $subcmd" >&2
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  resource)
+    shift
+    subcmd="${1:-}"
+    case "$subcmd" in
+      resolve)
+        shift
+        if (( $# != 1 )); then
+          echo "Usage: beislid resource resolve <name>" >&2
+          exit 2
+        fi
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "error: beislid resource requires python3" >&2
+          exit 1
+        fi
+        python3 "$BEISLID_ROOT/scripts/resource_resolver.py" --root "$BEISLID_ROOT" "$1"
+        ;;
+      "")
+        echo "Missing resource subcommand." >&2
+        _usage >&2
+        exit 2
+        ;;
+      *)
+        echo "Unknown resource subcommand: $subcmd" >&2
         _usage >&2
         exit 2
         ;;

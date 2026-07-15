@@ -44,6 +44,13 @@ BUDGETS = {
     "skills/kickoff/step-6-blueprint.md": 4_000,
     "skills/kickoff/step-7-discoveries.md": 4_000,
     "skills/kickoff/step-8-ticket-update.md": 4_000,
+    "skills/setup/SKILL.md": 7_000,
+    "skills/setup/update.md": 4_500,
+    "skills/setup/first-run.md": 13_000,
+    "skills/setup/menu.md": 9_000,
+    "skills/setup/write-and-report.md": 5_000,
+    "skills/setup/agents-integration.md": 4_000,
+    "skills/setup/parse-recovery.md": 4_000,
     "skills/implement/workspace-placement-protocol.md": 4_000,
     "skills/implement/codex-delegate-context.md": 3_000,
     "skills/implement/workspace-placement-codex.md": 3_000,
@@ -83,6 +90,12 @@ PHASE_AUX_HEADINGS = {
     "skills/kickoff/step-6-blueprint.md": "# kickoff step 6 blueprint v1",
     "skills/kickoff/step-7-discoveries.md": "# kickoff step 7 discoveries v1",
     "skills/kickoff/step-8-ticket-update.md": "# kickoff step 8 ticket update v1",
+    "skills/setup/update.md": "# setup update v1",
+    "skills/setup/first-run.md": "# setup first run v1",
+    "skills/setup/menu.md": "# setup menu v1",
+    "skills/setup/write-and-report.md": "# setup write and report v1",
+    "skills/setup/agents-integration.md": "# setup AGENTS integration v1",
+    "skills/setup/parse-recovery.md": "# setup parse recovery v1",
     "skills/implement/workspace-placement-protocol.md": "# workspace placement protocol v1",
     "skills/implement/codex-delegate-context.md": "# Codex delegate context v1",
     "skills/implement/workspace-placement-codex.md": "# workspace placement Codex adapter v1",
@@ -97,6 +110,36 @@ PHASE_AUX_HEADINGS = {
     "skills/walk-the-diff/phase-3-present.md": "# walk-the-diff phase 3 present v1",
     "skills/walk-the-diff/phase-4-wrap.md": "# walk-the-diff phase 4 wrap v1",
 }
+
+SETUP_SECTION_SLUGS = (
+    "agent-isolation",
+    "babysit",
+    "browser-compatibility",
+    "checkpoint-artifacts",
+    "clean-evaluator",
+    "domain-capture",
+    "explore",
+    "fresh-eyes",
+    "guided-walkthrough",
+    "lifecycle-actions",
+    "lifecycle-hooks",
+    "model-routing",
+    "planning-artifacts",
+    "pr-description-formatter",
+    "pr-host",
+    "pr-review",
+    "review-feedback-profiles",
+    "scopes-quality-gates",
+    "ship-time-artifacts",
+    "ticket-updates",
+    "translation-sync",
+    "visual-surfaces",
+    "workflow-signals",
+)
+for slug in SETUP_SECTION_SLUGS:
+    rel = f"skills/setup/sections/{slug}.md"
+    BUDGETS[rel] = 8_000
+    PHASE_AUX_HEADINGS[rel] = f"# setup section {slug} v1"
 
 PHASE_AUX_FILES = set(PHASE_AUX_HEADINGS)
 

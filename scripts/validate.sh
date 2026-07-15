@@ -148,6 +148,10 @@ banner "script-tests: python3 scripts/test_workspace_placement.py"
 python3 scripts/test_workspace_placement.py
 banner "script-tests: python3 scripts/test_workspace_host_conformance.py"
 python3 scripts/test_workspace_host_conformance.py
+banner "script-tests: python3 scripts/test_resource_resolver.py"
+python3 scripts/test_resource_resolver.py
+banner "script-tests: python3 scripts/test_setup_skill_routing.py"
+python3 scripts/test_setup_skill_routing.py
 banner "script-tests: python3 scripts/test_visual_feedback.py"
 python3 scripts/test_visual_feedback.py
 banner "script-tests: python3 scripts/test_agent_smoke_harness.py (self-test only, no live agents)"

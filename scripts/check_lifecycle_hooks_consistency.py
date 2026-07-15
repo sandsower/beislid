@@ -12,7 +12,7 @@ REQUIRED_REFERENCES = {
     "docs/configuration.md": ["Lifecycle hooks", "beislid:lifecycle_hooks", "paths: ['docs/**', 'skills/**']"],
     "docs/workflow-authoring.md": ["Lifecycle hooks", "beislid:lifecycle_hooks", "branch_pattern"],
     "skills/lifecycle-hooks.md": ["Lifecycle hooks protocol v1", "beislid:lifecycle_hooks", "before and after"],
-    "skills/setup/SKILL.md": ["lifecycle_hooks", "Configure custom phase-boundary hooks"],
+    "skills/setup/sections/lifecycle-hooks.md": ["lifecycle_hooks", "Configure custom phase-boundary hooks"],
     "skills/doctor/SKILL.md": ["lifecycle_hooks", "phase-boundary hook shape"],
     "skills/spec/SKILL.md": ["lifecycle-hooks.md"],
     "skills/blueprint/SKILL.md": ["lifecycle-hooks.md"],

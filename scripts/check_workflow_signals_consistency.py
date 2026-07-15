@@ -31,8 +31,10 @@ REQUIRED_REFERENCES = {
         "sinks",
         "tmux-glance",
     ],
-    "skills/setup/SKILL.md": [
-        "**Workflow signals** — *Configure optional local workflow-state signals",
+    "skills/setup/menu.md": [
+        "**Workflow signals** - *Configure optional local workflow-state signals",
+    ],
+    "skills/setup/sections/workflow-signals.md": [
         "beislid:workflow_signals",
         "tmux-glance",
     ],

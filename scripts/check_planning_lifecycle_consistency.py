@@ -48,7 +48,7 @@ REQUIRED_REFERENCES = {
         "{artifact_path}",
         "lifecycle.blueprint_approved.<name>",
     ],
-    "skills/setup/SKILL.md": [
+    "skills/setup/sections/lifecycle-actions.md": [
         "break_spec_approved",
         "spec_approved",
         "blueprint_approved",
