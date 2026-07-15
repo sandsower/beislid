@@ -572,6 +572,72 @@ def command_preflight(args: argparse.Namespace) -> dict[str, Any]:
     return result
 
 
+def command_probe(args: argparse.Namespace) -> dict[str, Any]:
+    try:
+        evidence = json.loads(Path(args.evidence_file).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PlacementError(f"host placement evidence is unreadable: {exc}") from exc
+    if not isinstance(evidence, dict) or evidence.get("kind") != "host-placement-evidence-v1":
+        raise PlacementError("host placement evidence kind must be host-placement-evidence-v1")
+
+    adapter = args.host if args.host in {"codex", "claude", "pi"} else "generic"
+    native = evidence.get("native_conformance_passed") is True
+    manual = evidence.get("manual_conformance_passed") is True
+    acknowledged = evidence.get("destination_acknowledged") is True
+    cwd_enforced = evidence.get("cwd_enforced") is True
+    runtime = evidence.get("runtime_isolation_verified") is True
+    capability = "unavailable"
+    disposition = "manual-transition-required" if args.operation == "orchestrator" else "sequential"
+    reason_code = "manual_path_unverified"
+
+    if adapter == "codex" and args.operation == "orchestrator":
+        if native and evidence.get("fork_resolved") is True and acknowledged:
+            capability, disposition, reason_code = "verified-native", "ready", "native_conformance_verified"
+        elif evidence.get("fork_resolved") is not True:
+            reason_code = "codex_fork_unresolved"
+        else:
+            reason_code = "destination_unacknowledged"
+    elif adapter == "pi" and args.operation == "orchestrator":
+        if manual and cwd_enforced and evidence.get("relaunch_acknowledged") is True:
+            capability, disposition, reason_code = "verified-manual", "ready", "manual_conformance_verified"
+        else:
+            reason_code = "pi_relaunch_required"
+    elif adapter == "claude" and native and acknowledged and (args.operation == "orchestrator" or runtime):
+        capability, disposition, reason_code = "verified-native", "ready", "native_conformance_verified"
+    elif manual and cwd_enforced and acknowledged and (args.operation == "orchestrator" or runtime):
+        capability, disposition, reason_code = "verified-manual", "ready", "manual_conformance_verified"
+
+    return {
+        "kind": "host-placement-probe-v1",
+        "host": args.host,
+        "host_adapter": adapter,
+        "operation": args.operation,
+        "capability": capability,
+        "disposition": disposition,
+        "reason_code": reason_code,
+    }
+
+
+def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
+    repo = git_root(Path(args.repo).expanduser().resolve())
+    run_dir = require_run_ledger(repo, args.run_id, args.flow)
+    placement_dir = require_placement(run_dir, args.placement_id)
+    receipt = run_ledger.read_json(placement_dir / "receipt.json")
+    workspace = receipt.get("workspace")
+    owner = workspace.get("cleanup_owner") if isinstance(workspace, dict) else None
+    if owner == "host":
+        payload = {"cleanup_owner": "host", "disposition": "host-cleanup-required"}
+        record_runtime_event(run_dir, args.placement_id, "cleanup_deferred", payload)
+        return payload
+    if owner == "user" or owner not in {"host", "beislid"}:
+        payload = {"cleanup_owner": "user", "disposition": "user-cleanup-required"}
+        record_runtime_event(run_dir, args.placement_id, "cleanup_deferred", payload)
+        return payload
+    payload = {"cleanup_owner": "beislid", "disposition": "retained", "reason": "cleanup-evidence-required"}
+    record_runtime_event(run_dir, args.placement_id, "cleanup_retained", payload)
+    return payload
+
+
 def runtime_lease_for(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
@@ -730,6 +796,11 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    probe = subparsers.add_parser("probe", help="evaluate evidence-backed host placement capability")
+    probe.add_argument("--host", required=True)
+    probe.add_argument("--operation", required=True, choices=("orchestrator", "delegate"))
+    probe.add_argument("--evidence-file", required=True)
+
     create = subparsers.add_parser("create", help="create a fresh verified manual worktree")
     create.add_argument("--repo", required=True, help="source Git repository")
     create.add_argument("--expected-sha", required=True, help="full commit SHA for the new worktree")
@@ -773,13 +844,21 @@ def build_parser() -> argparse.ArgumentParser:
     release.add_argument("--profile", required=True)
     release.add_argument("--run-id", required=True)
     release.add_argument("--flow", required=True)
+
+    cleanup = subparsers.add_parser("cleanup", help="route cleanup through the recorded ownership boundary")
+    cleanup.add_argument("--repo", required=True)
+    cleanup.add_argument("--placement-id", required=True)
+    cleanup.add_argument("--run-id", required=True)
+    cleanup.add_argument("--flow", required=True)
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        if args.command == "create":
+        if args.command == "probe":
+            payload = command_probe(args)
+        elif args.command == "create":
             payload = create_manual_placement(args)
         elif args.command == "preflight":
             payload = command_preflight(args)
@@ -791,6 +870,8 @@ def main() -> int:
             payload = command_reconcile(args)
         elif args.command == "release":
             payload = command_release(args)
+        elif args.command == "cleanup":
+            payload = command_cleanup(args)
         else:
             raise PlacementError(f"unsupported command: {args.command}")
     except PlacementError as exc:

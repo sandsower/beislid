@@ -142,6 +142,10 @@ banner "script-tests: bash scripts/test_validate_skills.sh"
 bash scripts/test_validate_skills.sh
 banner "script-tests: python3 scripts/test_workflow_normalizer.py"
 python3 scripts/test_workflow_normalizer.py
+banner "script-tests: python3 scripts/test_workspace_placement.py"
+python3 scripts/test_workspace_placement.py
+banner "script-tests: python3 scripts/test_workspace_host_conformance.py"
+python3 scripts/test_workspace_host_conformance.py
 banner "script-tests: python3 scripts/test_visual_feedback.py"
 python3 scripts/test_visual_feedback.py
 banner "script-tests: python3 scripts/test_agent_smoke_harness.py (self-test only, no live agents)"
