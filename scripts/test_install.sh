@@ -950,6 +950,48 @@ PY
 }
 
 
+test_beislid_repo_workflow_uses_single_pre_pr_mirror() {
+  python3 - <<'PY' "$REPO_DIR/.beislid/workflow.md" || note_fail "expected repo workflow.md to use the optimized pre-PR policy"
+from pathlib import Path
+import re, sys
+
+text = Path(sys.argv[1]).read_text(encoding='utf-8')
+
+def block(name):
+    match = re.search(rf'```beislid:{name}\n(.*?)\n```', text, re.DOTALL)
+    if not match:
+        raise SystemExit(f'missing beislid:{name} block')
+    return match.group(1)
+
+gates = block('gates')
+gate_names = re.findall(r'^- name: (.+)$', gates, re.MULTILINE)
+expected_names = ['diff-whitespace', 'local-ci-mirror']
+if gate_names != expected_names:
+    raise SystemExit(f'expected only {expected_names}, got {gate_names}')
+if "command: 'bash scripts/validate.sh'" not in gates:
+    raise SystemExit('local-ci-mirror must run the complete scripts/validate.sh mirror')
+
+ready = block('ready_for_review')
+expected_approvals = {
+    'pr_title_body': 'auto',
+    'gate_failure': 'prompt',
+    'autofix_commit': 'auto',
+    'clean_eval_failure': 'prompt',
+    'reduced_review_coverage': 'prompt',
+}
+actual_approvals = dict(re.findall(r'^  ([a-z_]+): (auto|prompt)$', ready, re.MULTILINE))
+if actual_approvals != expected_approvals:
+    raise SystemExit(f'expected approval policy {expected_approvals}, got {actual_approvals}')
+
+clean_eval = block('clean_eval')
+if 'mode: require' not in clean_eval:
+    raise SystemExit('clean evaluator must remain required')
+if 'Run Codex agent smoke now?' not in text:
+    raise SystemExit('conditional Codex agent-smoke approval gate must remain configured')
+PY
+}
+
+
 test_rondo_step_hints_configured() {
   python3 - <<'PY' "$REPO_DIR/WORKFLOW.md" || note_fail "expected WORKFLOW.md to dogfood step_hints"
 from pathlib import Path
@@ -2234,6 +2276,7 @@ run_test "pi babysit preserves args and token budgets"        test_pi_babysit_to
 run_test "pi babysit handler uses runtime without fallback"   test_pi_babysit_handler_uses_runtime_without_goal_fallback
 run_test "pi Beislið surfaces workflow signals"               test_pi_beislid_surfaces_workflow_signals
 run_test "repo workflow dogfoods workflow signals"            test_beislid_repo_workflow_signals_configured
+run_test "repo workflow uses one complete pre-PR mirror"       test_beislid_repo_workflow_uses_single_pre_pr_mirror
 run_test "WORKFLOW.md step_hints dogfood"                    test_rondo_step_hints_configured
 run_test "security hook is opt-in"                            test_security_hooks_off_by_default
 run_test "installed hook blocks a secret dump"                test_hook_blocks_secret_dump

@@ -105,66 +105,12 @@ risk:
 
 ## Quality gates
 
-The repo has no scope separation (single markdown distribution). Top-level gates run install integration, skill validation, and artifact/workflow/planning-lifecycle consistency checks from the repo root.
+The repo has no scope separation because it is a single Markdown distribution.
+The cheap whitespace gate catches malformed diffs early, then the local CI mirror runs every blocking deterministic check from the repo root once.
 
 ```beislid:gates
 - name: diff-whitespace
   command: 'git diff --check origin/main...HEAD'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: install-integration-tests
-  command: 'bash scripts/test_install.sh'
-  parallel_safe: true
-  mutates: false
-  cost: moderate
-- name: skill-size-budgets
-  command: 'python3 scripts/check_skill_size_budgets.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: validate-skills
-  command: 'python3 scripts/validate_skills.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: approved-planning-lifecycle-consistency
-  command: 'python3 scripts/check_planning_lifecycle_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: visual-surfaces-consistency
-  command: 'python3 scripts/check_visual_surfaces_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: artifact-templates-consistency
-  command: 'python3 scripts/check_artifact_templates_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: workflow-signals-consistency
-  command: 'python3 scripts/check_workflow_signals_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: lifecycle-hooks-consistency
-  command: 'python3 scripts/check_lifecycle_hooks_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: model-routing-step-hints-consistency
-  command: 'python3 scripts/check_model_routing_step_hints_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: run-ledger-skill-examples-consistency
-  command: 'python3 scripts/check_run_ledger_skill_examples_consistency.py'
-  parallel_safe: true
-  mutates: false
-  cost: cheap
-- name: crust-seam-consistency
-  command: 'python3 scripts/check_crust_seam_consistency.py'
   parallel_safe: true
   mutates: false
   cost: cheap
@@ -178,7 +124,7 @@ The repo has no scope separation (single markdown distribution). Top-level gates
   mutates: false
   parallel_safe: false
   failure:
-    hint: 'Mirrors every CI-blocking check in .github/workflows/validate.yml (all check_*_consistency.py scripts, script tests, install/action-policy/run-ledger tests, npm test, committed export bundle validation, and the lychee link check where available locally). The cheap gates above only cover a subset; run this before opening a PR to catch what they cannot.'
+    hint: 'Mirrors every CI-blocking check in .github/workflows/validate.yml (all check_*_consistency.py scripts, script tests, install/action-policy/run-ledger tests, npm test, committed export bundle validation, and the lychee link check where available locally). Run this once before opening a PR.'
 ```
 
 Changes to `bin/beislid` runtime-layout checks or `packaging/` must run `bash scripts/test_install.sh` locally before push; the packaged-layout contract is only covered by the install integration tests.
@@ -191,15 +137,14 @@ python3 tests/agent-smoke/run.py gate ready-for-review --hosts codex --timeout 9
 
 ## Ready-for-review
 
-This repo uses explicit-approval defaults; all gates prompt by default. Low-friction
-auto-approval is available for repos that trust the agent's generated metadata after
-recording decisions to the transcript and run ledger.
+This repo auto-approves auditable PR metadata and policy-checked autofix commits.
+Failures, clean-evaluation exceptions, and reduced review coverage still require explicit human judgment.
 
 ```beislid:ready_for_review
 approval_gates:
-  pr_title_body: prompt
+  pr_title_body: auto
   gate_failure: prompt
-  autofix_commit: prompt
+  autofix_commit: auto
   clean_eval_failure: prompt
   reduced_review_coverage: prompt
 ```
