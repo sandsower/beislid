@@ -23,6 +23,18 @@ The current distribution has no trusted runner, so synthetic evidence remains un
 If the selected capability is unavailable, use the configured manual transition or sequential delegate fallback.
 Never infer success from `pwd`, a created directory, an unresolved host task identifier, or a version string.
 
+## Codex delegate context
+
+Codex context transport is separate from mutation isolation.
+Immediately before a Codex subagent dispatch, `implement` loads its Codex delegate-context protocol and builds a self-contained packet from the approved artifact and current repository facts.
+When supported by the host, a complete packet permits no-history context forking by default.
+Missing packet fields stop dispatch, and conversation context is narrowed to the smallest bounded recent context needed for a named gap.
+Claude, Pi, generic, and future host adapters keep their existing transport behavior.
+
+The normal external Beislið state location remains the default.
+A Codex run may opt into workspace-local state through the existing `BEISLID_STATE_DIR` environment variable only when the selected path is inside the repository, untracked, and confirmed ignored by `git check-ignore`.
+Beislið does not create or use an unsafe local state path, and it never edits `.gitignore` automatically.
+
 ## Fresh placement
 
 Every automatic placement receives a fresh unique worktree path and branch from the exact requested SHA.
@@ -66,7 +78,7 @@ The receipt records repository and workspace identity, operation, expected and a
 Manual creation records `placement_status: verified` for the checked instance but keeps host `capability: unavailable` until a trusted conformance runner exists.
 The run ledger rejects incomplete or malformed versioned receipts before persisting them.
 Placement lifecycle events record runtime leases, handoff validation, integration, retention, and cleanup.
-No second workspace state directory is created.
+Workspace placement does not create a second state directory automatically.
 
 Runtime binding values live in permission-restricted external secret state.
 Ledger evidence contains only profile, lease ID, expiry, binding names, and keyed fingerprints.

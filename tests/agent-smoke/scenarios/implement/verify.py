@@ -12,7 +12,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from harness.fixtures import commit_and_push, commit_only, init_fixture_repo, run, write
-from harness.verification import fail, run_test_functions
+from harness.verification import collect_agent_output, fail, require_stamp_sequence, run_test_functions
+
+CODEX_CONTEXT_STAMP = "✓ implement/codex-delegate-context v1 loaded"
 
 REQUIRED_SECTIONS = [
     "Checkpoint Metadata",
@@ -41,6 +43,18 @@ def load_json(path: Path, errors: list[str], label: str) -> dict | None:
         fail(errors, "artifact", f"{label}: top level must be a JSON object")
         return None
     return payload
+
+
+def smoke_host(run_dir: Path) -> str | None:
+    path = run_dir / "agent-smoke.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    host = payload.get("host")
+    return host if isinstance(host, str) else None
 
 
 def verify(run_dir: Path) -> list[str]:
@@ -90,6 +104,16 @@ def verify(run_dir: Path) -> list[str]:
     test_failures = run_test_functions(test_file, repo)
     for failure in test_failures:
         fail(errors, "product", f"tests/test_widget_export.py: {failure}")
+
+    if smoke_host(run_dir) == "codex":
+        host_text = collect_agent_output(run_dir, strip_tokens=True)
+        require_stamp_sequence(
+            errors,
+            text=host_text,
+            stamps=[CODEX_CONTEXT_STAMP],
+            label="agent output",
+            kind="verifier",
+        )
 
     return errors
 
@@ -194,6 +218,8 @@ def test_export_widgets_with_tax_rate():
             "initial_head": initial_head,
         }
         write(run_dir / "metadata.json", json.dumps(metadata, indent=2) + "\n")
+        write(run_dir / "agent-smoke.json", json.dumps({"host": "codex"}) + "\n")
+        write(run_dir / "agent.log", CODEX_CONTEXT_STAMP + "\n")
 
         errors = verify(run_dir)
         if errors:
@@ -201,6 +227,15 @@ def test_export_widgets_with_tax_rate():
             for error in errors:
                 print(f"- {error}", file=sys.stderr)
             return 1
+
+        write(run_dir / "agent.log", "implemented without loading the Codex context protocol\n")
+        missing_stamp_errors = verify(run_dir)
+        if not any("expected aux load stamps" in error for error in missing_stamp_errors):
+            print("self-test failed: missing Codex context stamp should fail", file=sys.stderr)
+            for error in missing_stamp_errors:
+                print(f"- {error}", file=sys.stderr)
+            return 1
+        write(run_dir / "agent.log", CODEX_CONTEXT_STAMP + "\n")
 
         # Negative: implementation silently ignores tax_rate (a plausible half-done
         # attempt) - the real test execution must catch it even though the checkpoint

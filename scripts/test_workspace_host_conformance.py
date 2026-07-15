@@ -17,6 +17,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 HELPER = ROOT / "scripts" / "workspace_placement.py"
 LEDGER = ROOT / "scripts" / "run_ledger.py"
+CODEX_CONTEXT = ROOT / "skills" / "implement" / "codex-delegate-context.md"
+IMPLEMENT_SKILL = ROOT / "skills" / "implement" / "SKILL.md"
+OTHER_HOST_ADAPTERS = (
+    ROOT / "skills" / "implement" / "workspace-placement-claude.md",
+    ROOT / "skills" / "implement" / "workspace-placement-pi.md",
+    ROOT / "skills" / "implement" / "workspace-placement-generic.md",
+)
 ADAPTER_BUILD = "workspace-placement-v1"
 PROOFS = (
     "placement_verified",
@@ -42,6 +49,42 @@ def run(*args: str, cwd: Path | None = None, env: dict[str, str] | None = None) 
 
 
 class WorkspaceHostConformanceTests(unittest.TestCase):
+    def test_codex_delegate_context_contract_is_complete(self) -> None:
+        self.assertTrue(CODEX_CONTEXT.is_file(), f"missing Codex context protocol: {CODEX_CONTEXT}")
+        text = CODEX_CONTEXT.read_text(encoding="utf-8")
+        for marker in (
+            "# Codex delegate context v1",
+            "approved artifact",
+            "workspace receipt",
+            "exact SHA",
+            "authorized scope",
+            "success criteria",
+            "required gates",
+            "handoff contract",
+            'fork_turns: "none"',
+            "smallest bounded recent context",
+            "Full-history",
+            "BEISLID_STATE_DIR",
+            "git check-ignore",
+            "Never edit `.gitignore`",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, text)
+
+    def test_codex_transport_rules_do_not_leak_into_other_host_adapters(self) -> None:
+        for path in OTHER_HOST_ADAPTERS:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                self.assertNotIn("fork_turns", text)
+                self.assertNotIn("BEISLID_STATE_DIR", text)
+                self.assertNotIn("codex-delegate-context", text)
+
+    def test_implement_defaults_to_verified_logical_batch_commits(self) -> None:
+        text = IMPLEMENT_SKILL.read_text(encoding="utf-8")
+        self.assertIn("Commit verified logical batches by default", text)
+        self.assertIn("Task-level commits are exceptions", text)
+        self.assertIn("codex-delegate-context.md", text)
+
     @staticmethod
     def complete_evidence(**overrides: object) -> dict[str, object]:
         evidence: dict[str, object] = {

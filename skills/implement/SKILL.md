@@ -8,6 +8,8 @@ description: "Use when you have an approved design or requirements for a multi-s
 Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm.
 When `beislid:agent_isolation` is configured, load [workspace placement](workspace-placement-protocol.md) plus the current host adapter.
 Only with that block present, run `ensure_orchestrator_workspace` before the first repo write and `place_mutating_delegate` before each mutating dispatch.
+When the current host is Codex and a subagent dispatch is planned, load [Codex delegate context](codex-delegate-context.md) just before dispatch even when agent isolation is not configured.
+Also load it when a smoke fixture explicitly requests protocol proof.
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, if the matching `blueprint_approved` latest pointer entry for the current ticket/branch resolves to a readable artifact, read that artifact as your primary input; if not, use the workflow-configured artifact path template when present, then look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 
@@ -41,7 +43,7 @@ Break work into bite-sized tasks (2-5 minutes each). Each task specifies:
 2. Run it — confirm it fails (red)
 3. Write minimal code to pass (green)
 4. Refactor if needed
-5. Commit the task or batch before starting the next one or handing off
+5. Commit the verified logical batch before starting the next batch or handing off
 
 **TDD exceptions** — mark tasks as non-TDD only when testing doesn't apply:
 - CSS/styling changes
@@ -98,11 +100,12 @@ Create an item for every task in the host agent's todo/task mechanism. If the ho
 ## Phase 3: Execute
 
 ### Single tasks
-Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit after each task or logical group before starting the next task or handing off; if policy allows, do it immediately after verification. If policy asks or denies, stop at the commit boundary before advancing.
+Work through the todo list in order. Evaluate action policy before workspace writes, dependency installs, and local git operations (`file.write`, `dependency.install`, `git.commit` or a more specific stable action id). Follow the TDD rhythm. Commit verified logical batches by default before starting the next batch or handing off. Task-level commits are exceptions for isolated handoffs, high-risk boundaries, configuration migrations, or an explicit user preference. A batch boundary never skips task tracking, TDD checkpoints, verification, or policy evaluation. If policy asks or denies, stop at the commit boundary before advancing.
 
 ### Parallel batches
 When a batch has 3+ independent tasks, dispatch subagents:
-- Give each subagent focused scope, context, and success criteria.
+- Give each subagent focused scope, context, success criteria, required gates, and a handoff contract.
+- On Codex, load and satisfy `codex-delegate-context.md` immediately before dispatch.
 - Treat generators, builds, formatters, database commands, and artifact-writing tests as mutation.
 - Every parallel mutating agent must have a different dedicated worktree and branch before dispatch.
 - Follow the loaded protocol for fresh placement, runtime leases, acknowledgment, handoff, integration, and cleanup.
