@@ -408,6 +408,79 @@ Evaluator input is explicit JSON/config from the calling orchestrator. The evalu
 
 The policy decision envelope contains `decision`, `mode`, `action`, `classes`, `matched_rules`, `sandbox_status`, `requires_human`, `log_level`, `reason`, and `remediation`. Run summaries and ledger events should preserve that shape, plus a separate human outcome when an `ask` decision is accepted or declined.
 
+## Agent isolation shape
+
+`agent_isolation` declares desired workspace-placement strategy without claiming that a host supports it.
+An absent block preserves legacy behavior and does not activate native placement.
+
+````markdown
+## Agent isolation
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+      - REDIS_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
+```
+````
+
+`orchestrator` accepts `current`, `native`, or `manual`.
+`current` keeps the active task association, `native` requests a verified host transition, and `manual` requests a Beislið-provisioned workspace followed by the host-specific handoff.
+
+`delegate` accepts `native`, `manual`, or `sequential`.
+Native and manual delegate placement remain unavailable until the selected host adapter passes end-to-end conformance for path anchoring, exact SHA, clean state, handoff, integration, and cleanup.
+Positive probe evidence must come from a trusted end-to-end runner and be fresh and bound to the host, operation, adapter build, repository, and proof artifacts.
+Without such a runner, capability remains unavailable.
+
+`manual_root` accepts `repo-sibling` or an absolute path.
+The runtime `BEISLID_WORKTREE_ROOT` environment variable takes precedence when set, then workflow configuration applies, and the portable default is `<repo-parent>/<repo-name>-worktrees`.
+Manual placements always allocate a fresh child path and branch and never adopt an existing one.
+
+`fallback.orchestrator` is `manual-transition-required` because an unresolved top-level host transition must return control to the user before mutation.
+`fallback.delegate` accepts `manual` or `sequential`, and `sequential` is required when the host cannot enforce the manual destination path or required runtime isolation.
+
+The normalized defaults for a present partial block are `current`, `sequential`, `repo-sibling`, and the fail-closed fallbacks above.
+Capability results use only `verified-native`, `verified-manual`, or `unavailable`; configuration values are requests, not capability evidence.
+Action authorization remains in `action_policy` and is not duplicated here.
+
+`preparation` is optional and contains one required non-empty `command` plus an optional list of non-empty `readiness` commands.
+Preparation runs inside the acknowledged destination after clean exact-SHA preflight.
+It must exit zero and leave tracked state unchanged before readiness checks run.
+Any failure retains the placement and stops dispatch.
+
+`runtime_profiles` is an optional mapping of atomic runtime environments.
+Each profile requires a unique list of uppercase `required_bindings` and provider commands for `allocate`, `verify`, `release`, and `reconcile`.
+One profile may bundle every database, cache, queue, port, or service entrypoint that must stay isolated together.
+The executable selection path is `beislid workspace lease --workflow-file .beislid/workflow.md --profile <name>` with repository, placement, run, and flow arguments.
+
+Provider commands use an argv-safe command string and receive `BEISLID_RUNTIME_ACTION`, `BEISLID_RUNTIME_REQUEST_FILE`, `BEISLID_RUNTIME_LEASE_FILE`, `BEISLID_PLACEMENT_ID`, and `BEISLID_RUNTIME_PROFILE`.
+`allocate` writes a `runtime-lease-v1` JSON object containing `lease_id`, optional `expires_at`, and a `bindings` mapping to the lease file.
+When present, `expires_at` must be a future RFC 3339 timestamp.
+`verify` must exit zero only after every binding is ready for the assigned placement.
+`release` must be idempotent at the provider boundary, and `reconcile` must confirm ownership and expiry state before reclaiming resources.
+
+Missing, empty, partial, or unverified binding sets fail the entire lease and trigger best-effort provider release.
+Binding values are stored with mode `0600` under the external Beislið secret state, outside run-ledger artifacts.
+The ledger stores only profile name, lease ID, expiry, binding names, and keyed fingerprints.
+The portable delivery wrapper is `beislid workspace exec --placement-id <id> --profile <name> -- <command...>` with the active run ID, flow, and repository supplied by the orchestrator.
+
 ## Crust seam shape
 
 `crust_seam` configures whether repo-aware orchestrators delegate deterministic decisions to the `crust` binary. All fields are optional; an absent block means `mode: prefer` with defaults.

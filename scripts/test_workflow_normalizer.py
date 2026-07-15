@@ -112,6 +112,212 @@ class WorkflowNormalizerTests(unittest.TestCase):
         self.assertEqual(envelope["warnings"], [])
         self.assertEqual(envelope["errors"], [])
 
+    def test_agent_isolation_is_absent_and_disabled_for_legacy_workflows(self) -> None:
+        workflow = self.write_workflow(VALID_WORKFLOW)
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        self.assertNotIn("agent_isolation", envelope["sections"])
+
+    def test_agent_isolation_normalizes_explicit_opt_in_strategy(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        self.assertEqual(
+            envelope["sections"]["agent_isolation"],
+            {
+                "orchestrator": "native",
+                "delegate": "manual",
+                "manual_root": "repo-sibling",
+                "fallback": {
+                    "orchestrator": "manual-transition-required",
+                    "delegate": "sequential",
+                },
+            },
+        )
+
+    def test_agent_isolation_rejects_unsafe_or_unknown_strategy_values(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: automatic
+delegate: shared
+manual_root: relative/worktrees
+fallback:
+  orchestrator: sequential
+  delegate: manual-transition-required
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [error["path"] for error in envelope["errors"]],
+            [
+                "sections.agent_isolation.orchestrator",
+                "sections.agent_isolation.delegate",
+                "sections.agent_isolation.manual_root",
+                "sections.agent_isolation.fallback.orchestrator",
+                "sections.agent_isolation.fallback.delegate",
+            ],
+        )
+        self.assertTrue(all(error["code"] == "invalid_value" for error in envelope["errors"]))
+
+    def test_agent_isolation_normalizes_atomic_runtime_profile_contract(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: current
+delegate: manual
+manual_root: /srv/beislid/worktrees
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+      - REDIS_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "ok")
+        isolation = envelope["sections"]["agent_isolation"]
+        self.assertEqual(isolation["fallback"]["delegate"], "sequential")
+        self.assertEqual(isolation["preparation"]["command"], "python3 scripts/prepare_workspace.py")
+        self.assertEqual(
+            isolation["runtime_profiles"]["integration"]["required_bindings"],
+            ["PRIMARY_DATABASE_URL", "SHADOW_DATABASE_URL", "REDIS_URL"],
+        )
+        self.assertEqual(
+            isolation["runtime_profiles"]["integration"]["provider"]["reconcile"],
+            "python3 scripts/runtime_provider.py reconcile",
+        )
+
+    def test_agent_isolation_rejects_ephemeral_root_and_invalid_runtime_profile(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: manual
+delegate: manual
+manual_root: /tmp/beislid-worktrees
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - primary_database_url
+      - PRIMARY_DATABASE_URL
+    provider:
+      allocate: ''
+      verify: 42
+      release: 'python3 provider.py release'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [(error["code"], error["path"]) for error in envelope["errors"]],
+            [
+                ("invalid_value", "sections.agent_isolation.manual_root"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.required_bindings"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.allocate"),
+                ("invalid_value", "sections.agent_isolation.runtime_profiles.integration.provider.verify"),
+                ("missing_required_field", "sections.agent_isolation.runtime_profiles.integration.provider.reconcile"),
+            ],
+        )
+
+    def test_agent_isolation_rejects_resolved_ephemeral_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            durable = root / "durable"
+            ephemeral = root / "ephemeral"
+            durable.mkdir()
+            ephemeral.mkdir()
+            link = durable / "linked"
+            link.symlink_to(ephemeral, target_is_directory=True)
+
+            for manual_root in (durable / ".." / "ephemeral" / "worktrees", link / "worktrees"):
+                with self.subTest(manual_root=manual_root):
+                    workflow = self.write_workflow(
+                        f"""<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: manual
+delegate: sequential
+manual_root: {manual_root}
+```
+"""
+                    )
+                    original_roots = workflow_normalizer.EPHEMERAL_MANUAL_ROOTS
+                    self.addCleanup(setattr, workflow_normalizer, "EPHEMERAL_MANUAL_ROOTS", original_roots)
+                    workflow_normalizer.EPHEMERAL_MANUAL_ROOTS = (ephemeral.resolve(),)
+
+                    envelope = workflow_normalizer.normalize_workflow(workflow)
+
+                    self.assertEqual(envelope["status"], "error")
+                    self.assertIn(
+                        ("invalid_value", "sections.agent_isolation.manual_root"),
+                        [(error["code"], error["path"]) for error in envelope["errors"]],
+                    )
+
+    def test_agent_isolation_rejects_invalid_preparation_contract(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: current
+delegate: sequential
+preparation:
+  command: 42
+  readiness: 'python3 scripts/check_ready.py'
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+
+        self.assertEqual(envelope["status"], "error")
+        self.assertEqual(
+            [(error["code"], error["path"]) for error in envelope["errors"]],
+            [
+                ("invalid_value", "sections.agent_isolation.preparation.command"),
+                ("invalid_value", "sections.agent_isolation.preparation.readiness"),
+            ],
+        )
+
     def test_d1_comments_and_inline_lists_follow_yaml_comment_rules(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->

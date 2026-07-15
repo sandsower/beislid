@@ -1,0 +1,57 @@
+{
+  "errors": [],
+  "schema_version": "beislid.workflow.normalizer.v1",
+  "sections": {
+    "agent_isolation": {
+      "delegate": "manual",
+      "fallback": {
+        "delegate": "sequential",
+        "orchestrator": "manual-transition-required"
+      },
+      "manual_root": "repo-sibling",
+      "orchestrator": "native",
+      "runtime_profiles": {
+        "integration": {
+          "provider": {
+            "allocate": "python3 scripts/runtime_provider.py allocate",
+            "reconcile": "python3 scripts/runtime_provider.py reconcile",
+            "release": "python3 scripts/runtime_provider.py release",
+            "verify": "python3 scripts/runtime_provider.py verify"
+          },
+          "required_bindings": [
+            "PRIMARY_DATABASE_URL",
+            "SHADOW_DATABASE_URL",
+            "REDIS_URL"
+          ]
+        }
+      }
+    },
+    "clean_eval": {
+      "mode": "off"
+    },
+    "gate_sets": {
+      "selectors": [],
+      "sets": {}
+    },
+    "gates": [],
+    "lifecycle_actions": {
+      "events": {}
+    },
+    "model_routing": {
+      "defaults": null,
+      "overrides": []
+    },
+    "review_feedback_profiles": [],
+    "visual_surfaces": {
+      "mode": "off",
+      "workflows": {}
+    }
+  },
+  "source": {
+    "path": "tests/conformance/cases/19-agent-isolation-valid/workflow.md",
+    "version_stamp": "<!-- beislid-workflow: v1 -->",
+    "workflow_hash": "64be0b77d9109f93f44b474003fac135968f6051"
+  },
+  "status": "ok",
+  "warnings": []
+}

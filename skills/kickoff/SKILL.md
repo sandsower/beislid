@@ -5,7 +5,7 @@ description: Use when starting work on a ticket after checking out the feature b
 
 # Start Work on Ticket
 
-Turn a checked-out feature branch into an implementation plan. For mutations, see [worktree isolation](../../docs/worktree-isolation.md). Kickoff is the front door: ticket → context → spec/blueprint/breakdown → update → `implement`
+Turn a checked-out feature branch into an implementation plan. Kickoff is the front door: ticket → context → spec/blueprint/breakdown → update → `implement`
 **Don't use this for:** creating PRs, handling review/QA feedback, or PR handoff for completed work. Use `ready-for-review` or `review-response` for those.
 
 Project config: `<repo>/.beislid/workflow.md` (see `workflow-md-format.md`). Probe lazily; policy-check side effects per `action-policy-protocol.md`. Output follows templates.
@@ -19,6 +19,8 @@ Read `<repo>/.beislid/workflow.md`. If missing, hard-fail and stop:
 > 🛑 No `workflow.md` found in `.beislid/`. If this is a fresh project, run `/setup` to create one. If you moved your config, restore it to `<repo>/.beislid/workflow.md`.
 
 Validate line 1 is exactly `<!-- beislid-workflow: v1 -->`. If missing or wrong, hard-fail and stop; kickoff will not silently mis-parse.
+
+When `beislid:agent_isolation` is present, load [workspace placement](../implement/workspace-placement-protocol.md) plus the current host adapter before the first repo write. Run `ensure_orchestrator_workspace`; a requested transition requires a clean source and acknowledged destination, or kickoff stops with the configured manual fallback.
 
 Compute cache identifiers:
 

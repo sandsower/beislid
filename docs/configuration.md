@@ -330,6 +330,107 @@ Policy decisions recorded in run summaries or the durable ledger should preserve
 
 In v1, repo-aware orchestrators enforce action policy at their owned side-effect boundaries: `kickoff`, `implement`, `ready-for-review`, `review-response`, and `babysit`. `retro` also uses the shared protocol for its optional approved handoff-artifact write. They use the same envelope rather than duplicating policy tables in skill prose.
 
+## Agent isolation
+
+Agent isolation is opt-in workflow policy for placing an orchestrator or mutating delegate in a verified workspace.
+When the block is absent, existing workflow behavior remains unchanged and no host-native placement is inferred.
+
+````markdown
+## Agent isolation
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+      - REDIS_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
+```
+````
+
+`orchestrator` selects `current`, `native`, or `manual` placement.
+`delegate` selects `native`, `manual`, or `sequential` placement.
+These are requested strategies, while adapters report only end-to-end verified capability states: `verified-native`, `verified-manual`, or `unavailable`.
+
+The portable manual root is `repo-sibling`, which resolves to `<repo-parent>/<repo-name>-worktrees`.
+`BEISLID_WORKTREE_ROOT` takes precedence when set by the runtime, then an absolute durable workflow path may override the portable default.
+Every placement receives a fresh unique child path and branch.
+
+Orchestrator fallback is `manual-transition-required` because a host task that cannot acknowledge its destination must return control before mutation.
+Delegate fallback may be `manual` or `sequential`.
+Use `sequential` whenever the host cannot enforce the assigned working directory or any required runtime binding.
+
+Runtime profiles are atomic.
+A profile may contain several database entrypoints and other services, but the delegate receives none of them unless every required binding allocates and verifies successfully.
+The provider owns allocation semantics, while the orchestrator owns lease, delivery, reconcile, and release lifecycle.
+Select a configured profile directly with `beislid workspace lease --workflow-file .beislid/workflow.md --profile <name>` plus the repository, placement, run, and flow arguments.
+The helper normalizes the workflow and materializes the selected mapping as `runtime-profile-v1`; orchestrators do not invent an intermediate profile file.
+
+Preparation is optional and runs after exact-SHA destination preflight.
+Its command must exit zero and leave tracked state unchanged before every configured readiness command passes.
+Preparation failure retains the placement for inspection and prevents delegate dispatch.
+
+Provider commands receive these environment variables:
+
+- `BEISLID_RUNTIME_ACTION`
+- `BEISLID_RUNTIME_REQUEST_FILE`
+- `BEISLID_RUNTIME_LEASE_FILE`
+- `BEISLID_PLACEMENT_ID`
+- `BEISLID_RUNTIME_PROFILE`
+
+The allocate command writes `runtime-lease-v1` JSON with `lease_id`, optional `expires_at`, and a `bindings` mapping.
+When present, `expires_at` must be a future RFC 3339 timestamp, and expired leases are rejected before binding delivery.
+The verify command exits zero only when the whole lease is ready.
+The release command must be idempotent, and the reconcile command must confirm ownership and expiry state before reclaiming anything.
+
+Binding values live under `${BEISLID_STATE_DIR}/secrets/` in files and directories restricted to the current user.
+Run-ledger artifacts contain only the profile name, lease ID, expiry, binding names, and keyed fingerprints.
+Provider stdout and stderr are not copied into ledger evidence because they may contain credentials.
+
+The portable wrapper delivers an active lease only to a command running in the recorded worktree:
+
+```bash
+beislid workspace exec \
+  --repo /path/to/repo \
+  --run-id <run-id> \
+  --flow implement \
+  --placement-id <placement-id> \
+  --profile integration \
+  -- <command...>
+```
+
+Automatic placement and runtime leasing require a running external run ledger.
+Missing ledger state, missing bindings, verification failure, or failed path anchoring stops dispatch and follows the configured manual or sequential fallback.
+
+Placement receipts use `cleanup_owner: host`, `beislid`, or `user`.
+Creation requires the explicit orchestrator or delegate operation, records the concrete placement as verified, and leaves host capability unavailable without trusted conformance.
+Manual placement also records each `--write-scope` pattern as `scope.write`, and `workspace validate-handoff` checks the committed diff against it.
+Parallel calls use a shared `--concurrency-group`; active receipts in that group reserve their scopes and force a sequential fallback on definite or potential overlap.
+Host-owned worktrees use the host lifecycle, Beislið removes only fresh manual worktrees it created, and unknown ownership is never cleaned automatically.
+Cleanup waits for integration, verification, commit reachability, clean handoff, runtime release, and action-policy authorization.
+For cherry-picked handoffs, `workspace-cleanup-evidence-v1.integration_map` records each `source_commit` and its `integrated_commit`, which must be reachable and patch-equivalent.
+
+The stable action IDs are `agent.workspace.transition`, `agent.delegate.provision`, `agent.delegate.commit`, `agent.runtime.lease`, `agent.runtime.release`, and `agent.workspace.cleanup`.
+Strategy remains in `agent_isolation`, while authorization remains centralized in `action_policy`.
+
+`/doctor` validates configuration and reports adapter conformance state, stale worktrees, retained failures, expired leases, and orphan candidates.
+Doctor is read-only for these resources and never releases, reconciles, reclaims, or removes them.
+
 ## Crust seam
 
 `crust` is a standalone Rust binary (from the separate crust repo) that computes the same deterministic decisions Beislið's Python tools compute, from a committed `.crust/` config generated by `crust import beislid-workflow --write --json`. Beislið skills call it first for five decision families — gate selection, action-policy verdict + placement, workflow normalization (`.crust/` drift), and run-ledger writes — and fall back to today's Python/prose paths when it isn't available. Crust is optional in v1: there is no published release yet, so `crust_seam.mode: prefer` (the default) degrades silently when the binary isn't built. Build it locally with `cargo build --release -p crust-cli` from the crust repo; the binary lands at `target/release/crust`.
@@ -1378,7 +1479,9 @@ Release process:
 3. Publish the tap/release that serves the updated formula.
 4. Users then update with `brew upgrade beislid`.
 
-The CLI validates its runtime layout before loading installer code. It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `scripts/workflow_normalizer.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root. The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
+The CLI validates its runtime layout before loading installer code.
+It expects `scripts/install_lib.sh`, `scripts/run_ledger.py`, `scripts/workspace_placement.py`, `scripts/action_policy.py`, `scripts/validate_export.py`, `scripts/visual_feedback.py`, `scripts/workflow_normalizer.py`, `.beislid/`, `skills/`, and `install.sh` under the resolved Beislið runtime root.
+The root is normally derived from the real `bin/beislid` path; package wrappers can set `BEISLID_HOME` when the executable and runtime root are separated.
 
 ## CLI commands and optional install flags
 

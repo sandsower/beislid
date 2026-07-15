@@ -255,6 +255,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 - **Scopes & quality gates** — *Run lint/test commands across the repo, scopes, or changed-file-aware gate sets. Simple gates need only name+command; rich gates may add stage, cost, timeout, selectors, output parser, and failure policy.*
 - **Explore skill** — *Let kickoff Step 2 run a project skill as an exploration enhancer or replacement before design.*
 - **Model routing** — *Declare preferred or required host model candidates per Beislið skill, with fallback/blocking disclosure.*
+- **Agent isolation** - *Configure top-level workspace transition, mutating-delegate placement, durable manual roots, preparation, and atomic runtime profiles.*
 - **Translation sync** — *Run a translation-sync skill during quality gates whenever paths under your trigger globs are touched.*
 - **Browser compatibility** — *Run an advisory browser compatibility skill during quality gates whenever paths under your trigger globs are touched. Doesn't block PR handoff.*
 - **Domain capture** — *After kickoff or PR handoff, ask a domain expert to record findings into a knowledge store. Kickoff can use a subagent or, when the host has no subagent mechanism, an installed skill with the same name. Both the expert name and the store path are required.*
@@ -477,6 +478,60 @@ closeout:
 ```
 
 Never create duplicate `beislid:babysit` blocks; update or remove the existing one.
+
+### Agent isolation
+
+Configure the canonical `beislid:agent_isolation` block under `Agent isolation`.
+Explain that configuration requests strategy but does not claim host capability, and an absent block preserves legacy behavior.
+
+Ask one value at a time:
+
+```text
+Orchestrator placement? (current / native / manual) [current]
+Mutating delegate placement? (native / manual / sequential) [sequential]
+Manual worktree root? (repo-sibling / absolute path) [repo-sibling]
+Delegate fallback? (manual / sequential) [sequential]
+Optional preparation command? [none]
+```
+
+Always write `fallback.orchestrator: manual-transition-required`.
+Reject temporary roots such as `/tmp`, `/private/tmp`, and `/var/tmp`.
+Explain that native or manual mutation becomes usable only after the host adapter passes end-to-end conformance, otherwise the configured fallback applies.
+
+When preparation is configured, ask for zero or more read-only readiness commands.
+Preparation must exit zero and leave tracked files unchanged before readiness checks run.
+
+Ask whether the workflow needs atomic runtime profiles.
+For each profile collect a lowercase name, every required uppercase binding name, and non-empty provider commands for allocate, verify, release, and reconcile that invoke checked-in provider scripts or reference named environment variables.
+Reject provider commands containing embedded credential values before writing the block.
+Explain that one profile bundles all database and service entrypoints that must isolate together, partial allocation rolls back, and secret values never enter workflow.md or ledger artifacts.
+
+```beislid:agent_isolation
+orchestrator: native
+delegate: manual
+manual_root: repo-sibling
+fallback:
+  orchestrator: manual-transition-required
+  delegate: sequential
+preparation:
+  command: 'python3 scripts/prepare_workspace.py'
+  readiness:
+    - 'python3 scripts/check_workspace_ready.py'
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
+```
+
+Do not add action approvals to this block.
+Authorization stays in `beislid:action_policy` under the stable `agent.*` action IDs.
+Never create duplicate `beislid:agent_isolation` blocks; update or remove the existing one.
 
 ### Clean evaluator
 
