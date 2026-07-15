@@ -9,7 +9,7 @@ This is shared by kickoff and review-response: kickoff uses only the comment cha
 
 Ask for one mode:
 
-```
+```text
 Configure ticket updates? (mcp / cli / skip)
 ```
 

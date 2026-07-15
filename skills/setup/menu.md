@@ -8,7 +8,7 @@ When `.beislid/workflow.md` already exists, parse it (using the grammar in `work
 If parsing fails, jump to [parse-error recovery](parse-recovery.md).
 Otherwise present:
 
-```
+```text
 📋 Found .beislid/workflow.md. What would you like to do?
 
   (1) Add a section
@@ -42,8 +42,12 @@ Each item shows a one-line "when this fires" hint (plain English, not phase-numb
 - **Fresh-eyes final review** - *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** - *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** - *Write approved structure/spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*
+- **Ship-time artifacts** - *Choose how ready-for-review narrates approved planning artifacts during PR handoff.*
+- **Checkpoint artifacts** - *Configure reserved checkpoint artifact metadata for future execution and reporting flows.*
 - **Lifecycle actions** - *Run configured side effects at Beislið workflow events, such as assigning or moving a ticket when kickoff starts.*
+- **Lifecycle hooks** - *Run configured hook actions at Beislið phase boundaries under the normal action policy.*
 - **PR review source / replies** - *Let review-response read PR review comments and either post clear-fix replies or print manual reply instructions.*
+- **Review feedback profiles** - *Attach agent-ready prompt formats to matching review or QA feedback sources.*
 - **PR host override** - *Override owner/repo/remote only when git remote derivation is wrong, such as forks or non-origin upstreams.*
 
 Walk the chosen section's sub-interview (asking one Y/N or value at a time).

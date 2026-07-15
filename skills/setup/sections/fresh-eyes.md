@@ -14,12 +14,13 @@ Configure final fresh-eyes behavior? (built-in / command / disable)
 ```
 
 For `built-in`, remove any existing `fresh_eyes` block.
-For `command`, ask for the command; it must be a repo-root command whose exit status signals blocking findings.
+For `command`, ask for the command; it must be a single-line repo-root command whose exit status signals blocking findings.
+Reject newline-containing values, then serialize the command as a YAML single-quoted scalar with every literal `'` escaped as `''`.
 Write:
 
 ```beislid:fresh_eyes
 type: command
-command: '<user command>'
+command: '<safely serialized user command>'
 ```
 
 For `disable`, ask for a short reason and write:

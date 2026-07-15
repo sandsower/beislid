@@ -12,7 +12,9 @@ An absent block means `mode: prefer`, `binary: nopal`, and no minimum version.
 - `mode: require` blocks when the probe is missing, stale, malformed, incomplete, or below `min_version`.
 - `mode: off` never probes or calls Nopal.
 
-Run `command -v nopal`, then `nopal info --json`.
+Set `nopal_bin` to the configured `binary` value, defaulting to `nopal`, and preserve it as one argv element rather than evaluating it as shell text.
+Run `command -v -- "$nopal_bin"`, then `"$nopal_bin" info --json`.
+Every delegated call below uses that same resolved executable.
 The response must be a complete `nopal.info/v1` envelope with `ok: true`, a dotted-triple `version`, a nullable `commit`, and a string `capabilities[]` list.
 Confirm `kind` before reading any other field.
 Compare a configured minimum version component by component.
@@ -66,7 +68,7 @@ Other dashed gate stages use the same dash-to-underscore rule.
 ### 1. Gate selection
 
 ```bash
-nopal gates select --dir . --stage <snake_stage> [--changed-files <f1,f2,...>] --json
+"$nopal_bin" gates select --dir . --stage <snake_stage> [--changed-files <f1,f2,...>] --json
 ```
 
 Require the `gates` capability.
@@ -77,7 +79,7 @@ When Nopal is unavailable, use the selector-union algorithm in `workflow-md-form
 ### 2. Action-policy verdict and placement
 
 ```bash
-nopal policy decide --dir . --mode <snake_mode> --action <stable-action-id> [--class <snake_class> ...] [--env <NAME> ...] --json
+"$nopal_bin" policy decide --dir . --mode <snake_mode> --action <stable-action-id> [--class <snake_class> ...] [--env <NAME> ...] --json
 ```
 
 Require the `policy` capability.
@@ -88,7 +90,7 @@ When Nopal is unavailable, use `beislid action-policy evaluate` as documented in
 ### 3. Workflow normalization and `.nopal/` drift
 
 ```bash
-nopal import beislid-workflow --dir . --source .beislid/workflow.md --output-dir .nopal --check --json
+"$nopal_bin" import beislid-workflow --dir . --source .beislid/workflow.md --output-dir .nopal --check --json
 ```
 
 Require the `import` capability.
@@ -96,8 +98,8 @@ The `nopal.beislid_import/v1` response compares generated module semantics with 
 A `beislid_import_drift` diagnostic means the committed modules must be regenerated and reviewed.
 
 ```bash
-nopal import beislid-workflow --dir . --source .beislid/workflow.md --output-dir .nopal --write --overwrite --json
-nopal validate --dir . --json
+"$nopal_bin" import beislid-workflow --dir . --source .beislid/workflow.md --output-dir .nopal --write --overwrite --json
+"$nopal_bin" validate --dir . --json
 ```
 
 Regeneration is an explicit write and requires the normal approval for the active mode.
@@ -107,13 +109,13 @@ The manifest uses `version: nopal.project/v1`.
 ### 4. Run-ledger writes
 
 ```bash
-nopal ledger init --dir . --skill <skill> [--flow <flow>] [--ticket-id ...] [--branch ...] --json
-nopal ledger event --run-id <id> --type <event_type> [--json-file <path>] [--summary <text>] --json
-nopal ledger checkpoint --run-id <id> --name <name> [--json-file <path>] [--resume-hint <text>] --json
-nopal ledger gate --run-id <id> --name <name> --envelope-file <path> --json
-nopal ledger interrupt --run-id <id> --reason <text> --json
-nopal ledger finalize --run-id <id> --status <completed|interrupted|failed> [--report-file <path>] --json
-nopal ledger resume [--flow <flow>] [--ticket-id ...] [--branch ...] --json
+"$nopal_bin" ledger init --dir . --skill <skill> [--flow <flow>] [--ticket-id ...] [--branch ...] --json
+"$nopal_bin" ledger event --run-id <id> --type <event_type> [--json-file <path>] [--summary <text>] --json
+"$nopal_bin" ledger checkpoint --run-id <id> --name <name> [--json-file <path>] [--resume-hint <text>] --json
+"$nopal_bin" ledger gate --run-id <id> --name <name> --envelope-file <path> --json
+"$nopal_bin" ledger interrupt --run-id <id> --reason <text> --json
+"$nopal_bin" ledger finalize --run-id <id> --status <completed|interrupted|failed> [--report-file <path>] --json
+"$nopal_bin" ledger resume [--flow <flow>] [--ticket-id ...] [--branch ...] --json
 ```
 
 Require the `ledger` capability.
@@ -142,6 +144,6 @@ When no ledger is active, preserve the decision, placement, selected gate IDs, o
 ## Out of scope
 
 - Beislið's export bundle formats remain owned by `beislid export validate`.
-- Sandbox-baseline and uncommitted-change inputs remain Beislið evidence because `nopal policy decide` does not accept them.
+- Sandbox-baseline and uncommitted-change inputs remain Beislið evidence because `nopal policy decide --json` does not accept them.
 - This cutover does not adopt additional Nopal capabilities such as review-risk or change Beislið's skill triggers, approvals, host adapters, or standalone fallbacks.
 - Fields reported as `beislid_import_unsupported` remain authoritative in `.beislid/workflow.md` and stay on their existing Beislið path.

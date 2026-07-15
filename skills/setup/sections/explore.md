@@ -8,7 +8,7 @@ Configure the canonical `explore` block under the `Kickoff` / skill-specific ove
 
 Ask:
 
-```
+```text
 Configure kickoff explore skill? (enhance / replace / skip)
 ```
 

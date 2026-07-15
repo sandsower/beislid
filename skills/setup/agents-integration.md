@@ -34,6 +34,6 @@ Insertion logic:
 
 Print:
 
-```
+```text
 📝 <added|updated> ## Agent skills section in <AGENTS.md path>
 ```

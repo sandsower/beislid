@@ -26,7 +26,7 @@ One suggestion at a time, single Y/n confirmation; never silent fill.
 
 **If host is github.com + gh authed + numeric IDs detected in commits:**
 
-```
+```text
 🔍 Detected GitHub Issues with `gh` CLI (numeric IDs in recent commits).
 Use `type: cli, command: 'gh issue view {id} --json title,body,labels'`?
 [Y/n/different]
@@ -39,7 +39,7 @@ On `Y`: capture `id_pattern: '^#?\d+$'` and `link_template: 'https://github.com/
 Try MCP discovery via `probe-semantics.md` (search for tools matching `*linear*` or `*issue*`).
 On match:
 
-```
+```text
 🔍 Linear-shaped IDs in recent commits + Linear MCP tool detected
 (`<tool-name>`). Use this for ticket fetching? [Y/n/different]
 ```
@@ -51,7 +51,7 @@ If the host resolves the same integration through an alias, keep the configured 
 If MCP discovery returns no Linear-shaped tools: do NOT ask the user to type an MCP tool name.
 Pivot:
 
-```
+```text
 💭 Linear-shaped IDs detected but no Linear MCP tool is available in this
 host. Pick an alternative:
   (a) cli - give me the command for fetching tickets
@@ -72,7 +72,7 @@ Never ask the user to type an MCP tool name.
 Test these 8 candidate regexes against the last 20 branches.
 Sort by coverage (number of branches that match).
 
-```
+```text
 1. ^[a-z]+/([a-z]+-\d+)       - case-mismatched (normalize via id_pattern)
 2. ^[a-z]+/([A-Z]+-\d+)       - Jira with type prefix
 3. ^([A-Z]+-\d+)              - Jira/Linear direct uppercase
@@ -85,7 +85,7 @@ Sort by coverage (number of branches that match).
 
 Suggest the highest-coverage candidate with stats:
 
-```
+```text
 🔍 Branch pattern `^[a-z]+/([a-z]+-\d+)` matches 18 of 20 recent branches.
 Use it? [Y/n/skip]
 ```
@@ -93,7 +93,7 @@ Use it? [Y/n/skip]
 If best coverage <60%: don't suggest a pattern.
 Ask:
 
-```
+```text
 💭 No regex covers most recent branches. Skip branch_pattern? Ready-for-review will
 ask for the ticket ID at every run. [Y/n]
 ```
@@ -112,7 +112,7 @@ Probe order:
 If the result is `main`: silent default - don't ask.
 If the result is anything else, confirm:
 
-```
+```text
 🔍 Default branch detected: `<branch>`. Use as pr_base? [Y/n]
 ```
 

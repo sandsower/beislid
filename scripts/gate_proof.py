@@ -24,6 +24,7 @@ PROOF_KIND = "gate-proof-v1"
 DECISION_KIND = "gate-proof-decision-v1"
 RECORD_KIND = "gate-proof-record-v1"
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+ENVIRONMENT_PROBE_TIMEOUT_SECONDS = 10
 
 
 class ProofUnavailable(Exception):
@@ -150,14 +151,22 @@ def environment_fingerprint(config: object, cwd: Path) -> str:
     for raw_argv in commands:
         if not isinstance(raw_argv, list) or not raw_argv or not all(isinstance(item, str) and item for item in raw_argv):
             raise ProofUnavailable("request_invalid", "environment.commands entries must be non-empty argv lists")
-        result = subprocess.run(
-            raw_argv,
-            cwd=cwd,
-            text=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                raw_argv,
+                cwd=cwd,
+                stdin=subprocess.DEVNULL,
+                text=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=ENVIRONMENT_PROBE_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ProofUnavailable(
+                "environment_probe_failed",
+                f"environment fingerprint command timed out: {raw_argv[0]}",
+            ) from exc
         if result.returncode != 0:
             raise ProofUnavailable("environment_probe_failed", f"environment fingerprint command failed: {raw_argv[0]}")
         command_values.append(
@@ -186,6 +195,8 @@ def compute_identity(request: dict[str, Any], repo: Path) -> tuple[dict[str, Any
     selection = request.get("selection")
     if not isinstance(gate, dict) or not isinstance(selection, dict):
         raise ProofUnavailable("request_invalid", "request requires gate and selection objects")
+    if gate.get("kind") != "sensor" or gate.get("execution") != "computational":
+        raise ProofUnavailable("gate_ineligible", "exact evidence reuse requires a computational sensor gate")
 
     evidence = gate.get("evidence_reuse")
     if not isinstance(evidence, dict) or evidence.get("mode") != "exact":
@@ -448,8 +459,16 @@ def record(
         "proof_key": key,
         "source": {"envelope_path": str(envelope_path.resolve()), "run_id": run_id},
     }
-    with proof_lock(repository_id):
-        write_json(path, proof)
+    try:
+        with proof_lock(repository_id):
+            write_json(path, proof)
+    except OSError as exc:
+        return {
+            "kind": RECORD_KIND,
+            "status": "skipped",
+            "reason": "proof_store_unavailable",
+            "summary": str(exc),
+        }
     return {
         "kind": RECORD_KIND,
         "status": "recorded",

@@ -41,6 +41,9 @@ REQUIRED_REFERENCES = {
         "Scratch-file convention",
         "Fallback ladder",
         "Out of scope",
+        "nopal_bin",
+        'command -v -- "$nopal_bin"',
+        '"$nopal_bin" info --json',
     ],
     ".beislid/action-policy-protocol.md": [
         "nopal_seam",
@@ -50,6 +53,7 @@ REQUIRED_REFERENCES = {
     ".beislid/probe-semantics.md": [
         "### binary",
         "nopal_seam validation and probe",
+        "mode` is not `off`",
     ],
     ".beislid/workflow-md-format.md": [
         "Nopal seam",
@@ -61,7 +65,7 @@ REQUIRED_REFERENCES = {
     ],
     "skills/doctor/SKILL.md": [
         "nopal_seam",
-        "nopal import beislid-workflow",
+        "<binary> import beislid-workflow",
     ],
     "docs/configuration.md": [
         "## Nopal seam",
@@ -154,7 +158,7 @@ def _check_grammar(root: pathlib.Path, rel: str, errors: list[str]) -> None:
                 )
     for span in INLINE_NOPAL_RE.findall(text):
         candidate = span.strip()
-        if "--" not in candidate or _json_exempt(candidate):
+        if _json_exempt(candidate):
             continue
         if "--json" not in candidate:
             errors.append(

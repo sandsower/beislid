@@ -10,10 +10,15 @@ import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from unittest import mock
+
+import sys
 
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 GATE_PROOF = REPO_DIR / "scripts" / "gate_proof.py"
+sys.path.insert(0, str(REPO_DIR / "scripts"))
+import gate_proof  # noqa: E402
 
 
 def run(*argv: str, cwd: Path, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -59,6 +64,8 @@ class GateProofTest(unittest.TestCase):
                         "scope": "repo",
                         "cwd": ".",
                         "command": "python3 scripts/validate.py",
+                        "kind": "sensor",
+                        "execution": "computational",
                         "mutates": False,
                         "evidence_reuse": {
                             "mode": "exact",
@@ -185,6 +192,20 @@ class GateProofTest(unittest.TestCase):
         result = self.invoke("lookup")
         self.assertEqual("gate_mutates", result["reason"])
 
+    def test_non_sensor_gate_is_never_reused(self) -> None:
+        payload = self.request_payload()
+        payload["gate"]["kind"] = "action"
+        self.write_request(payload)
+        result = self.invoke("lookup")
+        self.assertEqual("gate_ineligible", result["reason"])
+
+    def test_non_computational_gate_is_never_reused(self) -> None:
+        payload = self.request_payload()
+        payload["gate"]["execution"] = "inferential"
+        self.write_request(payload)
+        result = self.invoke("lookup")
+        self.assertEqual("gate_ineligible", result["reason"])
+
     def test_dirty_worktree_is_never_reused(self) -> None:
         (self.repo / "uncommitted.txt").write_text("dirty\n", encoding="utf-8")
         result = self.invoke("lookup")
@@ -304,6 +325,15 @@ class GateProofTest(unittest.TestCase):
         result = self.invoke("lookup")
         self.assertEqual("environment_probe_failed", result["reason"])
 
+    def test_environment_probe_timeout_forces_rerun(self) -> None:
+        payload = self.request_payload()
+        payload["gate"]["evidence_reuse"]["environment"]["commands"] = [
+            ["python3", "-c", "import time; time.sleep(60)"]
+        ]
+        self.write_request(payload)
+        result = self.invoke("lookup")
+        self.assertEqual("environment_probe_failed", result["reason"])
+
     def test_non_passing_envelope_is_not_recorded(self) -> None:
         envelope = json.loads(self.gate_log.read_text(encoding="utf-8"))
         envelope["status"] = "fail"
@@ -369,6 +399,24 @@ class GateProofTest(unittest.TestCase):
         self.assertTrue(all(item["status"] == "recorded" for item in results))
         result = self.invoke("lookup")
         self.assertEqual("reuse", result["decision"])
+
+    def test_proof_store_write_failure_is_skipped(self) -> None:
+        decision = self.invoke("lookup")
+        request = self.request_payload()
+        with mock.patch.dict(os.environ, self.env), mock.patch.object(
+            gate_proof,
+            "write_json",
+            side_effect=OSError("store unavailable"),
+        ):
+            result = gate_proof.record(
+                request,
+                self.repo.resolve(),
+                self.gate_log,
+                "run-1",
+                str(decision["proof_key"]),
+            )
+        self.assertEqual("skipped", result["status"])
+        self.assertEqual("proof_store_unavailable", result["reason"], result)
 
     def test_cli_dispatch(self) -> None:
         result = run(

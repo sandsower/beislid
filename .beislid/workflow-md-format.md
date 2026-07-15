@@ -6,7 +6,7 @@ Per-project Beislið config lives at `<repo>/.beislid/workflow.md`. The file mix
 
 The first line of the file MUST be:
 
-```
+```html
 <!-- beislid-workflow: v1 -->
 ```
 
@@ -109,7 +109,7 @@ Keys recognized by Beislið orchestrators. Optional fields are noted; the rest a
 - `pi_handoff` — Pi-extension-only context handoff policy. Fields: `enabled` (bool, default true when the Beislið Pi extension is active), `events` (`all` or list of lifecycle/checkpoint event names, default `all`; default `all` excludes planning approval events unless explicitly listed), and `exclude` (list of event names to suppress). Repo workflow declares team intent; local Pi extension settings are the final override. Portable skills do not execute this key directly.
 
 **Action policy:**
-- `action_policy` - optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_insufficient_baseline` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. `on_insufficient_baseline` defaults to `ask` and may be set to `deny` for a fail-closed isolation boundary. When the `nopal_seam` capability probes `ok`, orchestrators evaluate through `nopal policy decide` first per `nopal-seam-protocol.md`; this fenced block remains the same override input for both the nopal and beislid evaluator paths.
+- `action_policy` - optional evaluator overrides for deterministic action-risk decisions. Fields: `modes.<mode>.rules.<class>` (`allow` / `ask` / `deny`), `modes.<mode>.actions.<action-id>`, `modes.<mode>.unknown_action`, `modes.<mode>.unclassified_action`, and `modes.<mode>.sandbox.minimum` / `on_insufficient_baseline` / `on_uncommitted_changes`. Supported modes are `supervised-auto` and `unattended-auto`. Supported classes are `read`, `workspace-write`, `dependency-install`, `network-read`, `git-local`, `git-remote`, `destructive`, and `secret-bearing`. Sandbox baselines are `none`, `non-default-branch`, `separate-worktree`, and `host-sandbox`. `on_insufficient_baseline` defaults to `ask` and may be set to `deny` for a fail-closed isolation boundary. When the `nopal_seam` capability probes `ok`, orchestrators evaluate through `nopal policy decide --json` first per `nopal-seam-protocol.md`; this fenced block remains the same override input for both the nopal and beislid evaluator paths.
 
 **Nopal seam:**
 - `nopal_seam` — optional config for the nopal delegation seam (`nopal-seam-protocol.md`). Fields: `mode` (`prefer` / `require` / `off`, default `prefer` when the block is absent), `binary` (default `nopal`), `min_version` (optional dotted version string). `prefer` uses nopal when its `binary` probe is `ok` and falls back to each seam's legacy path otherwise; `require` hard-stops when the probe fails instead of falling back; `off` never probes or calls nopal.
@@ -372,7 +372,7 @@ approval_gates:
 
 ## Action policy shape
 
-Action policy controls how repo-aware orchestrators decide whether side effects may proceed. The deterministic evaluator lives behind `beislid action-policy evaluate`, or `nopal policy decide` first when the `nopal_seam` capability probes ok (see `nopal-seam-protocol.md`); workflow config supplies the same optional overrides to both paths. Actions may carry multiple classes, and the strictest applicable decision wins (`deny` > `ask` > `allow`). Unknown or unclassified actions default to `ask` in both built-in modes.
+Action policy controls how repo-aware orchestrators decide whether side effects may proceed. The deterministic evaluator lives behind `beislid action-policy evaluate`, or `nopal policy decide --json` first when the `nopal_seam` capability probes ok (see `nopal-seam-protocol.md`); workflow config supplies the same optional overrides to both paths. Actions may carry multiple classes, and the strictest applicable decision wins (`deny` > `ask` > `allow`). Unknown or unclassified actions default to `ask` in both built-in modes.
 
 Example override:
 
@@ -563,6 +563,7 @@ Unavailable probes, dirty trees, missing or changed artifacts, legacy envelopes,
 Only passing immutable ledger envelopes populate proof state.
 Do not enable exact reuse for time-dependent, network-dependent, flaky, secret-producing, or otherwise incompletely fingerprinted gates.
 The setting affects computational gate execution only and never replaces clean evaluation, inferential review, or human proof.
+Doctor and workflow normalization reject unknown modes, malformed environment variable or argv lists, and exact reuse on mutating, non-sensor, or non-computational gates.
 
 Selectors may use `changed_file_selector.include` / `exclude` glob lists (or legacy draft `selector.paths`) to describe when the gate is relevant. Gate-level selectors are advisory metadata unless a selected gate set includes the gate; the changed-file-aware selector model is `gate_sets`.
 
@@ -754,7 +755,7 @@ Disabled is a deliberate user choice. Missing is a probe result. Not-configured 
 
 H3 subsections under a skill name hold capabilities only one orchestrator uses. Naming pattern: H3 named after the skill in title case. Capabilities still use the same `beislid:<key>` info-string convention.
 
-```
+```markdown
 ### Ready-for-review overrides
 
 ​```beislid:guided_walkthrough.threshold_files

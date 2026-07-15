@@ -6,7 +6,7 @@ In verbose mode, emit `✓ setup/write-and-report v1 loaded` immediately after r
 
 Print the composed workflow.md to the user as context, then ask the explicit approval question once in the final response:
 
-```
+```text
 📋 Preview of `.beislid/workflow.md`:
 
 <composed contents>
@@ -22,7 +22,7 @@ On `Y`: continue to step 9.
 Run `mkdir -p <git-toplevel>/.beislid/` then write the file.
 Print:
 
-```
+```text
 📝 Wrote .beislid/workflow.md
 ```
 
@@ -34,7 +34,7 @@ After writing the minimum, offer the menu mode through [menu mode](menu.md) for 
 
 After any successful `.beislid/workflow.md` write (first-run, add/change/remove, or reset), print a concise next-steps report:
 
-```
+```text
 ✅ Beislið config written.
 
 Files to review/commit:

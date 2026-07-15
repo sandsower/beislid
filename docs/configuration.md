@@ -216,7 +216,8 @@ Rich gate metadata can describe where a check belongs in the harness and how age
     environment:
       variables: ['CI']
       commands:
-        - ['python3', '--version']
+        - ['.venv/bin/python', '--version']
+        - ['.venv/bin/python', '-m', 'pip', 'freeze', '--all']
   output:
     parser: pytest
   failure:

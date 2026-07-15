@@ -17,6 +17,7 @@ If the user chooses rich metadata, collect only fields they can answer confident
 - `kind`: default `sensor`
 - `execution`: `computational`, `inferential`, or `human`; default `computational`
 - `timeout_seconds`, `cost`, `mutates`, `accepts_files`, `required_tools`
+- optional exact `evidence_reuse` for deterministic computational sensor gates with `mutates: false`; collect environment variable names and argv-style runtime/dependency probes, and leave it absent by default
 - changed-file selector globs under `changed_file_selector.include` / `exclude`
 - `output.parser` and `output.agent_summary`
 - `failure.retryable`, `failure.max_fix_iterations`, `failure.stop_if_patterns`, and `failure.hint`
@@ -42,6 +43,13 @@ Example rich gate:
   timeout_seconds: 600
   cost: expensive
   mutates: false
+  evidence_reuse:
+    mode: exact
+    environment:
+      variables: ['CI']
+      commands:
+        - ['.venv/bin/python', '--version']
+        - ['.venv/bin/python', '-m', 'pip', 'freeze', '--all']
   output:
     parser: pytest
   failure:

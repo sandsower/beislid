@@ -194,6 +194,8 @@ payload = {
         "scope": "repo",
         "cwd": ".",
         "command": "python3 scripts/validate.py",
+        "kind": "sensor",
+        "execution": "computational",
         "mutates": False,
         "evidence_reuse": {"mode": "exact", "environment": {}},
     },

@@ -391,6 +391,38 @@ preparation:
         self.assertIn("sections.gates[0].evidence_reuse.environment.variables", paths)
         self.assertIn("sections.gates[0].evidence_reuse.environment.commands", paths)
 
+    def test_null_and_ineligible_gate_evidence_reuse_are_warned(self) -> None:
+        workflow = self.write_workflow(
+            """<!-- beislid-workflow: v1 -->
+
+```beislid:gates
+- name: null-reuse
+  command: python3 -m unittest
+  evidence_reuse:
+- name: ineligible-reuse
+  kind: action
+  execution: inferential
+  command: python3 -m unittest
+  mutates: true
+  evidence_reuse:
+    mode: exact
+```
+"""
+        )
+
+        envelope = workflow_normalizer.normalize_workflow(workflow)
+        warnings = envelope["warnings"]
+        self.assertTrue(
+            any(
+                item["path"] == "sections.gates[0].evidence_reuse" and item["code"] == "invalid_section_shape"
+                for item in warnings
+            )
+        )
+        paths = {item["path"] for item in warnings}
+        self.assertIn("sections.gates[1].kind", paths)
+        self.assertIn("sections.gates[1].execution", paths)
+        self.assertIn("sections.gates[1].mutates", paths)
+
     def test_d2_flow_maps_are_rejected_even_inside_registered_scopes(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->

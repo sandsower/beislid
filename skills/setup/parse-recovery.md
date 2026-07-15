@@ -10,7 +10,7 @@ grep -n '^```beislid:' <repo>/.beislid/workflow.md
 
 Compute the line number of the failing block, surface it in prose:
 
-```
+```text
 🛑 Workflow.md has a parse error.
 
 ⚠️ The `beislid:<key>` block at line <N> doesn't parse: <yaml error>.

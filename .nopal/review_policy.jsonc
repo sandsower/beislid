@@ -10,7 +10,8 @@
       "scripts/install*.sh",
       "skills/**/SKILL.md",
       "tests/agent-smoke/**",
-      ".beislid/**"
+      ".beislid/**",
+      ".nopal/**"
     ],
     "high_risk_total_changes": 500,
     "low_risk_file_count": 3,

@@ -6,7 +6,7 @@ In verbose mode, emit `✓ setup/section-pr-review v1 loaded` immediately after 
 
 If `git remote get-url origin` parses as GitHub and `gh auth status` passes, suggest GitHub CLI defaults:
 
-```
+```text
 Use GitHub CLI to read PR reviews and post clear-fix replies? (Y / manual replies / n)
 ```
 

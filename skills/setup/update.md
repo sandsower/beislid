@@ -10,7 +10,7 @@ Run this distribution-update flow instead:
 2. Read the manifest.
   If missing, hard-fail with:
 
-   ```
+   ```text
    🛑 No Beislið install manifest found at `<manifest>`. Run `install.sh --update`
    from your Beislið checkout, or reinstall Beislið with `<beislid-repo>/install.sh`.
    ```
@@ -18,7 +18,7 @@ Run this distribution-update flow instead:
 3. Read `repo` from the manifest.
   If empty, missing, or not a directory, hard-fail with:
 
-   ```
+   ```text
    🛑 Beislið install manifest does not point at a valid repo: `<repo>`.
    Run `install.sh --update` from your Beislið checkout, or reinstall Beislið.
    ```
@@ -27,7 +27,7 @@ Run this distribution-update flow instead:
   If not, hard-fail with the same recovery guidance.
 5. Show the planned action and ask for confirmation:
 
-   ```
+   ```text
    📋 Update Beislið from `<repo>`?
 
    This will run:

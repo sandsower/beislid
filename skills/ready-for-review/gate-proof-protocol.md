@@ -22,6 +22,8 @@ Use this shape:
     "scope": "repo",
     "cwd": ".",
     "command": "python3 -m pytest",
+    "kind": "sensor",
+    "execution": "computational",
     "mutates": false,
     "evidence_reuse": {
       "mode": "exact",
@@ -35,7 +37,7 @@ Use this shape:
 }
 ```
 
-Use the normalized gate fields and Phase 1 base exactly.
+Use the normalized gate fields, including `kind` and `execution`, and Phase 1 base exactly.
 Never add environment inputs inferred from the current process.
 Only configured variable names and argv-style commands belong in the request.
 

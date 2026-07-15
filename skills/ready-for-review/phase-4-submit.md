@@ -93,7 +93,7 @@ On successful PR handoff, or on abort after Phase 2 starts or any side effect, c
 1. If host memory exists or `BEISLID_MEMENTO_CAPTURE=1`, attempt one structured brief.
 2. Append/print exactly one literal marker: `kind: ready-for-review-session-memory-v1` with the brief, or `memory brief unavailable:<reason>`.
 3. Include repo, branch, base, ticket id/none, PR URL, phase path, aux loaded, transcript path/reason, clean-eval proof, reduced-coverage acceptance, gates, review/final-check status, risks, side effects, host, timestamp, and duration if known.
-4. If a run ledger is active: `finalize` only after successful PR handoff (`nopal ledger finalize --json` when the nopal seam started the run, else `beislid run-ledger finalize`); on abort, record `nopal ledger interrupt` or `beislid run-ledger interrupt` with context, matching whichever CLI initialized the run (`nopal-seam-protocol.md`).
+4. If a run ledger is active: `finalize` only after successful PR handoff (`nopal ledger finalize --json` when the nopal seam started the run, else `beislid run-ledger finalize`); on abort, record `nopal ledger interrupt --json` or `beislid run-ledger interrupt` with context, matching whichever CLI initialized the run (`nopal-seam-protocol.md`).
 
 Do not finish with only prose such as “brief summarized”; that fails smoke. Do not include secrets, env values, auth headers, or raw stdout/stderr.
 

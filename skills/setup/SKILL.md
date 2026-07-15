@@ -37,7 +37,7 @@ Do not preload update, first-run, menu, write, AGENTS, parse-recovery, or option
 Run `git rev-parse --show-toplevel`.
 If it errors or returns non-zero, hard-fail with prose:
 
-```
+```text
 🛑 Setup needs a git repo with at least one commit. Run `git init` and make
 the first commit, then re-run /setup.
 ```

@@ -45,13 +45,12 @@ def load_json(path: Path, errors: list[str], label: str) -> dict | None:
     return payload
 
 
-def smoke_host(run_dir: Path) -> str | None:
+def smoke_host(run_dir: Path, errors: list[str]) -> str | None:
     path = run_dir / "agent-smoke.json"
     if not path.is_file():
         return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    payload = load_json(path, errors, "agent-smoke.json")
+    if payload is None:
         return None
     host = payload.get("host")
     return host if isinstance(host, str) else None
@@ -105,7 +104,7 @@ def verify(run_dir: Path) -> list[str]:
     for failure in test_failures:
         fail(errors, "product", f"tests/test_widget_export.py: {failure}")
 
-    if smoke_host(run_dir) == "codex":
+    if smoke_host(run_dir, errors) == "codex":
         host_text = collect_agent_output(run_dir, strip_tokens=True)
         require_stamp_sequence(
             errors,
@@ -236,6 +235,15 @@ def test_export_widgets_with_tax_rate():
                 print(f"- {error}", file=sys.stderr)
             return 1
         write(run_dir / "agent.log", CODEX_CONTEXT_STAMP + "\n")
+
+        write(run_dir / "agent-smoke.json", "{broken\n")
+        malformed_descriptor_errors = verify(run_dir)
+        if not any("agent-smoke.json: unreadable or invalid JSON" in error for error in malformed_descriptor_errors):
+            print("self-test failed: malformed smoke descriptor should fail", file=sys.stderr)
+            for error in malformed_descriptor_errors:
+                print(f"- {error}", file=sys.stderr)
+            return 1
+        write(run_dir / "agent-smoke.json", json.dumps({"host": "codex"}) + "\n")
 
         # Negative: implementation silently ignores tax_rate (a plausible half-done
         # attempt) - the real test execution must catch it even though the checkpoint

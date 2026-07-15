@@ -142,7 +142,7 @@ No command, tool, path, skill, or network probe is run for this capability. Miss
 
 `beislid:nopal_seam` is validated as shape, then its `binary` field drives a `binary` probe (above). Fields: `mode` (`prefer` | `require` | `off`, default `prefer` when the block is absent), `binary` (default `nopal`), `min_version` (optional dotted version string). Unknown `mode` values or a non-string `min_version` are a config failure.
 
-The exact probe for `nopal_seam` is `nopal info --json`.
+The exact probe for `nopal_seam` is `<configured-binary> info --json`, with the configured executable preserved as one argv element.
 Require a complete `nopal.info/v1` envelope containing `ok: true`, a dotted-triple `version`, a nullable `commit`, and a string `capabilities[]` list.
 Feature detection is capability membership, never a version-string heuristic.
 A non-zero exit or malformed, incomplete, or wrong-kind envelope is `failed`; there is no retired-binary or `--version` compatibility probe.
@@ -151,8 +151,8 @@ See `nopal-seam-protocol.md` for the call and fallback contract.
 | Status | Condition |
 |---|---|
 | `ok` | `mode: off`, or the exact `nopal.info/v1` probe resolves and meets `min_version` when set. `probe_supported: true`. |
-| `missing` | `mode: prefer` or `require` and the `binary` probe is `missing`/`failed`. `probe_supported: true`. Reason names the binary and, for `require`, that the seam is hard-required. |
-| `failed` | Malformed config, or the binary resolves but the exact envelope contract is unusable. `probe_supported: true`. |
+| `missing` | `mode: prefer` or `require` and the configured binary is absent. `probe_supported: true`. Reason names the binary and, for `require`, that the seam is hard-required. |
+| `failed` | Malformed config, or the binary resolves but execution fails or the exact envelope contract is unusable. `probe_supported: true`. |
 
 `mode: off` records `status: ok` without running the binary probe because it is explicit project policy to never call Nopal.
 `mode: prefer` treats a missing or failed probe as a graceful miss and uses each seam's documented Beislið fallback.
@@ -162,7 +162,7 @@ Doctor should direct installation to the current `sandsower/nopal` GitHub Releas
 Doctor's `.nopal/` freshness check runs `nopal import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --check --json`.
 This compares module semantics and reports `beislid_import_drift` without writing.
 Remediation is `nopal import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --write --overwrite --json` followed by review and `nopal validate --json`.
-Run this check only when the `nopal_seam` probe is `ok`.
+Run this check only when `mode` is not `off` and the `nopal_seam` binary probe completed successfully with `status: ok`.
 
 ### workflow_signals validation
 

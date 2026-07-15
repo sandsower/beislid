@@ -87,7 +87,7 @@ stray_regular=$(find skills \( -name 'probe-semantics.md' \
                       -o -name 'review-response-templates.md' \
                       -o -name 'action-policy-protocol.md' \
                       -o -name 'nopal-seam-protocol.md' \) \
-          | xargs -I{} sh -c '[ -L "{}" ] || echo "{}"')
+          ! -type l -print)
 if [ -n "$stray_regular" ]; then
   echo "Found per-skill aux files that should be symlinks but are regular files:"
   echo "$stray_regular"

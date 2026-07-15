@@ -90,6 +90,7 @@ risk:
     - 'skills/**/SKILL.md'
     - 'tests/agent-smoke/**'
     - '.beislid/**'
+    - '.nopal/**'
   low_risk_paths:
     - 'docs/**'
     - '**/*.md'
