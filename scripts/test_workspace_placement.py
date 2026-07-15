@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 HELPER = ROOT / "scripts" / "workspace_placement.py"
 LEDGER = ROOT / "scripts" / "run_ledger.py"
+CLI = ROOT / "bin" / "beislid"
 
 
 def run(
@@ -71,9 +72,7 @@ class WorkspacePlacementTests(unittest.TestCase):
         return result
 
     def create(self, expected_sha: str) -> subprocess.CompletedProcess[str]:
-        return run(
-            sys.executable,
-            str(HELPER),
+        return self.helper(
             "create",
             "--repo",
             str(self.repo),
@@ -83,13 +82,80 @@ class WorkspacePlacementTests(unittest.TestCase):
             "repo-sibling",
             "--label",
             "worker",
-            "--run-id",
-            self.run_id,
-            "--flow",
-            "implement",
-            cwd=self.repo,
-            env=self.env,
         )
+
+    def helper(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+        command = list(args)
+        common = ["--run-id", self.run_id, "--flow", "implement"]
+        if "--" in command:
+            separator = command.index("--")
+            command[separator:separator] = common
+        else:
+            command.extend(common)
+        return run(
+            sys.executable,
+            str(HELPER),
+            *command,
+            cwd=self.repo,
+            env=env or self.env,
+        )
+
+    def write_runtime_fixture(self) -> tuple[Path, Path]:
+        provider = Path(self.tmp.name) / "runtime_provider.py"
+        provider.write_text(
+            """import json
+import os
+from pathlib import Path
+
+action = os.environ["BEISLID_RUNTIME_ACTION"]
+with Path(os.environ["PROVIDER_ACTIONS"]).open("a", encoding="utf-8") as log:
+    log.write(action + "\\n")
+lease_file = Path(os.environ["BEISLID_RUNTIME_LEASE_FILE"])
+mode = os.environ.get("PROVIDER_MODE", "ok")
+if action == "allocate":
+    bindings = {
+        "PRIMARY_DATABASE_URL": "postgres://primary-secret",
+        "SHADOW_DATABASE_URL": "postgres://shadow-secret",
+        "REDIS_URL": "redis://cache-secret",
+    }
+    if mode == "missing-binding":
+        bindings.pop("SHADOW_DATABASE_URL")
+    lease_file.write_text(json.dumps({
+        "kind": "runtime-lease-v1",
+        "lease_id": "lease-worker-1",
+        "expires_at": "2030-01-01T00:00:00+00:00",
+        "bindings": bindings,
+    }) + "\\n", encoding="utf-8")
+elif action == "verify" and mode == "verify-fail":
+    raise SystemExit(7)
+""",
+            encoding="utf-8",
+        )
+        actions = Path(self.tmp.name) / "provider-actions.log"
+        profile = Path(self.tmp.name) / "runtime-profile.json"
+        command = f"{sys.executable} {provider}"
+        profile.write_text(
+            json.dumps(
+                {
+                    "kind": "runtime-profile-v1",
+                    "name": "integration",
+                    "required_bindings": [
+                        "PRIMARY_DATABASE_URL",
+                        "SHADOW_DATABASE_URL",
+                        "REDIS_URL",
+                    ],
+                    "provider": {
+                        "allocate": command,
+                        "verify": command,
+                        "release": command,
+                        "reconcile": command,
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return profile, actions
 
     def test_manual_create_proves_fresh_exact_sha_worktree_and_receipt(self) -> None:
         first = self.create(self.sha)
@@ -135,6 +201,150 @@ class WorkspacePlacementTests(unittest.TestCase):
         self.assertEqual(rejected.returncode, 2)
         self.assertIn("expected SHA", rejected.stderr)
         self.assertEqual(sorted(expected_root.iterdir()), before)
+
+    def test_runtime_profile_lease_exec_reconcile_and_idempotent_release(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        placement_id = json.loads(created.stdout)["placement_id"]
+        profile, actions = self.write_runtime_fixture()
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+
+        leased = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile-file",
+            str(profile),
+            env=env,
+        )
+        self.assertEqual(leased.returncode, 0, leased.stderr)
+        lease = json.loads(leased.stdout)
+        self.assertEqual(lease["profile"], "integration")
+        self.assertEqual(lease["lease_id"], "lease-worker-1")
+        self.assertEqual(
+            lease["binding_names"],
+            ["PRIMARY_DATABASE_URL", "REDIS_URL", "SHADOW_DATABASE_URL"],
+        )
+        self.assertEqual(sorted(lease["fingerprints"]), lease["binding_names"])
+        self.assertNotIn("primary-secret", leased.stdout)
+        self.assertNotIn("shadow-secret", leased.stdout)
+        self.assertNotIn("cache-secret", leased.stdout)
+
+        secret_files = list((Path(self.env["BEISLID_STATE_DIR"]) / "secrets").rglob("lease.json"))
+        self.assertEqual(len(secret_files), 1)
+        self.assertEqual(secret_files[0].stat().st_mode & 0o777, 0o600)
+
+        cli_env = dict(env)
+        cli_env["BEISLID_HOME"] = str(ROOT)
+        delivered = run(
+            str(CLI),
+            "workspace",
+            "exec",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile",
+            "integration",
+            "--run-id",
+            self.run_id,
+            "--flow",
+            "implement",
+            "--",
+            sys.executable,
+            "-c",
+            "import os; print('|'.join([os.environ['PRIMARY_DATABASE_URL'], os.environ['SHADOW_DATABASE_URL'], os.environ['REDIS_URL']]))",
+            cwd=self.repo,
+            env=cli_env,
+        )
+        self.assertEqual(delivered.returncode, 0, delivered.stderr)
+        self.assertEqual(
+            delivered.stdout.strip(),
+            "postgres://primary-secret|postgres://shadow-secret|redis://cache-secret",
+        )
+
+        reconciled = self.helper(
+            "reconcile",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile",
+            "integration",
+            env=env,
+        )
+        self.assertEqual(reconciled.returncode, 0, reconciled.stderr)
+
+        released = self.helper(
+            "release",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile",
+            "integration",
+            env=env,
+        )
+        self.assertEqual(released.returncode, 0, released.stderr)
+        released_again = self.helper(
+            "release",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile",
+            "integration",
+            env=env,
+        )
+        self.assertEqual(released_again.returncode, 0, released_again.stderr)
+        self.assertTrue(json.loads(released_again.stdout)["already_released"])
+        self.assertEqual(actions.read_text(encoding="utf-8").splitlines().count("release"), 1)
+
+        run_dir = Path(json.loads((Path(self.env["BEISLID_STATE_DIR"]) / "runs" / "implement" / self.repo_hash() / self.run_id / "run.json").read_text(encoding="utf-8"))["paths"]["run_dir"])
+        evidence = (run_dir / "artifacts" / "workspaces" / placement_id / "events.jsonl").read_text(encoding="utf-8")
+        self.assertIn('"type": "runtime_leased"', evidence)
+        self.assertIn('"type": "runtime_reconciled"', evidence)
+        self.assertIn('"type": "runtime_released"', evidence)
+        self.assertNotIn("primary-secret", evidence)
+        self.assertNotIn("shadow-secret", evidence)
+        self.assertNotIn("cache-secret", evidence)
+
+    def repo_hash(self) -> str:
+        return self.git("rev-list", "--max-parents=0", "HEAD").stdout.strip()[:12]
+
+    def test_runtime_profile_missing_binding_rolls_back_partial_lease(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        placement_id = json.loads(created.stdout)["placement_id"]
+        profile, actions = self.write_runtime_fixture()
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+        env["PROVIDER_MODE"] = "missing-binding"
+
+        leased = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile-file",
+            str(profile),
+            env=env,
+        )
+
+        self.assertEqual(leased.returncode, 2)
+        self.assertIn("missing required runtime bindings: SHADOW_DATABASE_URL", leased.stderr)
+        self.assertEqual(actions.read_text(encoding="utf-8").splitlines(), ["allocate", "release"])
+        self.assertEqual(list((Path(self.env["BEISLID_STATE_DIR"]) / "secrets").rglob("lease.json")), [])
+
+        run_json = Path(self.env["BEISLID_STATE_DIR"]) / "runs" / "implement" / self.repo_hash() / self.run_id / "run.json"
+        run_dir = Path(json.loads(run_json.read_text(encoding="utf-8"))["paths"]["run_dir"])
+        evidence = (run_dir / "artifacts" / "workspaces" / placement_id / "events.jsonl").read_text(encoding="utf-8")
+        self.assertIn('"type": "runtime_lease_failed"', evidence)
+        self.assertNotIn("primary-secret", evidence)
 
 
 if __name__ == "__main__":

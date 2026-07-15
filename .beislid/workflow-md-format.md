@@ -423,6 +423,17 @@ manual_root: repo-sibling
 fallback:
   orchestrator: manual-transition-required
   delegate: sequential
+runtime_profiles:
+  integration:
+    required_bindings:
+      - PRIMARY_DATABASE_URL
+      - SHADOW_DATABASE_URL
+      - REDIS_URL
+    provider:
+      allocate: 'python3 scripts/runtime_provider.py allocate'
+      verify: 'python3 scripts/runtime_provider.py verify'
+      release: 'python3 scripts/runtime_provider.py release'
+      reconcile: 'python3 scripts/runtime_provider.py reconcile'
 ```
 ````
 
@@ -442,6 +453,20 @@ Manual placements always allocate a fresh child path and branch and never adopt 
 The normalized defaults for a present partial block are `current`, `sequential`, `repo-sibling`, and the fail-closed fallbacks above.
 Capability results use only `verified-native`, `verified-manual`, or `unavailable`; configuration values are requests, not capability evidence.
 Action authorization remains in `action_policy` and is not duplicated here.
+
+`runtime_profiles` is an optional mapping of atomic runtime environments.
+Each profile requires a unique list of uppercase `required_bindings` and provider commands for `allocate`, `verify`, `release`, and `reconcile`.
+One profile may bundle every database, cache, queue, port, or service entrypoint that must stay isolated together.
+
+Provider commands use an argv-safe command string and receive `BEISLID_RUNTIME_ACTION`, `BEISLID_RUNTIME_REQUEST_FILE`, `BEISLID_RUNTIME_LEASE_FILE`, `BEISLID_PLACEMENT_ID`, and `BEISLID_RUNTIME_PROFILE`.
+`allocate` writes a `runtime-lease-v1` JSON object containing `lease_id`, optional `expires_at`, and a `bindings` mapping to the lease file.
+`verify` must exit zero only after every binding is ready for the assigned placement.
+`release` must be idempotent at the provider boundary, and `reconcile` must confirm ownership and expiry state before reclaiming resources.
+
+Missing, empty, partial, or unverified binding sets fail the entire lease and trigger best-effort provider release.
+Binding values are stored with mode `0600` under the external Beislið secret state, outside run-ledger artifacts.
+The ledger stores only profile name, lease ID, expiry, binding names, and keyed fingerprints.
+The portable delivery wrapper is `beislid workspace exec --placement-id <id> --profile <name> -- <command...>` with the active run ID, flow, and repository supplied by the orchestrator.
 
 ## Crust seam shape
 
