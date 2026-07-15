@@ -259,6 +259,40 @@ runtime_profiles:
             ],
         )
 
+    def test_agent_isolation_rejects_resolved_ephemeral_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            durable = root / "durable"
+            ephemeral = root / "ephemeral"
+            durable.mkdir()
+            ephemeral.mkdir()
+            link = durable / "linked"
+            link.symlink_to(ephemeral, target_is_directory=True)
+
+            for manual_root in (durable / ".." / "ephemeral" / "worktrees", link / "worktrees"):
+                with self.subTest(manual_root=manual_root):
+                    workflow = self.write_workflow(
+                        f"""<!-- beislid-workflow: v1 -->
+
+```beislid:agent_isolation
+orchestrator: manual
+delegate: sequential
+manual_root: {manual_root}
+```
+"""
+                    )
+                    original_roots = workflow_normalizer.EPHEMERAL_MANUAL_ROOTS
+                    self.addCleanup(setattr, workflow_normalizer, "EPHEMERAL_MANUAL_ROOTS", original_roots)
+                    workflow_normalizer.EPHEMERAL_MANUAL_ROOTS = (ephemeral.resolve(),)
+
+                    envelope = workflow_normalizer.normalize_workflow(workflow)
+
+                    self.assertEqual(envelope["status"], "error")
+                    self.assertIn(
+                        ("invalid_value", "sections.agent_isolation.manual_root"),
+                        [(error["code"], error["path"]) for error in envelope["errors"]],
+                    )
+
     def test_agent_isolation_rejects_invalid_preparation_contract(self) -> None:
         workflow = self.write_workflow(
             """<!-- beislid-workflow: v1 -->

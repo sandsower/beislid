@@ -282,6 +282,8 @@ def validate_workspace_receipt(receipt: dict[str, Any]) -> str:
     created_at = receipt.get("created_at")
     if not isinstance(created_at, str):
         raise SystemExit("workspace receipt created_at must be an RFC 3339 timestamp")
+    if len(created_at) < 11 or created_at[10] != "T":
+        raise SystemExit("workspace receipt created_at must be an RFC 3339 timestamp")
     try:
         parsed_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
     except ValueError as exc:

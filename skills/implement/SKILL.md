@@ -6,8 +6,8 @@ description: "Use when you have an approved design or requirements for a multi-s
 # Implementation Plan
 
 Creates a structured plan, tracks it with the host agent's todo/task mechanism, and executes with TDD as the default rhythm.
-When `beislid:agent_isolation` is configured or a mutating delegate is possible, load [workspace placement](workspace-placement-protocol.md) plus the current host adapter.
-Before the first repo write run `ensure_orchestrator_workspace`; before each mutating dispatch run `place_mutating_delegate`.
+When `beislid:agent_isolation` is configured, load [workspace placement](workspace-placement-protocol.md) plus the current host adapter.
+Only with that block present, run `ensure_orchestrator_workspace` before the first repo write and `place_mutating_delegate` before each mutating dispatch.
 
 If the handoff includes an explicit design artifact path from `blueprint`, read it as your primary input; design artifacts are checkpoint-compatible state seeds for implementation planning. Otherwise, if the matching `blueprint_approved` latest pointer entry for the current ticket/branch resolves to a readable artifact, read that artifact as your primary input; if not, use the workflow-configured artifact path template when present, then look for a matching design artifact in `plans/` using the ticket/feature slug when known (for example, `plans/<feature>-design.md` from `blueprint`). If exactly one match exists, read it as your primary input. If multiple candidates remain, ask the user to choose the artifact path. Only fall back to conversation context when no design artifact is available.
 

@@ -337,6 +337,7 @@ def test_workspace_receipt_schema_rejects_missing_or_malformed_evidence() -> Non
             "capability": lambda value: value.update(capability="verified-manual"),
             "placement_status": lambda value: value.pop("placement_status"),
             "created_at": lambda value: value.update(created_at="not-a-timestamp"),
+            "created_at_space_separator": lambda value: value.update(created_at="2026-07-15 00:00:00+00:00"),
             "repository": lambda value: value.pop("repository"),
             "source": lambda value: value["repository"].update(source="relative/repo"),
             "repository_mismatch": lambda value: value["repository"].update(source=str(tmp / "other-repo")),

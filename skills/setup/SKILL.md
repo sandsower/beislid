@@ -502,7 +502,8 @@ When preparation is configured, ask for zero or more read-only readiness command
 Preparation must exit zero and leave tracked files unchanged before readiness checks run.
 
 Ask whether the workflow needs atomic runtime profiles.
-For each profile collect a lowercase name, every required uppercase binding name, and non-empty provider commands for allocate, verify, release, and reconcile.
+For each profile collect a lowercase name, every required uppercase binding name, and non-empty provider commands for allocate, verify, release, and reconcile that invoke checked-in provider scripts or reference named environment variables.
+Reject provider commands containing embedded credential values before writing the block.
 Explain that one profile bundles all database and service entrypoints that must isolate together, partial allocation rolls back, and secret values never enter workflow.md or ledger artifacts.
 
 ```beislid:agent_isolation

@@ -411,7 +411,7 @@ def _validate_sections(sections: dict[str, Any], warnings: list[Diagnostic], err
                 )
             )
         elif manual_root != "repo-sibling":
-            resolved_root = Path(manual_root).expanduser()
+            resolved_root = Path(manual_root).expanduser().resolve()
             if any(resolved_root == root or root in resolved_root.parents for root in EPHEMERAL_MANUAL_ROOTS):
                 errors.append(
                     Diagnostic(
