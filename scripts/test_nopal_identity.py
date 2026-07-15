@@ -12,9 +12,13 @@ ROOT = Path(__file__).resolve().parent.parent
 OLD = "cr" + "ust"
 
 
-def tracked_files() -> list[Path]:
+def git_files(*, include_untracked: bool) -> list[Path]:
+    args = ["git", "ls-files", "--cached"]
+    if include_untracked:
+        args.extend(["--others", "--exclude-standard"])
+    args.append("-z")
     result = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        args,
         cwd=ROOT,
         check=True,
         stdout=subprocess.PIPE,
@@ -23,10 +27,18 @@ def tracked_files() -> list[Path]:
     return [path for path in paths if path.exists() or path.is_symlink()]
 
 
+def active_files() -> list[Path]:
+    return git_files(include_untracked=True)
+
+
+def committed_files() -> list[Path]:
+    return git_files(include_untracked=False)
+
+
 class NopalIdentityTests(unittest.TestCase):
     def test_no_active_tracked_path_or_content_uses_retired_identity(self) -> None:
         stale: list[str] = []
-        for path in tracked_files():
+        for path in active_files():
             relative = path.relative_to(ROOT).as_posix()
             if relative == "CHANGELOG.md":
                 continue
@@ -51,7 +63,7 @@ class NopalIdentityTests(unittest.TestCase):
             ".nopal/integrations.jsonc",
             ".nopal/review_policy.jsonc",
         }
-        actual = {path.relative_to(ROOT).as_posix() for path in tracked_files()}
+        actual = {path.relative_to(ROOT).as_posix() for path in committed_files()}
         self.assertTrue(expected.issubset(actual), f"missing canonical Nopal files: {sorted(expected - actual)}")
 
     def test_dogfood_workflow_uses_nopal_seam(self) -> None:

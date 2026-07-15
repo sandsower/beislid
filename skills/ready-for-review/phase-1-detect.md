@@ -52,7 +52,7 @@ Store files/stats. If the diff touches `skills/**` or `.beislid/**`, emit the sk
 
 If `review_policy.agentic_reviewer.mode: opt_in_final_review`, classify risk: `high` for high path/threshold match; `low` only when every file is low-risk and low thresholds hold; else `medium` (unknown stats cannot be low). Store `agentic_reviewer_required = risk > max_auto_closeout_risk` using `low < medium < high`. Missing policy preserves old behavior.
 
-`probe(nopal_seam)`; if ok, select gates via `nopal gates select --stage pre_pr --changed-files <files> --json` (`nopal-seam-protocol.md`) and use its `selected`/`skipped`. Else if `gate_sets` exists, match selectors to changed files, apply `exclude`, union deterministically, de-dupe by gate identity, and record selected/skipped reasons. Else mark touched scopes; else create repo-root scope for top-level `gates`; else no gate scopes.
+`probe(nopal_seam)`; when ok with the `gates` capability, use `nopal gates select --stage pre_pr --changed-files <files> --json` and its `selected`/`skipped`. If `gates` is unavailable, follow the seam fallback ladder; `mode: require` blocks. When fallback is allowed and `gate_sets` exists, match selectors to files, apply `exclude`, union/de-dupe gates, and record reasons. Else mark touched scopes; else use top-level `gates`; else no gate scopes.
 
 ### 1d. Apply split policy
 

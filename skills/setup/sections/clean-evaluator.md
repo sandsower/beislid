@@ -22,6 +22,7 @@ Preferred clean surface? (auto / worktree / container)
 
 Default to `auto` and explain that it accepts either a received clean surface or a fresh one created for evaluation.
 Then ask for an optional artifact root, defaulting to `.beislid/clean-eval`.
+Before writing, require the artifact root to be a non-empty repository-relative path, reject absolute paths and any `..` traversal segment, and re-prompt on invalid input.
 Write:
 
 ```beislid:clean_eval

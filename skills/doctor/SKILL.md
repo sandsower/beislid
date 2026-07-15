@@ -136,7 +136,8 @@ For each fenced block with info string `beislid:<key>`:
      Require a complete `nopal.info/v1` envelope containing `ok: true`, `version`, `commit`, and `capabilities[]`.
      A missing binary is `missing`, while a non-zero, malformed, incomplete, wrong-kind, or below-minimum response is `failed`.
      There is no retired-binary or `--version` compatibility probe.
-     When the probe is `ok`, run `<binary> import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --check --json`.
+     When the probe is `ok` and `capabilities[]` contains `import`, run `<binary> import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --check --json`.
+     When `import` is unavailable, follow the seam fallback ladder: under `mode: prefer`, keep Beislið validation active and report a concise fallback note; under `mode: require`, report a real gap and do not call the unsupported family.
      Report `beislid_import_drift` with a `<binary> import beislid-workflow --source .beislid/workflow.md --output-dir .nopal --write --overwrite --json` remediation instead of editing modules directly.
      Under `mode: prefer`, an unavailable probe is a graceful fallback note with the current `sandsower/nopal` GitHub Release install story.
      Under `mode: require`, the same condition is a real gap.

@@ -222,6 +222,18 @@ payload = {
 with open(path, "w", encoding="utf-8") as target:
     json.dump(payload, target)
 PY
+  out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow ready-for-review --name validate-legacy --scope repo --envelope-file "$envelope")"
+  python3 - <<'PY' "$out" "$run_dir" || return 1
+import json, pathlib, sys
+payload = json.loads(sys.argv[1])
+run_dir = pathlib.Path(sys.argv[2])
+assert "proof" not in payload, payload
+checkpoint = json.loads(pathlib.Path(payload["checkpoint"]).read_text(encoding="utf-8"))
+assert "proof" not in checkpoint["payload"], checkpoint
+events = [json.loads(line) for line in (run_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()]
+event = next(item for item in reversed(events) if item["type"] == "gate_result" and item["payload"]["name"] == "validate-legacy")
+assert "proof" not in event["payload"], event
+PY
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" gate --run-id "$run_id" --flow ready-for-review --name validate --scope repo --envelope-file "$envelope" --proof-request-file "$request")"
   python3 - <<'PY' "$out" || return 1
 import json, pathlib, sys

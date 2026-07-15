@@ -612,30 +612,34 @@ def command_gate(args: argparse.Namespace) -> int:
         run.setdefault("artifacts", []).append(artifact)
         run.setdefault("logs", []).append(artifact)
         write_json(rdir / "run.json", run)
+    checkpoint_data = {
+        "name": args.name,
+        "scope": scope,
+        "path": str(envelope_path),
+        "status": envelope.get("status"),
+        "envelope": envelope,
+    }
+    if proof_result is not None:
+        checkpoint_data["proof"] = proof_result
     checkpoint_path = record_checkpoint(
         rdir,
         f"gate-{scope}-{safe_name}",
-        {
-            "name": args.name,
-            "scope": scope,
-            "path": str(envelope_path),
-            "status": envelope.get("status"),
-            "envelope": envelope,
-            "proof": proof_result,
-        },
+        checkpoint_data,
         args.resume_hint or "continue after reviewing gate result",
     )
+    event_data = {
+        "name": args.name,
+        "scope": scope,
+        "path": str(envelope_path),
+        "checkpoint": str(checkpoint_path),
+        "envelope": envelope,
+    }
+    if proof_result is not None:
+        event_data["proof"] = proof_result
     append_event(
         rdir,
         "gate_result",
-        {
-            "name": args.name,
-            "scope": scope,
-            "path": str(envelope_path),
-            "checkpoint": str(checkpoint_path),
-            "envelope": envelope,
-            "proof": proof_result,
-        },
+        event_data,
     )
     output = {"run_id": args.run_id, "gate_log": str(envelope_path), "checkpoint": str(checkpoint_path)}
     if proof_result is not None:

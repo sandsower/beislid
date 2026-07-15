@@ -16,7 +16,9 @@ Configure workflow signals? (auto / off / skip)
 
 For `auto`, write a `sinks` list with `type: tmux-glance`.
 Ask whether to enable the default semantically instrumented skills (`ready-for-review` and `poke-holes`) or customize per-skill overrides.
-Valid modes are `off / auto`.
+For `off`, write a block containing only `mode: off`, removing any existing `sinks` and `skills` entries so signals are disabled deterministically.
+For `skip`, leave any existing block unchanged and do not serialize `skip` as a mode.
+Valid serialized modes are `off / auto`; `skip` is a prompt-only no-op.
 
 ```beislid:workflow_signals
 mode: auto
