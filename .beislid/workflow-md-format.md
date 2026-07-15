@@ -446,6 +446,8 @@ runtime_profiles:
 
 `delegate` accepts `native`, `manual`, or `sequential`.
 Native and manual delegate placement remain unavailable until the selected host adapter passes end-to-end conformance for path anchoring, exact SHA, clean state, handoff, integration, and cleanup.
+Positive probe evidence must come from a trusted end-to-end runner and be fresh and bound to the host, operation, adapter build, repository, and proof artifacts.
+Without such a runner, capability remains unavailable.
 
 `manual_root` accepts `repo-sibling` or an absolute path.
 The runtime `BEISLID_WORKTREE_ROOT` environment variable takes precedence when set, then workflow configuration applies, and the portable default is `<repo-parent>/<repo-name>-worktrees`.
@@ -466,9 +468,11 @@ Any failure retains the placement and stops dispatch.
 `runtime_profiles` is an optional mapping of atomic runtime environments.
 Each profile requires a unique list of uppercase `required_bindings` and provider commands for `allocate`, `verify`, `release`, and `reconcile`.
 One profile may bundle every database, cache, queue, port, or service entrypoint that must stay isolated together.
+The executable selection path is `beislid workspace lease --workflow-file .beislid/workflow.md --profile <name>` with repository, placement, run, and flow arguments.
 
 Provider commands use an argv-safe command string and receive `BEISLID_RUNTIME_ACTION`, `BEISLID_RUNTIME_REQUEST_FILE`, `BEISLID_RUNTIME_LEASE_FILE`, `BEISLID_PLACEMENT_ID`, and `BEISLID_RUNTIME_PROFILE`.
 `allocate` writes a `runtime-lease-v1` JSON object containing `lease_id`, optional `expires_at`, and a `bindings` mapping to the lease file.
+When present, `expires_at` must be a future RFC 3339 timestamp.
 `verify` must exit zero only after every binding is ready for the assigned placement.
 `release` must be idempotent at the provider boundary, and `reconcile` must confirm ownership and expiry state before reclaiming resources.
 

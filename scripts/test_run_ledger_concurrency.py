@@ -89,6 +89,27 @@ def jsonl_line_count(path: Path) -> int:
     return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
 
 
+def workspace_receipt(placement_id: str, path: str, sha: str, repository: str) -> dict[str, object]:
+    return {
+        "kind": "workspace-placement-receipt-v1",
+        "placement_id": placement_id,
+        "operation": "place_mutating_delegate",
+        "capability": "unavailable",
+        "placement_status": "verified",
+        "created_at": "2026-07-15T00:00:00+00:00",
+        "concurrency_group": None,
+        "repository": {"source": repository, "expected_sha": sha, "actual_sha": sha},
+        "scope": {"write": ["README.md"]},
+        "workspace": {
+            "path": path,
+            "branch": f"beislid/placement/{placement_id}",
+            "clean": True,
+            "cleanup_owner": "beislid",
+            "created_by": "beislid",
+        },
+    }
+
+
 def test_concurrent_event_appends() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         repo, env = setup_fixture(Path(tmp_name))
@@ -233,16 +254,13 @@ def test_concurrent_workspace_receipts_are_unique_and_collision_safe() -> None:
         init = init_run(repo, env)
         run_id = init["run_id"]
         run_dir = Path(init["run_dir"])
+        sha = run(["git", "rev-parse", "HEAD"], cwd=repo, env=env).stdout.strip()
         payloads: list[Path] = []
         for index in range(20):
             payload = tmp / f"receipt-{index}.json"
             payload.write_text(
                 json.dumps(
-                    {
-                        "kind": "workspace-placement-receipt-v1",
-                        "placement_id": f"worker-{index}",
-                        "workspace": {"path": f"/worktrees/worker-{index}", "cleanup_owner": "beislid"},
-                    }
+                    workspace_receipt(f"worker-{index}", f"/worktrees/worker-{index}", sha, str(repo.resolve()))
                 )
                 + "\n",
                 encoding="utf-8",
@@ -282,11 +300,7 @@ def test_concurrent_workspace_receipts_are_unique_and_collision_safe() -> None:
         collision = tmp / "receipt-collision.json"
         collision.write_text(
             json.dumps(
-                {
-                    "kind": "workspace-placement-receipt-v1",
-                    "placement_id": "collision",
-                    "workspace": {"path": "/worktrees/collision", "cleanup_owner": "beislid"},
-                }
+                workspace_receipt("collision", "/worktrees/collision", sha, str(repo.resolve()))
             )
             + "\n",
             encoding="utf-8",
@@ -309,11 +323,70 @@ def test_concurrent_workspace_receipts_are_unique_and_collision_safe() -> None:
             )
 
 
+def test_workspace_receipt_schema_rejects_missing_or_malformed_evidence() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        repo, env = setup_fixture(tmp)
+        init = init_run(repo, env)
+        run_id = init["run_id"]
+        sha = run(["git", "rev-parse", "HEAD"], cwd=repo, env=env).stdout.strip()
+        mutations = {
+            "kind": lambda value: value.pop("kind"),
+            "placement_id": lambda value: value.pop("placement_id"),
+            "operation": lambda value: value.update(operation="unknown"),
+            "capability": lambda value: value.update(capability="verified-manual"),
+            "placement_status": lambda value: value.pop("placement_status"),
+            "created_at": lambda value: value.update(created_at="not-a-timestamp"),
+            "repository": lambda value: value.pop("repository"),
+            "source": lambda value: value["repository"].update(source="relative/repo"),
+            "repository_mismatch": lambda value: value["repository"].update(source=str(tmp / "other-repo")),
+            "expected_sha": lambda value: value["repository"].pop("expected_sha"),
+            "actual_sha": lambda value: value["repository"].update(actual_sha="short"),
+            "sha_mismatch": lambda value: value["repository"].update(actual_sha="b" * 40),
+            "scope": lambda value: value.update(scope={"write": []}),
+            "unsafe_scope": lambda value: value.update(scope={"write": ["../outside"]}),
+            "workspace_path": lambda value: value["workspace"].update(path="relative/worktree"),
+            "branch": lambda value: value["workspace"].pop("branch"),
+            "clean": lambda value: value["workspace"].update(clean=False),
+            "cleanup_owner": lambda value: value["workspace"].update(cleanup_owner="unknown"),
+            "created_by": lambda value: value["workspace"].pop("created_by"),
+        }
+        for index, (name, mutate) in enumerate(mutations.items()):
+            payload = workspace_receipt(
+                f"invalid-{index}",
+                f"/worktrees/invalid-{index}",
+                sha,
+                str(repo.resolve()),
+            )
+            mutate(payload)
+            path = tmp / f"invalid-{name}.json"
+            path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+            result = run(
+                [
+                    "python3",
+                    str(LEDGER),
+                    "workspace-receipt",
+                    "--run-id",
+                    run_id,
+                    "--flow",
+                    "kickoff",
+                    "--json-file",
+                    str(path),
+                ],
+                cwd=repo,
+                env=env,
+                check=False,
+            )
+            if result.returncode == 0:
+                raise TestFailure(f"malformed workspace receipt unexpectedly passed: {name}")
+
+
 def main() -> int:
     tests = [
         ("concurrent event appends", test_concurrent_event_appends),
         ("concurrent gate attempt dirs", test_concurrent_gate_attempt_dirs),
         ("concurrent workspace receipts", test_concurrent_workspace_receipts_are_unique_and_collision_safe),
+        ("workspace receipt schema", test_workspace_receipt_schema_rejects_missing_or_malformed_evidence),
         ("explicit run-id collision", test_explicit_run_id_collision_errors),
     ]
     passed = 0

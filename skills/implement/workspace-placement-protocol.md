@@ -13,8 +13,8 @@ Only the orchestrator places mutating delegates in v1.
 Build one normalized request with:
 
 - run ID, flow, operation, strategy, and fallback
-- source repository, exact SHA, objective, next skill, and write scope
-- preparation command, runtime profiles, and integration order
+- source repository, exact SHA, objective, next skill, write scope, and concurrency group
+- preparation, runtime profiles, and integration order
 - action-policy envelopes for requested side effects
 
 Initialize or resume the external run ledger before automatic placement.
@@ -23,7 +23,7 @@ If unavailable, disable automatic parallel placement and cleanup and use the con
 ## Capability
 
 Capability is `verified-native`, `verified-manual`, or `unavailable`.
-Only end-to-end conformance across placement, SHA, preparation, runtime, handoff, integration, and cleanup proves capability.
+Only a trusted runner's fresh proof, bound to the host, operation, adapter build, and repository, establishes capability.
 
 ## Placement hard gates
 
@@ -38,15 +38,12 @@ Before mutation, require all of the following:
 7. Concurrent delegates have disjoint authorized write scopes.
 8. Every runtime profile has one verified atomic lease with all required bindings.
 
-Never adopt or reuse an existing path or branch automatically.
-Never keep sole progress under an ephemeral root.
-
-Use `beislid workspace create --write-scope <pattern>` for manual placement, `preflight` for preparation, and `exec` for runtime delivery inside the recorded worktree.
+Pass the exact `--operation` to `workspace create`; parallel calls share `--concurrency-group` and declare `--write-scope`.
 
 ## Receipt and handoff
 
 Store `workspace-placement-receipt-v1` at `artifacts/workspaces/<placement_id>/receipt.json` in the run ledger.
-Record identity, operation, capability, repository, SHAs, path, branch, clean state, creator, cleanup owner, run ID, and flow.
+Record identity, operation, placement status, capability, repository, SHAs, scope, workspace, ownership, run ID, and flow.
 Runtime events record profile, lease ID, expiry, binding names, and keyed fingerprints, never binding values.
 
 A mutating delegate returns the base SHA, commit list, clean status, changed paths, verification evidence, worktree path, and cleanup disposition.
@@ -58,13 +55,15 @@ Reject wrong bases, scope drift, missing or unreachable commits, dirty state, or
 
 Start parallel delegates from one frozen SHA and declare their integration order before dispatch.
 Cherry-pick committed handoffs serially and verify after each integration.
+Record source-to-integrated commit mappings for cleanup proof.
 Stop the remaining batch on conflict or regression and retain every unintegrated placement.
 Replan failed or dependent slices from the new SHA.
 
 ## Runtime and cleanup
 
 The orchestrator owns lease lifecycle, the provider owns allocation, the adapter transports identity, and the delegate consumes bindings.
-Missing, shared, partial, or unverified bindings make the placement unavailable for concurrent mutation.
+Lease a configured profile with `workspace lease --workflow-file .beislid/workflow.md --profile <name>`.
+Missing, shared, partial, unverified, or expired bindings prevent concurrent mutation.
 Release is idempotent and reconciliation may reclaim only confirmed owned resources after action-policy authorization.
 
 `cleanup_owner` is `host`, `beislid`, or `user`.

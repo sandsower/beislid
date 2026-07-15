@@ -608,7 +608,7 @@ PY
 )"
 
   receipt_payload="$TMP/receipt.json"
-  printf '%s\n' '{"kind":"workspace-placement-receipt-v1","placement_id":"worker-abc123","workspace":{"path":"/safe/worktree","cleanup_owner":"beislid"},"runtime":{"db_password":"do-not-store","binding_names":["primary"]}}' > "$receipt_payload"
+  printf '%s\n' '{"kind":"workspace-placement-receipt-v1","placement_id":"worker-abc123","operation":"place_mutating_delegate","capability":"unavailable","placement_status":"verified","created_at":"2026-07-15T00:00:00+00:00","concurrency_group":null,"repository":{"source":"'"$TMP"'/repo","expected_sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","actual_sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"scope":{"write":["README.md"]},"workspace":{"path":"/safe/worktree","branch":"beislid/placement/worker-abc123","clean":true,"cleanup_owner":"beislid","created_by":"beislid"},"runtime":{"db_password":"do-not-store","binding_names":["primary"]}}' > "$receipt_payload"
   out="$(cd "$TMP/repo" && BEISLID_STATE_DIR="$state" python3 "$LEDGER" workspace-receipt --run-id "$run_id" --flow implement --json-file "$receipt_payload")"
   receipt_path="$(python3 - <<'PY' "$out"
 import json, sys

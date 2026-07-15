@@ -76,6 +76,8 @@ class WorkspacePlacementTests(unittest.TestCase):
             "create",
             "--repo",
             str(self.repo),
+            "--operation",
+            "place_mutating_delegate",
             "--expected-sha",
             expected_sha,
             "--manual-root",
@@ -112,6 +114,7 @@ class WorkspacePlacementTests(unittest.TestCase):
         provider.write_text(
             """import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 action = os.environ["BEISLID_RUNTIME_ACTION"]
@@ -127,10 +130,11 @@ if action == "allocate":
     }
     if mode == "missing-binding":
         bindings.pop("SHADOW_DATABASE_URL")
+    expires_at = "2000-01-01T00:00:00+00:00" if mode == "expired" else (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     lease_file.write_text(json.dumps({
         "kind": "runtime-lease-v1",
         "lease_id": "lease-worker-1",
-        "expires_at": "2030-01-01T00:00:00+00:00",
+        "expires_at": expires_at,
         "bindings": bindings,
     }) + "\\n", encoding="utf-8")
 elif action == "verify" and mode == "verify-fail":
@@ -180,7 +184,8 @@ elif action == "verify" and mode == "verify-fail":
         for receipt in receipts:
             self.assertEqual(receipt["kind"], "workspace-placement-receipt-v1")
             self.assertEqual(receipt["operation"], "place_mutating_delegate")
-            self.assertEqual(receipt["capability"], "verified-manual")
+            self.assertEqual(receipt["capability"], "unavailable")
+            self.assertEqual(receipt["placement_status"], "verified")
             self.assertEqual(receipt["repository"]["source"], str(self.repo.resolve()))
             self.assertEqual(receipt["repository"]["expected_sha"], self.sha)
             self.assertEqual(receipt["repository"]["actual_sha"], self.sha)
@@ -218,6 +223,8 @@ elif action == "verify" and mode == "verify-fail":
             "create",
             "--repo",
             str(self.repo),
+            "--operation",
+            "place_mutating_delegate",
             "--expected-sha",
             self.sha,
             "--manual-root",
@@ -231,6 +238,29 @@ elif action == "verify" and mode == "verify-fail":
 
         self.assertEqual(rejected.returncode, 2)
         self.assertIn("temporary system directory", rejected.stderr)
+
+    def test_manual_create_records_explicit_orchestrator_operation_without_claiming_capability(self) -> None:
+        created = self.helper(
+            "create",
+            "--repo",
+            str(self.repo),
+            "--operation",
+            "ensure_orchestrator_workspace",
+            "--expected-sha",
+            self.sha,
+            "--manual-root",
+            "repo-sibling",
+            "--label",
+            "orchestrator",
+            "--write-scope",
+            "README.md",
+        )
+
+        self.assertEqual(created.returncode, 0, created.stderr)
+        receipt = json.loads(created.stdout)
+        self.assertEqual(receipt["operation"], "ensure_orchestrator_workspace")
+        self.assertEqual(receipt["capability"], "unavailable")
+        self.assertEqual(receipt["placement_status"], "verified")
 
     def test_runtime_profile_lease_exec_reconcile_and_idempotent_release(self) -> None:
         created = self.create(self.sha)
@@ -342,6 +372,57 @@ elif action == "verify" and mode == "verify-fail":
         self.assertNotIn("shadow-secret", evidence)
         self.assertNotIn("cache-secret", evidence)
 
+    def test_runtime_profile_materializes_from_normalized_workflow(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        placement_id = json.loads(created.stdout)["placement_id"]
+        profile_file, actions = self.write_runtime_fixture()
+        profile = json.loads(profile_file.read_text(encoding="utf-8"))
+        provider = profile["provider"]
+        workflow = Path(self.tmp.name) / "workflow.md"
+        workflow.write_text(
+            "\n".join(
+                [
+                    "<!-- beislid-workflow: v1 -->",
+                    "",
+                    "```beislid:agent_isolation",
+                    "runtime_profiles:",
+                    "  integration:",
+                    "    required_bindings:",
+                    "      - PRIMARY_DATABASE_URL",
+                    "      - SHADOW_DATABASE_URL",
+                    "      - REDIS_URL",
+                    "    provider:",
+                    f"      allocate: '{provider['allocate']}'",
+                    f"      verify: '{provider['verify']}'",
+                    f"      release: '{provider['release']}'",
+                    f"      reconcile: '{provider['reconcile']}'",
+                    "```",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+
+        leased = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--workflow-file",
+            str(workflow),
+            "--profile",
+            "integration",
+            env=env,
+        )
+
+        self.assertEqual(leased.returncode, 0, leased.stderr)
+        self.assertEqual(json.loads(leased.stdout)["profile"], "integration")
+        self.assertEqual(actions.read_text(encoding="utf-8").splitlines(), ["allocate", "verify"])
+
     def repo_hash(self) -> str:
         return self.git("rev-list", "--max-parents=0", "HEAD").stdout.strip()[:12]
 
@@ -375,6 +456,158 @@ elif action == "verify" and mode == "verify-fail":
         evidence = (run_dir / "artifacts" / "workspaces" / placement_id / "events.jsonl").read_text(encoding="utf-8")
         self.assertIn('"type": "runtime_lease_failed"', evidence)
         self.assertNotIn("primary-secret", evidence)
+
+    def test_runtime_profile_rejects_expired_allocation_and_expired_exec(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        placement_id = json.loads(created.stdout)["placement_id"]
+        profile, actions = self.write_runtime_fixture()
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+        expired_env = dict(env)
+        expired_env["PROVIDER_MODE"] = "expired"
+
+        rejected = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile-file",
+            str(profile),
+            env=expired_env,
+        )
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("must be in the future", rejected.stderr)
+
+        leased = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile-file",
+            str(profile),
+            env=env,
+        )
+        self.assertEqual(leased.returncode, 0, leased.stderr)
+        lease_file = next((Path(self.env["BEISLID_STATE_DIR"]) / "secrets").rglob("lease.json"))
+        secret_lease = json.loads(lease_file.read_text(encoding="utf-8"))
+        secret_lease["expires_at"] = "2000-01-01T00:00:00+00:00"
+        lease_file.write_text(json.dumps(secret_lease) + "\n", encoding="utf-8")
+        delivered = self.helper(
+            "exec",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile",
+            "integration",
+            "--",
+            sys.executable,
+            "-c",
+            "print('should-not-run')",
+            env=env,
+        )
+        self.assertEqual(delivered.returncode, 2)
+        self.assertIn("runtime lease is expired", delivered.stderr)
+        self.assertNotIn("should-not-run", delivered.stdout)
+
+    def test_runtime_profile_allocation_is_process_atomic(self) -> None:
+        created = self.create(self.sha)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        placement_id = json.loads(created.stdout)["placement_id"]
+        profile, actions = self.write_runtime_fixture()
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+        command = [
+            sys.executable,
+            str(HELPER),
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            placement_id,
+            "--profile-file",
+            str(profile),
+            "--run-id",
+            self.run_id,
+            "--flow",
+            "implement",
+        ]
+        contenders = [
+            subprocess.Popen(command, cwd=self.repo, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for _ in range(2)
+        ]
+        results = [process.communicate(timeout=10) + (process.returncode,) for process in contenders]
+        self.assertEqual(sorted(result[2] for result in results), [0, 2])
+        self.assertEqual(actions.read_text(encoding="utf-8").splitlines().count("allocate"), 1)
+        runtime_files = list((Path(self.env["BEISLID_STATE_DIR"]) / "secrets").rglob("*.json"))
+        self.assertEqual([path.name for path in runtime_files], ["lease.json"])
+
+    def test_concurrent_group_rejects_potential_scope_overlap(self) -> None:
+        def create_in_group(scope: str, group: str = "batch-one") -> subprocess.CompletedProcess[str]:
+            return self.helper(
+                "create",
+                "--repo",
+                str(self.repo),
+                "--operation",
+                "place_mutating_delegate",
+                "--expected-sha",
+                self.sha,
+                "--manual-root",
+                "repo-sibling",
+                "--label",
+                "worker",
+                "--concurrency-group",
+                group,
+                "--write-scope",
+                scope,
+            )
+
+        first = create_in_group("src/**")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        overlapping = create_in_group("src/module/**")
+        self.assertEqual(overlapping.returncode, 2)
+        self.assertIn("write scope may overlap active placement", overlapping.stderr)
+        disjoint = create_in_group("docs/**")
+        self.assertEqual(disjoint.returncode, 0, disjoint.stderr)
+
+        wildcard_cases = (
+            ("foo?bar", "foox*", "batch-wildcard"),
+            ("*tail", "?tail", "batch-suffix"),
+            ("src/**/test.py", "src/*/test.py", "batch-segments"),
+        )
+        for first_scope, second_scope, group in wildcard_cases:
+            with self.subTest(first=first_scope, second=second_scope):
+                self.assertEqual(create_in_group(first_scope, group).returncode, 0)
+                rejected = create_in_group(second_scope, group)
+                self.assertEqual(rejected.returncode, 2)
+                self.assertIn("write scope may overlap active placement", rejected.stderr)
+
+    def test_invalid_placement_id_cannot_escape_runtime_secret_state(self) -> None:
+        profile, actions = self.write_runtime_fixture()
+        outside = Path(self.tmp.name) / "escape-target"
+        outside.mkdir(mode=0o755)
+        original_mode = outside.stat().st_mode & 0o777
+        env = dict(self.env)
+        env["PROVIDER_ACTIONS"] = str(actions)
+
+        rejected = self.helper(
+            "lease",
+            "--repo",
+            str(self.repo),
+            "--placement-id",
+            "../../../../../escape-target",
+            "--profile-file",
+            str(profile),
+            env=env,
+        )
+
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("invalid placement id", rejected.stderr)
+        self.assertEqual(outside.stat().st_mode & 0o777, original_mode)
+        self.assertFalse(actions.exists())
 
     def test_preflight_runs_preparation_and_readiness_without_tracked_changes(self) -> None:
         created = self.create(self.sha)
@@ -522,7 +755,9 @@ elif action == "verify" and mode == "verify-fail":
             "cleanup.json",
             {
                 "kind": "workspace-cleanup-evidence-v1",
-                "integrated_commits": [delegate_commit],
+                "integration_map": [
+                    {"source_commit": delegate_commit, "integrated_commit": delegate_commit}
+                ],
                 "verification": ["handoff validation passed"],
                 "runtime_profiles_released": True,
                 "action_policy": {
@@ -553,7 +788,13 @@ elif action == "verify" and mode == "verify-fail":
         self.assertIn("not reachable from the integration branch", retained.stderr)
         self.assertTrue(workspace.is_dir())
 
-        self.git("merge", "--no-ff", "-q", "-m", "Integrate delegate", branch)
+        self.git("cherry-pick", delegate_commit)
+        integrated_commit = self.git("rev-parse", "HEAD").stdout.strip()
+        cleanup_payload = json.loads(evidence.read_text(encoding="utf-8"))
+        cleanup_payload["integration_map"] = [
+            {"source_commit": delegate_commit, "integrated_commit": integrated_commit}
+        ]
+        evidence.write_text(json.dumps(cleanup_payload) + "\n", encoding="utf-8")
         cleaned = self.helper(
             "cleanup",
             "--repo",

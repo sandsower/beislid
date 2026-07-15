@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import hmac
 import json
@@ -13,16 +14,17 @@ import secrets
 import shlex
 import subprocess
 import sys
-from datetime import datetime, timezone
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 import run_ledger
+import workflow_normalizer
 
 
 RECEIPT_KIND = "workspace-placement-receipt-v1"
-PLACEMENT_OPERATION = "place_mutating_delegate"
-CAPABILITY = "verified-manual"
+PLACEMENT_OPERATIONS = {"ensure_orchestrator_workspace", "place_mutating_delegate"}
 MAX_ALLOCATION_ATTEMPTS = 20
 RUNTIME_PROFILE_KIND = "runtime-profile-v1"
 RUNTIME_LEASE_KIND = "runtime-lease-v1"
@@ -36,6 +38,10 @@ CONFORMANCE_PROOFS = (
     "integration_verified",
     "cleanup_verified",
 )
+HOST_PROOF_KIND = "host-placement-proof-v1"
+HOST_ADAPTER_BUILD = "workspace-placement-v1"
+MAX_PROBE_AGE = timedelta(hours=24)
+ATTESTED_ADAPTER_BUILDS: frozenset[str] = frozenset()
 
 
 class PlacementError(Exception):
@@ -44,6 +50,30 @@ class PlacementError(Exception):
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+@contextmanager
+def exclusive_lock(path: Path):
+    """Serialize one placement or lease transaction across processes."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def parse_timestamp(value: object, label: str) -> datetime:
+    if not isinstance(value, str) or not value:
+        raise PlacementError(f"{label} must be an RFC 3339 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise PlacementError(f"{label} must be an RFC 3339 timestamp") from exc
+    if parsed.tzinfo is None:
+        raise PlacementError(f"{label} must include a timezone")
+    return parsed.astimezone(timezone.utc)
 
 
 def run_git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -142,6 +172,48 @@ def path_in_scope(path: str, scopes: list[str]) -> bool:
     return any(scope_regex(pattern).fullmatch(path) for pattern in scopes)
 
 
+def literal_scope_prefix(pattern: str) -> str:
+    wildcard = min((pattern.find(mark) for mark in ("*", "?") if mark in pattern), default=len(pattern))
+    return pattern[:wildcard].rstrip("/")
+
+
+def scope_patterns_may_overlap(first: str, second: str) -> bool:
+    if first == second:
+        return True
+    first_wild = "*" in first or "?" in first
+    second_wild = "*" in second or "?" in second
+    if not first_wild and not second_wild:
+        return False
+    first_prefix = literal_scope_prefix(first)
+    second_prefix = literal_scope_prefix(second)
+    if not first_prefix or not second_prefix:
+        return True
+    return first_prefix.startswith(second_prefix) or second_prefix.startswith(first_prefix)
+
+
+def scopes_may_overlap(first: list[str], second: list[str]) -> bool:
+    return any(scope_patterns_may_overlap(left, right) for left in first for right in second)
+
+
+def active_group_scopes(run_dir: Path, concurrency_group: str) -> list[tuple[str, list[str]]]:
+    run = run_ledger.read_json(run_dir / "run.json")
+    active: list[tuple[str, list[str]]] = []
+    for placement_id, state in run.get("workspaces", {}).items():
+        if not isinstance(state, dict) or state.get("last_event") == "cleanup_completed":
+            continue
+        receipt_path = state.get("receipt")
+        if not isinstance(receipt_path, str) or not Path(receipt_path).is_file():
+            continue
+        receipt = run_ledger.read_json(Path(receipt_path))
+        if receipt.get("concurrency_group") != concurrency_group:
+            continue
+        scope = receipt.get("scope")
+        writes = scope.get("write") if isinstance(scope, dict) else None
+        if isinstance(writes, list) and all(isinstance(value, str) for value in writes):
+            active.append((placement_id, writes))
+    return active
+
+
 def read_evidence(path_value: str, expected_kind: str, label: str) -> dict[str, Any]:
     try:
         payload = json.loads(Path(path_value).expanduser().resolve().read_text(encoding="utf-8"))
@@ -235,7 +307,34 @@ def read_profile(path: Path) -> dict[str, Any]:
         profile = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise PlacementError(f"runtime profile is unreadable: {exc}") from exc
-    if not isinstance(profile, dict) or profile.get("kind") != RUNTIME_PROFILE_KIND:
+    if not isinstance(profile, dict):
+        raise PlacementError("runtime profile must be a JSON mapping")
+    return read_profile_payload(profile)
+
+
+def read_lease_profile(args: argparse.Namespace, repo: Path) -> dict[str, Any]:
+    if args.profile_file:
+        return read_profile(Path(args.profile_file).expanduser().resolve())
+    if not args.workflow_file or not args.profile:
+        raise PlacementError("workflow-backed leasing requires --workflow-file and --profile")
+    workflow_path = Path(args.workflow_file).expanduser()
+    if not workflow_path.is_absolute():
+        workflow_path = repo / workflow_path
+    envelope = workflow_normalizer.normalize_workflow(workflow_path.resolve())
+    if envelope.get("status") != "ok":
+        errors = envelope.get("errors") or []
+        detail = errors[0].get("message") if errors and isinstance(errors[0], dict) else "workflow is invalid"
+        raise PlacementError(f"runtime profile workflow could not be normalized: {detail}")
+    isolation = envelope.get("sections", {}).get("agent_isolation")
+    profiles = isolation.get("runtime_profiles") if isinstance(isolation, dict) else None
+    profile = profiles.get(args.profile) if isinstance(profiles, dict) else None
+    if not isinstance(profile, dict):
+        raise PlacementError(f"runtime profile not found in workflow: {args.profile}")
+    return read_profile_payload({**profile, "kind": RUNTIME_PROFILE_KIND, "name": args.profile})
+
+
+def read_profile_payload(profile: dict[str, Any]) -> dict[str, Any]:
+    if profile.get("kind") != RUNTIME_PROFILE_KIND:
         raise PlacementError(f"runtime profile kind must be {RUNTIME_PROFILE_KIND}")
     name = profile.get("name")
     if not isinstance(name, str):
@@ -257,17 +356,22 @@ def read_profile(path: Path) -> dict[str, Any]:
 
 
 def secure_runtime_dir(run_dir: Path, placement_id: str, profile_name: str) -> Path:
+    try:
+        placement_id = run_ledger.validate_placement_id(placement_id)
+    except SystemExit as exc:
+        raise PlacementError(str(exc)) from exc
     validate_profile_name(profile_name)
     run = run_ledger.read_json(run_dir / "run.json")
     secrets_root = run_ledger.state_dir() / "secrets"
-    path = (
+    workspace_root = (
         secrets_root
         / run["repo_hash"]
         / run["run_id"]
         / "workspaces"
-        / placement_id
-        / profile_name
-    )
+    ).resolve()
+    path = (workspace_root / placement_id / profile_name).resolve()
+    if workspace_root not in path.parents:
+        raise PlacementError("runtime secret path escaped the run workspace root")
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     current = secrets_root
     for segment in path.relative_to(secrets_root).parts:
@@ -374,11 +478,24 @@ def command_lease(args: argparse.Namespace) -> dict[str, Any]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
     workspace = placement_workspace(run_dir, args.placement_id)
-    profile = read_profile(Path(args.profile_file).expanduser().resolve())
+    profile = read_lease_profile(args, repo)
     runtime_dir = secure_runtime_dir(run_dir, args.placement_id, profile["name"])
+    with exclusive_lock(runtime_dir / ".lease.lock"):
+        return command_lease_unlocked(args, repo, run_dir, workspace, profile, runtime_dir)
+
+
+def command_lease_unlocked(
+    args: argparse.Namespace,
+    repo: Path,
+    run_dir: Path,
+    workspace: Path,
+    profile: dict[str, Any],
+    runtime_dir: Path,
+) -> dict[str, Any]:
     lease_file = runtime_dir / "lease.json"
-    request_file = runtime_dir / "request.json"
-    candidate_file = runtime_dir / "candidate.json"
+    attempt_id = secrets.token_hex(8)
+    request_file = runtime_dir / f"request-{attempt_id}.json"
+    candidate_file = runtime_dir / f"candidate-{attempt_id}.json"
     if lease_file.exists():
         existing = run_ledger.read_json(lease_file)
         if existing.get("status") == "active":
@@ -440,6 +557,23 @@ def command_lease(args: argparse.Namespace) -> dict[str, Any]:
             {"profile": profile["name"], "stage": "validate", "rollback": rollback_ok},
         )
         raise PlacementError("runtime provider returned an invalid lease envelope")
+    expires_at = candidate.get("expires_at")
+    if expires_at is not None:
+        try:
+            expiry = parse_timestamp(expires_at, "runtime lease expires_at")
+            if expiry <= datetime.now(timezone.utc):
+                raise PlacementError("runtime lease expires_at must be in the future")
+        except PlacementError as exc:
+            rollback_ok = rollback_partial_lease(profile, workspace, request_file, candidate_file, args.placement_id)
+            candidate_file.unlink(missing_ok=True)
+            request_file.unlink(missing_ok=True)
+            record_runtime_event(
+                run_dir,
+                args.placement_id,
+                "runtime_lease_failed",
+                {"profile": profile["name"], "stage": "expiry", "rollback": rollback_ok},
+            )
+            raise exc
     if not isinstance(bindings, dict):
         bindings = {}
     missing = sorted(
@@ -640,6 +774,64 @@ def command_preflight(args: argparse.Namespace) -> dict[str, Any]:
     return result
 
 
+def validate_probe_provenance(
+    evidence: dict[str, Any],
+    *,
+    host: str,
+    operation: str,
+    repository: Path,
+) -> bool:
+    if evidence.get("host") != host or evidence.get("operation") != operation:
+        return False
+    if evidence.get("adapter_build") != HOST_ADAPTER_BUILD:
+        return False
+    if evidence.get("repository") != str(repository):
+        return False
+    try:
+        generated_at = parse_timestamp(evidence.get("generated_at"), "host evidence generated_at")
+        expires_at = parse_timestamp(evidence.get("expires_at"), "host evidence expires_at")
+    except PlacementError:
+        return False
+    current = datetime.now(timezone.utc)
+    if generated_at > current + timedelta(minutes=5) or current - generated_at > MAX_PROBE_AGE:
+        return False
+    if expires_at <= current or expires_at - generated_at > MAX_PROBE_AGE:
+        return False
+    artifacts = evidence.get("proof_artifacts")
+    if not isinstance(artifacts, dict) or set(artifacts) != set(CONFORMANCE_PROOFS):
+        return False
+    for proof in CONFORMANCE_PROOFS:
+        reference = artifacts.get(proof)
+        if not isinstance(reference, dict):
+            return False
+        path_value = reference.get("path")
+        digest = reference.get("sha256")
+        if not isinstance(path_value, str) or not isinstance(digest, str):
+            return False
+        path = Path(path_value).expanduser()
+        if not path.is_absolute() or not path.is_file():
+            return False
+        content = path.read_bytes()
+        if not hmac.compare_digest(hashlib.sha256(content).hexdigest(), digest):
+            return False
+        try:
+            artifact = json.loads(content)
+        except json.JSONDecodeError:
+            return False
+        expected = {
+            "kind": HOST_PROOF_KIND,
+            "proof": proof,
+            "host": host,
+            "operation": operation,
+            "adapter_build": HOST_ADAPTER_BUILD,
+            "repository": str(repository),
+            "passed": True,
+        }
+        if not isinstance(artifact, dict) or any(artifact.get(key) != value for key, value in expected.items()):
+            return False
+    return True
+
+
 def command_probe(args: argparse.Namespace) -> dict[str, Any]:
     evidence = read_evidence(
         args.evidence_file,
@@ -647,8 +839,20 @@ def command_probe(args: argparse.Namespace) -> dict[str, Any]:
         "host placement evidence",
     )
 
+    repository = git_root(Path(args.repo).expanduser().resolve())
     adapter = args.host if args.host in {"codex", "claude", "pi"} else "generic"
-    complete = all(evidence.get(proof) is True for proof in CONFORMANCE_PROOFS)
+    provenance_valid = validate_probe_provenance(
+        evidence,
+        host=args.host,
+        operation=args.operation,
+        repository=repository,
+    )
+    proofs_complete = all(evidence.get(proof) is True for proof in CONFORMANCE_PROOFS)
+    complete = (
+        proofs_complete
+        and provenance_valid
+        and HOST_ADAPTER_BUILD in ATTESTED_ADAPTER_BUILDS
+    )
     native_claim = evidence.get("native_conformance_passed") is True
     manual_claim = evidence.get("manual_conformance_passed") is True
     native = native_claim and complete
@@ -682,7 +886,11 @@ def command_probe(args: argparse.Namespace) -> dict[str, Any]:
         and (native_claim or manual_claim)
         and not complete
     ):
-        reason_code = "conformance_evidence_incomplete"
+        reason_code = (
+            "conformance_harness_unavailable"
+            if proofs_complete and provenance_valid and HOST_ADAPTER_BUILD not in ATTESTED_ADAPTER_BUILDS
+            else "conformance_evidence_incomplete"
+        )
 
     return {
         "kind": "host-placement-probe-v1",
@@ -814,6 +1022,24 @@ def runtime_leases_released(run_dir: Path, placement_id: str) -> bool:
     return all(run_ledger.read_json(lease).get("status") == "released" for lease in leases)
 
 
+def commit_patch_id(repo: Path, commit: str) -> str:
+    patch = run_git(repo, "show", "--pretty=format:", "--binary", "--no-ext-diff", commit)
+    if patch.returncode != 0:
+        raise PlacementError(f"could not inspect integration patch for commit {commit}")
+    result = subprocess.run(
+        ["git", "patch-id", "--stable"],
+        cwd=repo,
+        input=patch.stdout,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        raise PlacementError(f"could not derive integration patch identity for commit {commit}")
+    return result.stdout.split()[0]
+
+
 def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
@@ -881,31 +1107,55 @@ def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
     if status:
         raise PlacementError("cleanup target must be clean, including untracked files")
     workspace_head = require_git(workspace_path, "rev-parse", "HEAD", context="cleanup HEAD check failed")
-    integrated_commits = require_string_list(
-        evidence,
-        "integrated_commits",
-        "cleanup integrated_commits",
+    integration_map = evidence.get("integration_map")
+    if not isinstance(integration_map, list) or not integration_map:
+        raise PlacementError("cleanup integration_map must be a non-empty list")
+    expected_base = receipt.get("repository", {}).get("expected_sha")
+    if not isinstance(expected_base, str):
+        raise PlacementError("workspace receipt lacks the expected base SHA")
+    source_output = require_git(
+        workspace_path,
+        "rev-list",
+        "--reverse",
+        f"{expected_base}..{workspace_head}",
+        context="workspace integration range check failed",
     )
-    if workspace_head not in integrated_commits:
-        raise PlacementError("cleanup evidence must include the workspace HEAD commit")
+    source_commits = source_output.splitlines() if source_output else []
+    if not source_commits:
+        raise PlacementError("cleanup requires at least one committed workspace change")
+    mapped_sources: list[str] = []
     integration_head = require_git(repo, "rev-parse", "HEAD", context="integration HEAD check failed")
-    for commit in integrated_commits:
+    for mapping in integration_map:
+        if not isinstance(mapping, dict):
+            raise PlacementError("cleanup integration_map entries must be mappings")
+        source_commit = mapping.get("source_commit")
+        integrated_commit = mapping.get("integrated_commit")
+        if not isinstance(source_commit, str) or not isinstance(integrated_commit, str):
+            raise PlacementError("cleanup integration_map entries require source_commit and integrated_commit")
+        mapped_sources.append(source_commit)
         resolved = require_git(
             repo,
             "rev-parse",
             "--verify",
-            f"{commit}^{{commit}}",
-            context=f"integrated commit does not exist: {commit}",
+            f"{integrated_commit}^{{commit}}",
+            context=f"integrated commit does not exist: {integrated_commit}",
         )
-        if resolved != commit:
-            raise PlacementError(f"integrated commit must be a full canonical SHA: {commit}")
-        if run_git(repo, "merge-base", "--is-ancestor", commit, integration_head).returncode != 0:
-            raise PlacementError(f"integrated commit is not reachable from the integration branch: {commit}")
+        if resolved != integrated_commit:
+            raise PlacementError(f"integrated commit must be a full canonical SHA: {integrated_commit}")
+        if run_git(repo, "merge-base", "--is-ancestor", integrated_commit, integration_head).returncode != 0:
+            raise PlacementError(f"integrated commit is not reachable from the integration branch: {integrated_commit}")
+        if commit_patch_id(repo, source_commit) != commit_patch_id(repo, integrated_commit):
+            raise PlacementError(
+                f"integrated commit patch does not match source commit: {source_commit} -> {integrated_commit}"
+            )
+    if mapped_sources != source_commits:
+        raise PlacementError("cleanup integration_map must exactly cover the workspace commit range")
 
     authorized = {
         "cleanup_owner": "beislid",
         "workspace_head": workspace_head,
         "integration_head": integration_head,
+        "integration_map": integration_map,
         "branch": branch,
     }
     record_runtime_event(run_dir, args.placement_id, "cleanup_authorized", authorized)
@@ -913,7 +1163,7 @@ def command_cleanup(args: argparse.Namespace) -> dict[str, Any]:
     if removed.returncode != 0:
         detail = removed.stderr.strip() or removed.stdout.strip() or "git worktree remove failed"
         raise PlacementError(f"automatic cleanup failed: {detail}")
-    deleted = run_git(repo, "branch", "-d", branch)
+    deleted = run_git(repo, "branch", "-D", branch)
     if deleted.returncode != 0:
         detail = deleted.stderr.strip() or deleted.stdout.strip() or "git branch deletion failed"
         raise PlacementError(f"workspace was removed but cleanup branch remains: {detail}")
@@ -943,6 +1193,9 @@ def command_runtime_exec(args: argparse.Namespace) -> int:
     workspace, _, lease = runtime_lease_for(args)
     if lease.get("status") != "active":
         raise PlacementError(f"runtime lease is not active for profile {args.profile}")
+    expires_at = lease.get("expires_at")
+    if expires_at is not None and parse_timestamp(expires_at, "runtime lease expires_at") <= datetime.now(timezone.utc):
+        raise PlacementError(f"runtime lease is expired for profile {args.profile}; reconcile or allocate a new lease")
     command = list(args.exec_command)
     if command and command[0] == "--":
         command.pop(0)
@@ -1025,8 +1278,24 @@ def command_release(args: argparse.Namespace) -> dict[str, Any]:
 def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
     repo = git_root(Path(args.repo).expanduser().resolve())
     run_dir = require_run_ledger(repo, args.run_id, args.flow)
+    with exclusive_lock(run_dir / ".workspace-placement.lock"):
+        return create_manual_placement_locked(args)
+
+
+def create_manual_placement_locked(args: argparse.Namespace) -> dict[str, Any]:
+    repo = git_root(Path(args.repo).expanduser().resolve())
+    run_dir = require_run_ledger(repo, args.run_id, args.flow)
     expected_sha = require_source_preflight(repo, args.expected_sha)
     write_scopes = validate_write_scopes(args.write_scope)
+    concurrency_group = args.concurrency_group
+    if concurrency_group is not None:
+        if slug(concurrency_group) != concurrency_group:
+            raise PlacementError("concurrency group must be a lowercase path-safe segment")
+        for placement_id, active_scopes in active_group_scopes(run_dir, concurrency_group):
+            if scopes_may_overlap(write_scopes, active_scopes):
+                raise PlacementError(
+                    f"write scope may overlap active placement {placement_id} in concurrency group {concurrency_group}"
+                )
     root = resolve_manual_root(repo, args.manual_root)
     placement_id, branch, path = allocate_identity(repo, root, args.label)
     root.mkdir(parents=True, exist_ok=True)
@@ -1059,8 +1328,10 @@ def create_manual_placement(args: argparse.Namespace) -> dict[str, Any]:
     receipt = {
         "kind": RECEIPT_KIND,
         "placement_id": placement_id,
-        "operation": PLACEMENT_OPERATION,
-        "capability": CAPABILITY,
+        "operation": args.operation,
+        "capability": "unavailable",
+        "placement_status": "verified",
+        "concurrency_group": concurrency_group,
         "created_at": now(),
         "repository": {
             "source": str(repo),
@@ -1093,13 +1364,19 @@ def build_parser() -> argparse.ArgumentParser:
     probe = subparsers.add_parser("probe", help="evaluate evidence-backed host placement capability")
     probe.add_argument("--host", required=True)
     probe.add_argument("--operation", required=True, choices=("orchestrator", "delegate"))
+    probe.add_argument("--repo", required=True, help="repository the evidence must be bound to")
     probe.add_argument("--evidence-file", required=True)
 
     create = subparsers.add_parser("create", help="create a fresh verified manual worktree")
     create.add_argument("--repo", required=True, help="source Git repository")
+    create.add_argument("--operation", required=True, choices=sorted(PLACEMENT_OPERATIONS))
     create.add_argument("--expected-sha", required=True, help="full commit SHA for the new worktree")
     create.add_argument("--manual-root", help="repo-sibling or an absolute worktree root")
     create.add_argument("--label", default="placement", help="human-readable placement label")
+    create.add_argument(
+        "--concurrency-group",
+        help="shared path-safe batch id whose active placements must have disjoint write scopes",
+    )
     create.add_argument(
         "--write-scope",
         action="append",
@@ -1126,7 +1403,10 @@ def build_parser() -> argparse.ArgumentParser:
     lease = subparsers.add_parser("lease", help="allocate and verify an atomic runtime profile")
     lease.add_argument("--repo", required=True)
     lease.add_argument("--placement-id", required=True)
-    lease.add_argument("--profile-file", required=True)
+    profile_source = lease.add_mutually_exclusive_group(required=True)
+    profile_source.add_argument("--profile-file")
+    profile_source.add_argument("--workflow-file")
+    lease.add_argument("--profile", help="runtime profile name when --workflow-file is used")
     lease.add_argument("--run-id", required=True)
     lease.add_argument("--flow", required=True)
 

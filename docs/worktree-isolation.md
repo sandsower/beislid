@@ -17,6 +17,8 @@ Likewise, creating a new user-visible task is not required to isolate a subagent
 The optional `beislid:agent_isolation` block declares desired strategy and fallbacks.
 An absent block preserves legacy behavior and does not opt into native placement.
 Host adapters report only `verified-native`, `verified-manual`, or `unavailable`, based on end-to-end conformance rather than configuration, documentation, or tool presence.
+Positive evidence must come from a trusted end-to-end runner and be fresh and bound to the requested host, operation, adapter build, repository, and proof artifacts.
+The current distribution has no trusted runner, so synthetic evidence remains unavailable.
 
 If the selected capability is unavailable, use the configured manual transition or sequential delegate fallback.
 Never infer success from `pwd`, a created directory, an unresolved host task identifier, or a version string.
@@ -25,6 +27,7 @@ Never infer success from `pwd`, a created directory, an unresolved host task ide
 
 Every automatic placement receives a fresh unique worktree path and branch from the exact requested SHA.
 Beislið never adopts or reuses an existing path or branch automatically because names do not prove ownership, base commit, cleanliness, or lifecycle state.
+`workspace create` requires `--operation ensure_orchestrator_workspace` or `--operation place_mutating_delegate` so the receipt preserves the correct boundary.
 
 The portable root order is:
 
@@ -52,13 +55,16 @@ Require and record:
 
 Reject a host-created worktree that starts from the wrong SHA.
 Stop before mutation when the destination cannot acknowledge its path, branch, SHA, placement ID, scope, runtime profiles, and next action.
+Parallel manual placements share one `--concurrency-group`; Beislið serializes placement and rejects definite or potential overlap with active receipts in that group.
 
 ## Durable receipts
 
 Automatic placement requires a running external Beislið run ledger.
 The receipt lives at `artifacts/workspaces/<placement_id>/receipt.json` inside that run and uses `workspace-placement-receipt-v1`.
 
-The receipt records repository and workspace identity, expected and actual SHA, declared `scope.write` patterns, capability, clean state, creator, and cleanup owner.
+The receipt records repository and workspace identity, operation, expected and actual SHA, declared `scope.write` patterns, placement status, capability, clean state, creator, and cleanup owner.
+Manual creation records `placement_status: verified` for the checked instance but keeps host `capability: unavailable` until a trusted conformance runner exists.
+The run ledger rejects incomplete or malformed versioned receipts before persisting them.
 Placement lifecycle events record runtime leases, handoff validation, integration, retention, and cleanup.
 No second workspace state directory is created.
 
@@ -69,9 +75,11 @@ Ledger evidence contains only profile, lease ID, expiry, binding names, and keye
 
 One atomic runtime profile may bundle primary, shadow, analytics, and other database entrypoints together with caches, queues, ports, or services.
 The orchestrator owns lease lifecycle, the configured provider owns allocation semantics, the host adapter transports placement identity, and the delegate only consumes bindings.
+`beislid workspace lease --workflow-file .beislid/workflow.md --profile <name>` deterministically materializes the selected normalized profile into the runtime lease contract.
 
 Missing, empty, partial, shared, or unverified bindings fail the whole profile and prevent concurrent mutation.
 Partial allocation triggers best-effort release.
+Lease allocation is serialized per placement and profile, and an expired lease cannot complete allocation or deliver bindings.
 Run delegated commands through `beislid workspace exec` so binding delivery stays out of prompts and command arguments.
 
 ## Handoff and integration
@@ -82,6 +90,7 @@ It passes that envelope to `beislid workspace validate-handoff` before integrati
 
 Parallel delegates start from one frozen SHA and declare integration order before dispatch.
 The orchestrator cherry-picks handoffs serially and verifies after each integration.
+Cleanup evidence maps every source commit to its reachable cherry-picked commit, and Beislid verifies patch equivalence before deleting its branch.
 A conflict or regression stops the remaining batch and retains all unintegrated placements for recovery.
 
 ## Cleanup ownership

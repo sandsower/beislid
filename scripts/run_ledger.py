@@ -41,6 +41,8 @@ VALID_STATUSES = {"running", "interrupted", "failed", "completed"}
 INCOMPLETE_STATUSES = {"running", "interrupted", "failed", "active"}
 RUN_ID_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 WORKSPACE_RECEIPT_KIND = "workspace-placement-receipt-v1"
+WORKSPACE_OPERATIONS = {"ensure_orchestrator_workspace", "place_mutating_delegate"}
+COMMIT_SHA = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 
 
 def now() -> str:
@@ -267,10 +269,70 @@ def workspace_dir(run_dir: Path, placement_id: str) -> Path:
     return run_dir / "artifacts" / "workspaces" / validate_placement_id(placement_id)
 
 
-def record_workspace_receipt(run_dir: Path, receipt: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+def validate_workspace_receipt(receipt: dict[str, Any]) -> str:
     if receipt.get("kind") != WORKSPACE_RECEIPT_KIND:
         raise SystemExit(f"workspace receipt kind must be {WORKSPACE_RECEIPT_KIND}")
     placement_id = validate_placement_id(str(receipt.get("placement_id") or ""))
+    if receipt.get("operation") not in WORKSPACE_OPERATIONS:
+        raise SystemExit("workspace receipt operation is invalid")
+    if receipt.get("capability") != "unavailable":
+        raise SystemExit("workspace receipt capability must remain unavailable without a trusted conformance runner")
+    if receipt.get("placement_status") != "verified":
+        raise SystemExit("workspace receipt placement_status must be verified")
+    created_at = receipt.get("created_at")
+    if not isinstance(created_at, str):
+        raise SystemExit("workspace receipt created_at must be an RFC 3339 timestamp")
+    try:
+        parsed_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit("workspace receipt created_at must be an RFC 3339 timestamp") from exc
+    if parsed_created_at.tzinfo is None:
+        raise SystemExit("workspace receipt created_at must include a timezone")
+
+    repository = receipt.get("repository")
+    if not isinstance(repository, dict):
+        raise SystemExit("workspace receipt repository must be a mapping")
+    source = repository.get("source")
+    if not isinstance(source, str) or not Path(source).is_absolute():
+        raise SystemExit("workspace receipt repository source must be an absolute path")
+    for field in ("expected_sha", "actual_sha"):
+        value = repository.get(field)
+        if not isinstance(value, str) or not COMMIT_SHA.fullmatch(value):
+            raise SystemExit(f"workspace receipt repository {field} must be a full commit SHA")
+    if repository["actual_sha"] != repository["expected_sha"]:
+        raise SystemExit("workspace receipt actual_sha must equal expected_sha")
+
+    scope = receipt.get("scope")
+    writes = scope.get("write") if isinstance(scope, dict) else None
+    if not isinstance(writes, list) or not writes or any(not isinstance(value, str) or not value for value in writes):
+        raise SystemExit("workspace receipt scope.write must be a non-empty list of path patterns")
+    for pattern in writes:
+        parts = Path(pattern.replace("\\", "/")).parts
+        if pattern.startswith("/") or ".." in parts or pattern == ".git" or pattern.startswith(".git/"):
+            raise SystemExit("workspace receipt scope.write contains an unsafe path pattern")
+
+    workspace = receipt.get("workspace")
+    if not isinstance(workspace, dict):
+        raise SystemExit("workspace receipt workspace must be a mapping")
+    path = workspace.get("path")
+    if not isinstance(path, str) or not Path(path).is_absolute():
+        raise SystemExit("workspace receipt workspace path must be absolute")
+    if not isinstance(workspace.get("branch"), str) or not workspace["branch"]:
+        raise SystemExit("workspace receipt workspace branch is required")
+    if workspace.get("clean") is not True:
+        raise SystemExit("workspace receipt workspace clean must be true")
+    if workspace.get("cleanup_owner") not in {"host", "beislid", "user"}:
+        raise SystemExit("workspace receipt cleanup_owner must be host, beislid, or user")
+    if not isinstance(workspace.get("created_by"), str) or not workspace["created_by"]:
+        raise SystemExit("workspace receipt workspace created_by is required")
+    group = receipt.get("concurrency_group")
+    if group is not None:
+        validate_placement_id(str(group))
+    return placement_id
+
+
+def record_workspace_receipt(run_dir: Path, receipt: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    placement_id = validate_workspace_receipt(receipt)
     placement_dir = workspace_dir(run_dir, placement_id)
     receipt_path = placement_dir / "receipt.json"
 
@@ -278,6 +340,10 @@ def record_workspace_receipt(run_dir: Path, receipt: dict[str, Any]) -> tuple[Pa
         run = read_json(run_dir / "run.json")
         if run.get("status") != "running":
             raise SystemExit(f"workspace receipts require a running ledger; status is {run.get('status', 'unknown')}")
+        run_repo = run.get("repo")
+        receipt_repo = receipt["repository"]["source"]
+        if not isinstance(run_repo, str) or Path(receipt_repo).resolve() != Path(run_repo).resolve():
+            raise SystemExit("workspace receipt repository source does not match the owning run")
         if placement_dir.exists():
             raise SystemExit(f"workspace receipt already exists: {receipt_path}")
         placement_dir.mkdir(parents=True, exist_ok=False)

@@ -378,6 +378,8 @@ Use `sequential` whenever the host cannot enforce the assigned working directory
 Runtime profiles are atomic.
 A profile may contain several database entrypoints and other services, but the delegate receives none of them unless every required binding allocates and verifies successfully.
 The provider owns allocation semantics, while the orchestrator owns lease, delivery, reconcile, and release lifecycle.
+Select a configured profile directly with `beislid workspace lease --workflow-file .beislid/workflow.md --profile <name>` plus the repository, placement, run, and flow arguments.
+The helper normalizes the workflow and materializes the selected mapping as `runtime-profile-v1`; orchestrators do not invent an intermediate profile file.
 
 Preparation is optional and runs after exact-SHA destination preflight.
 Its command must exit zero and leave tracked state unchanged before every configured readiness command passes.
@@ -392,6 +394,7 @@ Provider commands receive these environment variables:
 - `BEISLID_RUNTIME_PROFILE`
 
 The allocate command writes `runtime-lease-v1` JSON with `lease_id`, optional `expires_at`, and a `bindings` mapping.
+When present, `expires_at` must be a future RFC 3339 timestamp, and expired leases are rejected before binding delivery.
 The verify command exits zero only when the whole lease is ready.
 The release command must be idempotent, and the reconcile command must confirm ownership and expiry state before reclaiming anything.
 
@@ -415,9 +418,12 @@ Automatic placement and runtime leasing require a running external run ledger.
 Missing ledger state, missing bindings, verification failure, or failed path anchoring stops dispatch and follows the configured manual or sequential fallback.
 
 Placement receipts use `cleanup_owner: host`, `beislid`, or `user`.
+Creation requires the explicit orchestrator or delegate operation, records the concrete placement as verified, and leaves host capability unavailable without trusted conformance.
 Manual placement also records each `--write-scope` pattern as `scope.write`, and `workspace validate-handoff` checks the committed diff against it.
+Parallel calls use a shared `--concurrency-group`; active receipts in that group reserve their scopes and force a sequential fallback on definite or potential overlap.
 Host-owned worktrees use the host lifecycle, Beislið removes only fresh manual worktrees it created, and unknown ownership is never cleaned automatically.
 Cleanup waits for integration, verification, commit reachability, clean handoff, runtime release, and action-policy authorization.
+For cherry-picked handoffs, `workspace-cleanup-evidence-v1.integration_map` records each `source_commit` and its `integrated_commit`, which must be reachable and patch-equivalent.
 
 The stable action IDs are `agent.workspace.transition`, `agent.delegate.provision`, `agent.delegate.commit`, `agent.runtime.lease`, `agent.runtime.release`, and `agent.workspace.cleanup`.
 Strategy remains in `agent_isolation`, while authorization remains centralized in `action_policy`.
