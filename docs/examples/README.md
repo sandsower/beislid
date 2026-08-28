@@ -13,7 +13,7 @@ Beislið capabilities.
 | [02 — Frontend app](./02-frontend-app.md) | Frontend team (Next.js) | Linear (MCP) | GitHub PRs (`gh` CLI) | TypeScript, build gate, babysit |
 | [03 — Backend service](./03-backend-service.md) | Backend team (Go API) | Linear (MCP) | GitHub PRs (`gh` CLI) | Integration tests, migration checks |
 | [04 — Monorepo](./04-monorepo.md) | Multi-package team | Linear (MCP) | GitHub PRs (`gh` CLI) | Gate sets per scope, cross-package gates |
-| [05 — Linear + GitHub team](./05-linear-github-team.md) | Established product team | Linear (MCP) | GitHub PRs (`gh` CLI) | Model routing, clean eval, lifecycle actions, auto memento/retro |
+| [05 — Linear + GitHub team](./05-linear-github-team.md) | Established product team | Linear (MCP) | GitHub PRs (`gh` CLI) | Model routing, clean eval, lifecycle actions, auto memento/retro, inherited cleanup |
 | [06 — Jira + GitLab team](./06-jira-gitlab-team.md) | Enterprise team | Jira (MCP) | GitLab MRs (`glab` CLI) | `develop` base branch, Jira transitions |
 | [07 — Manual / no-tracker](./07-manual-no-tracker.md) | Solo developer, prototyping | Paste (manual) | GitHub PRs or manual | Paste-based tickets, minimal gates |
 

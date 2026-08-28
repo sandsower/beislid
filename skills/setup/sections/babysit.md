@@ -28,7 +28,10 @@ Delete branch after merge? (y/N)
 Run memento capture after closeout? (off / ask / auto)
 Run retro after closeout? (off / ask / auto)
 Apply accepted retro findings? (off / ask / auto)
+Run cleanup after a successful merge? (inherit merge / off / ask / auto)
 ```
+
+Cleanup is the last closeout stage. It proves nothing is unlanded, closes the ticket through the configured `ticket_update` issue channel, deletes the merged remote branch, and reports the worktree path and branch as ready for removal — it never removes them itself. Offer `inherit merge` as the default and omit `closeout.cleanup.mode` when the answer is `inherit merge`, since an absent key follows `closeout.merge.mode`.
 
 Explain that `auto` removes routine babysit prompts only when action policy allows the side effect.
 If policy asks, the skill asks; if policy denies, it stops.
@@ -51,6 +54,8 @@ closeout:
   retro:
     mode: ask
     apply_findings: ask
+  cleanup:
+    mode: ask
 ```
 
 Never create duplicate `beislid:babysit` blocks; update or remove the existing one.

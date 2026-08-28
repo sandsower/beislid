@@ -195,7 +195,7 @@ The probe cache JSON written to `<state_dir>/probes/<repo_hash>.json`:
       "probe_supported": true,
       "probed_at": "2026-04-29T15:30:00Z",
       "probe_kind": "validation",
-      "value": "goal: 50k; review-response loop: on; gates before push: on; merge/memento/retro: ask/ask/ask"
+      "value": "goal: 50k; review-response loop: on; gates before push: on; merge/memento/retro/cleanup: ask/ask/ask/ask (cleanup inherits merge)"
     },
     "nopal_seam": {
       "status": "ok",
@@ -254,7 +254,7 @@ When `BEISLID_VERBOSE=1` is set, doctor appends a `---` separator and structured
 ✓ clean_eval validation                                     ok (mode: require; surface: auto; artifact_root: .beislid/clean-eval)
 ✓ ship_time_artifacts validation                            ok (mode: remind; planning-artifact summary only)
 ✓ workflow_signals validation                               ok (sinks: tmux-glance; skill overrides: 2)
-✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask)
+✓ babysit validation                                        ok (goal: 50k; closeout: ask/ask/ask/ask)
 ✓ nopal_seam binary:nopal                                   ok (0.1.0, rich; .nopal/ fresh; delegated: gates, policy, workflow, ledger)
 cache file:        <path>
 cache valid until: <ISO-8601>

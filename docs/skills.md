@@ -33,7 +33,7 @@ Lifecycle artifact templates are standardized in [`.beislid/artifact-templates.m
 - `walk-the-diff`: interactive walkthrough of your own diff for a human reviewer.
 - `ready-for-review`: review-ready PR flow driven by `workflow.md`; runs `review` and the configured final check before new PR creation.
 - `review-response`: handle PR/QA feedback after someone reviews or tests your work; supports prompt-profile enrichment for agent-ready review comments.
-- `babysit`: goal-backed PR babysitting loop that keeps using configured review-response, gates, and optional closeout automation until the PR is green or blocked. Claude includes `/goal`; Pi requires `pi-goal`.
+- `babysit`: goal-backed PR babysitting loop that keeps using configured review-response, gates, and optional merge/memento/retro/cleanup closeout automation until the PR is green or blocked. Claude includes `/goal`; Pi requires `pi-goal`.
 
 ## Manage
 

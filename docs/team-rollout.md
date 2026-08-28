@@ -73,7 +73,7 @@ Add these layers in order. Each layer should be committed, audited with `/doctor
 | Ticket updates | Kickoff plans and QA replies should be recorded in the tracker | `ticket_update` |
 | PR review replies | Agents may post clear-fix replies after addressing feedback | `pr_review_update` plus action policy |
 | Domain or triggered checks | Work needs repository-specific expertise beyond generic code search | `domain_expert`, `translation_sync`, `browser_compat` |
-| Babysit closeout | The team trusts the loop to keep PRs green and, by policy, merge or run retros | `babysit`, `action_policy` |
+| Babysit closeout | The team trusts the loop to keep PRs green and, by policy, merge, run retros, or close out the ticket and merged branch | `babysit`, `ticket_update`, `action_policy` |
 
 Keep gates as proof, not setup. Put dependency installs, codegen, or cache warmups in a scope-level `setup` command (or an equivalent prereq step), not inside a gate that claims readiness.
 

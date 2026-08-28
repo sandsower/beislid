@@ -86,4 +86,4 @@ If you legitimately need to add a new shared format doc, add it under `.beislid/
 
 ## Skill auxiliary protocol files
 
-Skill-specific auxiliary protocol files are different from the shared docs above: they are regular files, not symlinks. `ready-for-review` uses `skills/ready-for-review/phase-*.md`, `kickoff` uses `skills/kickoff/step-*.md`, and `review-response` uses `skills/review-response/phase-*.md`. Entry `SKILL.md` files load them just in time at phase/step entry, so keep them focused and within the hard caps enforced by `scripts/check_skill_size_budgets.py`.
+Skill-specific auxiliary protocol files are different from the shared docs above: they are regular files, not symlinks. `ready-for-review` uses `skills/ready-for-review/phase-*.md`, `kickoff` uses `skills/kickoff/step-*.md`, `review-response` uses `skills/review-response/phase-*.md`, and `babysit` uses `skills/babysit/cleanup-protocol.md` for its `cleanup` closeout stage. Entry `SKILL.md` files load them just in time at phase/step entry, so keep them focused and within the hard caps enforced by `scripts/check_skill_size_budgets.py`.

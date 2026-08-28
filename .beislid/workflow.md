@@ -173,9 +173,11 @@ skills:
 
 ## Babysit
 
-Enable all closeout steps by default for this repo. Babysit may merge, capture memento, and run/apply retro automatically after the green audit; each action is still bounded by runtime safety stops.
+Enable all closeout steps by default for this repo. Babysit may merge, capture memento, run/apply retro, and then run cleanup automatically after the green audit; each action is still bounded by runtime safety stops.
 
-This repo runs ticket work in secondary worktrees, so `gh pr merge --delete-branch` fails its local checkout step (`main` is checked out in the primary worktree) and leaves the remote branch undeleted. Verify the merge via `gh pr view --json state`, then delete the remote branch with `gh api repos/{owner}/{repo}/git/refs/heads/{branch} --method DELETE`.
+`closeout.cleanup.mode` is deliberately left unset so this repo exercises the inherited default: cleanup follows `closeout.merge.mode`, which is `auto` here. Cleanup closes the merged Linear issue through the configured `ticket_update` issue channel, assigns it to the PR author, deletes the remote branch, and reports the worktree path and branch as ready for removal. It never removes the worktree or the local branch — the supervising session does that after reading the report.
+
+This repo runs ticket work in secondary worktrees, so `gh pr merge --delete-branch` fails its local checkout step (`main` is checked out in the primary worktree) and leaves the remote branch undeleted. Cleanup covers that gap: verify the merge via `gh pr view --json state`, then delete the remote branch with `gh api repos/{owner}/{repo}/git/refs/heads/{branch} --method DELETE`.
 
 ```beislid:babysit
 loop:
@@ -196,7 +198,7 @@ closeout:
 
 ## Action policy
 
-This repo auto-allows supervised PR handoff and closeout actions, including review replies, pushes, PR creation, AgenticReviewer label edits, and merge/retro/memento closeout.
+This repo auto-allows supervised PR handoff and closeout actions, including review replies, pushes, PR creation, AgenticReviewer label edits, merge/retro/memento closeout, and the cleanup stage's ticket close and remote-branch delete.
 
 ```beislid:action_policy
 modes:
@@ -215,6 +217,10 @@ modes:
       memento.capture: allow
       retro.run: allow
       retro.apply: allow
+      # Babysit cleanup closes the merged issue and drops the remote branch.
+      ticket.update: allow
+      tracker.issue.transition: allow
+      git.remote.branch.delete: allow
 ```
 
 ## Nopal seam

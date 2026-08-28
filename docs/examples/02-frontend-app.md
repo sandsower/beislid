@@ -98,7 +98,8 @@ modes:
 ## Babysit
 
 Babysit monitors the PR loop and can auto-reply to actionable review feedback.
-Closeout requires explicit human approval for merge, memento, and retro.
+Closeout requires explicit human approval for merge, memento, retro, and
+cleanup — cleanup has no key of its own, so it inherits merge's `ask`.
 
 ```beislid:babysit
 loop:

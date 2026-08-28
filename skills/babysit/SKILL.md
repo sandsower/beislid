@@ -1,6 +1,6 @@
 ---
 name: babysit
-description: "Use when the user asks to babysit a PR, run /babysit, keep a PR green, monitor review/CI until ready, or optionally close out a PR through configured merge/capture/retro automation. Can run directly; host goal/persistence support is optional."
+description: "Use when the user asks to babysit a PR, run /babysit, keep a PR green, monitor review/CI until ready, or optionally close out a PR through configured merge/capture/retro/cleanup automation. Can run directly; host goal/persistence support is optional."
 ---
 
 # Babysit
@@ -21,7 +21,7 @@ This is an outer-loop workflow. It does not replace `review-response`; it repeat
 
 Use, in order:
 
-- invocation args such as `stop when green`, `merge`, `don't merge`, `skip memento`, or `skip retro`
+- invocation args such as `stop when green`, `merge`, `don't merge`, `skip memento`, `skip retro`, or `skip cleanup`
 - `.beislid/workflow.md`
 - current branch PR metadata from configured PR host tooling when available
 - configured `pr_review_source` and `pr_review_update`
@@ -51,9 +51,11 @@ closeout:
   retro:
     mode: ask # off | ask | auto
     apply_findings: ask # off | ask | auto
+  cleanup:
+    mode: ask # off | ask | auto; follows merge.mode when unset
 ```
 
-Defaults when absent: no goal budget, use `review-response`, run configured gates before pushes, merge/memento/retro off. Invocation args override config for this run.
+Defaults when absent: no goal budget, use `review-response`, run configured gates before pushes, merge/memento/retro off, and cleanup following `merge.mode`. Invocation args override config for this run.
 
 ## Workflow
 
@@ -67,7 +69,8 @@ Defaults when absent: no goal budget, use `review-response`, run configured gate
 8. **Wait and recheck** — after pushes or pending checks, wait using bounded polling or host monitor facilities. Do not busy-loop. Re-read live PR state after each transition.
 9. **Green audit** — green means required checks successful, mergeable/no conflicts, acceptable review state, no unaddressed actionable feedback, and any risk-required AgenticReviewer review is real. Green status plus deferred-review evidence is not acceptable.
 10. **Closeout** — perform configured merge, memento capture, and retro only when green audit passes and action policy allows. Policy-check closeout side effects: `gh.pr.merge` or `pr.merge` as `git-remote`, `memento.capture` as `workspace-write`, `retro.run` as `read` plus `workspace-write` when it may write artifacts, and `retro.apply`/setup edits as `workspace-write`. Stop for approval when mode is `ask`; proceed only when mode is `auto` and policy allows.
-11. **Complete persistence loop when present** — call completion only after final audit and configured closeout, or the stop-when-green endpoint. In Pi runtime, call `update_beislid_babysit({status:"complete", summary:"..."})`; if blocked, call `update_beislid_babysit({status:"blocked", summary:"..."})`.
+11. **Cleanup** — last closeout stage, reachable only after a successful merge. Load [cleanup protocol](cleanup-protocol.md) and follow it. Policy-check cleanup side effects: unlanded-content verification as `read` plus `network-read` for the fetch, ticket close as `ticket.update` plus `tracker.issue.transition` as `network-read` and `git-remote`, and remote-branch delete as `git.remote.branch.delete` as `git-remote`.
+12. **Complete persistence loop when present** — call completion only after final audit and configured closeout, or the stop-when-green endpoint. In Pi runtime, call `update_beislid_babysit({status:"complete", summary:"..."})`; if blocked, call `update_beislid_babysit({status:"blocked", summary:"..."})`.
 
 ## Safety stops
 
@@ -83,8 +86,9 @@ Stop and ask when any occur:
 - action policy returns `deny`
 - every closeout step is disabled, in which case stop green and report
 - retro findings would require editing workflow/config and `apply_findings` is not `auto`
+- cleanup finds a dirty working tree, or branch content that has not landed on the default branch
 
-Never force-push or amend published commits. Never merge to bypass a failing/pending required check. Never interpolate review reply bodies into shell commands; use temp JSON payload files.
+Never remove the worktree or the local branch during cleanup. Never force-push or amend published commits. Never merge to bypass a failing/pending required check. Never interpolate review reply bodies into shell commands; use temp JSON payload files.
 
 ## Closeout semantics
 
@@ -94,10 +98,12 @@ Never force-push or amend published commits. Never merge to bypass a failing/pen
 - `memento.mode` controls durable knowledge capture after merge/green endpoint.
 - `retro.mode` controls running retro after closeout.
 - `retro.apply_findings` controls whether accepted retro/setup findings may be applied automatically. `auto` still respects action policy; ambiguous/destructive edits stop.
+- `cleanup.mode` controls post-merge closeout and follows `merge.mode` when unset. It runs last, only after a successful merge, and stops rather than touching anything when work is unlanded.
+- `cleanup` never removes the worktree or the local branch. The agent runs inside that worktree; it reports both as ready for removal and the supervising session removes them.
 
 ## Output
 
-When stopping, report: PR URL/branch, final state, checks/review/mergeability evidence including deferred-review comments, feedback handled, gates run, closeout side effects, and remaining blockers or human decisions.
+When stopping, report: PR URL/branch, final state, checks/review/mergeability evidence including deferred-review comments, feedback handled, gates run, closeout side effects, cleanup outcome including ticket and remote-branch disposition plus the worktree path and branch reported as ready for removal, and remaining blockers or human decisions.
 
 ## Common mistakes
 
@@ -106,4 +112,6 @@ When stopping, report: PR URL/branch, final state, checks/review/mergeability ev
 - Hardcoding provider labels, gates, or risk thresholds instead of reading workflow config.
 - Assuming `/goal` is required; direct runs are allowed but must stop with next steps when no persistence mechanism is active and the PR is not terminal.
 - Posting replies or merging without policy and approval handling.
+- Removing the worktree or local branch from inside cleanup instead of reporting them.
+- Treating a squash merge's missing local SHAs as unlanded work instead of comparing content.
 - Mentioning private provenance in public tracker/PR updates; keep public updates focused on the current repo and PR only.
