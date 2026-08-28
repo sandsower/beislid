@@ -96,7 +96,7 @@ KNOWN_ACTIONS: dict[str, dict[str, Any]] = {
     "git.commit": {"classes": ["workspace-write", "git-local"], "description": "Create a local git commit"},
     "git.push": {"classes": ["git-remote"], "description": "Push commits to a remote"},
     "gh.issue.view": {"classes": ["network-read"], "description": "Read an issue through gh"},
-    "ticket.update": {"classes": ["network-read", "git-remote"], "description": "Update a ticket body through tracker APIs"},
+    "ticket.update": {"classes": ["network-read", "git-remote"], "description": "Update a ticket body, state, or assignee through tracker APIs"},
     "tracker.issue.transition": {"classes": ["network-read", "git-remote"], "description": "Move a ticket to another state through tracker APIs"},
     "git.remote.branch.delete": {"classes": ["git-remote"], "description": "Delete a merged branch from a remote"},
     "gh.pr.create": {"classes": ["git-remote"], "description": "Create a pull request"},

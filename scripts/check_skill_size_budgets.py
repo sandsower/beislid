@@ -29,7 +29,7 @@ BUDGETS = {
     # contract); the stage protocol itself is JIT-loaded from
     # cleanup-protocol.md rather than inlined.
     "skills/babysit/SKILL.md": 9_200,
-    "skills/babysit/cleanup-protocol.md": 4_500,
+    "skills/babysit/cleanup-protocol.md": 5_000,
     "skills/envelope/SKILL.md": 7_000,
     "skills/envelope/step-1-intake.md": 4_000,
     "skills/envelope/step-2-author.md": 4_000,

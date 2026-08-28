@@ -14,34 +14,36 @@ Run no later step until all of these hold. Report and stop otherwise; never disc
 
 - The PR is merged according to configured PR host tooling, for example `gh pr view --json state,mergedAt`.
 - `git status --porcelain` is empty, untracked files included.
-- The default branch is freshly fetched and `git diff <remote>/<default> HEAD` is empty.
+- The default branch is freshly fetched (`git fetch <remote> <default>`) and `git diff <remote>/<default> HEAD` is empty.
 
 A squash merge rewrites the branch into one new commit, so local commit SHAs will not appear on the default branch. Compare content, not SHAs; an empty tree diff is the check that works.
 
-A non-empty tree diff does not prove unlanded work on its own — the default branch may have advanced with unrelated commits. Narrow to the paths this branch touched before concluding:
+A non-empty tree diff does not prove unlanded work on its own — the default branch may have advanced with unrelated commits. Intersect the paths this branch touched with the paths that still differ from the default branch:
 
 ```bash
 base=$(git merge-base <remote>/<default> HEAD)
-git diff --name-only -z "$base" HEAD > "$paths_file"
-git diff --name-only <remote>/<default> HEAD \
-  --pathspec-from-file="$paths_file" --pathspec-file-nul
+comm -12 \
+  <(git diff --name-only "$base" HEAD | sort) \
+  <(git diff --name-only <remote>/<default> HEAD | sort)
 ```
 
-If the branch touched no paths there is nothing to land; skip the narrowing rather than passing an empty pathspec file, which would diff the whole tree. Empty output means this branch's content landed and cleanup may continue. Any remaining path is unlanded work: stop, name every path, and hand the branch back untouched.
+Intersect the two path lists as text. Do not restrict the second diff with a git pathspec instead: `git diff` has no `--pathspec-from-file`, and passing the paths as pathspec arguments lets `*`, `?`, or `[...]` in a filename be read as glob magic, so a path like `pages/[id].tsx` silently matches nothing and unlanded work reads as landed.
+
+Empty output means this branch's content landed and cleanup may continue. Any listed path is unlanded work: stop, name every path, and hand the branch back untouched.
 
 Policy: verification is `read`, plus `network-read` for the fetch.
 
 ## Step 2 — close the ticket
 
-Resolve the ticket from run context or `branch_pattern`. Close it through the configured `ticket_update` issue channel — `issue_tool` when `type: mcp`, `issue_command` when `type: cli` — and assign it to the PR author. Read the tracker from `workflow.md`; never hardcode Linear, Jira, GitHub Issues, or any other tracker.
+Resolve the ticket from run context or `branch_pattern`. Close it through the configured `ticket_update` close channel — `close_tool` when `type: mcp`, `close_command` when `type: cli` — and assign it to the PR author. Read the tracker from `workflow.md`; never hardcode Linear, Jira, GitHub Issues, or any other tracker.
 
-Skip this step and say so when no `ticket_update` is configured or no ticket was resolved for this branch. When the configured channel cannot express a state transition or assignee change, print the exact manual close step instead of inventing a command.
+Skip this step and say so when no `ticket_update` is configured or no ticket was resolved for this branch. With no close channel, fall back to the issue channel only when it can set an existing ticket's state and assignee; the CLI `issue_command` cannot, because its placeholders are `{title_file}` and `{body_file}` with no ticket id. When no configured channel can express the change, print the exact manual close step instead of inventing a command.
 
 Policy: `ticket.update` plus `tracker.issue.transition`, classes `network-read` and `git-remote`.
 
 ## Step 3 — delete the remote branch
 
-Delete it only when `closeout.merge.delete_branch` is true and the ref still exists (`git ls-remote --heads <remote> <branch>`); the merge may already have deleted it. Never delete the default branch. Some PR hosts fail the branch-delete step of a merge when it runs from a secondary worktree, which is exactly the gap this step covers.
+Delete it only when `closeout.merge.delete_branch` is true and the ref still exists (`git ls-remote --heads <remote> <branch>`); the merge may already have deleted it. Never delete the default branch. Use configured PR host tooling where it has a branch-delete verb, and fall back to `git push <remote> --delete <branch>` when it does not; do not invent a host-specific API call. Some PR hosts fail the branch-delete step of a merge when it runs from a secondary worktree, which is exactly the gap this step covers.
 
 Policy: `git.remote.branch.delete`, class `git-remote`.
 

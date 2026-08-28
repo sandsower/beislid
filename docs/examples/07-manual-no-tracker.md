@@ -85,7 +85,7 @@ modes:
 
 Babysit is configured but all closeout steps ask. No auto-merge, no auto-
 memento, no auto-retro, and no auto-cleanup — cleanup inherits merge's `ask`.
-With no `ticket_update` configured, cleanup skips its ticket-close step and
+With no `ticket_update` close channel configured, cleanup skips its ticket-close step and
 says so, then still verifies nothing is unlanded and reports the worktree and
 branch as ready for removal. The human drives every decision.
 
