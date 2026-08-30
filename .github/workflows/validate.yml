@@ -187,6 +187,7 @@ jobs:
       - run: python3 scripts/test_setup_skill_routing.py
       - run: python3 scripts/test_visual_feedback.py
       - run: python3 scripts/test_gate_proof.py
+      - run: bash scripts/test_cleanup_unlanded_check.sh
       # Harness self-test only: every host invocation is mocked, no live agents.
       - run: python3 scripts/test_agent_smoke_harness.py
 

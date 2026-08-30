@@ -14,11 +14,11 @@ Run no later step until all of these hold. Report and stop otherwise; never disc
 
 - The PR is merged according to configured PR host tooling, for example `gh pr view --json state,mergedAt`.
 - `git status --porcelain` is empty, untracked files included.
-- The default branch is freshly fetched (`git fetch <remote> <default>`) and `git diff <remote>/<default> HEAD` is empty.
+- The default branch is freshly fetched (`git fetch <remote> <default>`).
 
-A squash merge rewrites the branch into one new commit, so local commit SHAs will not appear on the default branch. Compare content, not SHAs; an empty tree diff is the check that works.
+A squash merge rewrites the branch into one new commit, so local commit SHAs will not appear on the default branch. Compare content, not SHAs.
 
-A non-empty tree diff does not prove unlanded work on its own — the default branch may have advanced with unrelated commits. Intersect the paths this branch touched with the paths that still differ from the default branch:
+Do not make an empty full-tree `git diff <remote>/<default> HEAD` a prerequisite. The default branch advances with unrelated commits, so that diff is non-empty on a healthy repo even when every path this branch touched has landed, and gating on it stops cleanup for merged work. Decide unlanded work from the intersection of the paths this branch touched with the paths that still differ from the default branch:
 
 ```bash
 base=$(git merge-base <remote>/<default> HEAD)
@@ -29,7 +29,7 @@ comm -12 \
 
 Intersect the two path lists as text. Do not restrict the second diff with a git pathspec instead: `git diff` has no `--pathspec-from-file`, and passing the paths as pathspec arguments lets `*`, `?`, or `[...]` in a filename be read as glob magic, so a path like `pages/[id].tsx` silently matches nothing and unlanded work reads as landed.
 
-Empty output means this branch's content landed and cleanup may continue. Any listed path is unlanded work: stop, name every path, and hand the branch back untouched.
+Empty output means this branch's content landed and cleanup may continue, however far the default branch has moved on paths this branch never touched. Any listed path is unlanded work: stop, name every path, and hand the branch back untouched.
 
 Policy: verification is `read`, plus `network-read` for the fetch.
 
@@ -45,7 +45,7 @@ Policy: `ticket.update` plus `tracker.issue.transition`, classes `network-read` 
 
 Delete it only when `closeout.merge.delete_branch` is true and the ref still exists (`git ls-remote --heads <remote> <branch>`); the merge may already have deleted it. Never delete the default branch. Use configured PR host tooling where it has a branch-delete verb, and fall back to `git push <remote> --delete <branch>` when it does not; do not invent a host-specific API call. Some PR hosts fail the branch-delete step of a merge when it runs from a secondary worktree, which is exactly the gap this step covers.
 
-Policy: `git.remote.branch.delete`, class `git-remote`.
+Policy: `git.remote.branch.delete`, classes `git-remote` and `destructive`. Deleting a remote ref is unrecoverable from here, so a per-action `allow` cannot downgrade the `destructive` decision. When policy does not clear the delete, skip it and report the branch as still present.
 
 ## Step 4 — report the local copy as ready for removal
 

@@ -345,6 +345,43 @@ JSON
   assert_contains_json_text "$out" '"rule": "protected_class_floor"'
 }
 
+test_remote_branch_delete_is_destructive() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "rules": { "git-remote": "allow" },
+      "actions": { "git.remote.branch.delete": "allow" }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action git.remote.branch.delete)"
+  assert_decision "$out" deny
+  assert_contains_json_text "$out" '"destructive"'
+  assert_contains_json_text "$out" '"rule": "protected_class_floor"'
+}
+
+test_remote_branch_delete_needs_explicit_destructive_rule() {
+  local override out
+  override="$TMP/policy.json"
+  cat >"$override" <<'JSON'
+{
+  "modes": {
+    "supervised-auto": {
+      "rules": { "git-remote": "allow", "destructive": "ask" },
+      "actions": { "git.remote.branch.delete": "allow" }
+    }
+  }
+}
+JSON
+  out="$(python3 "$POLICY" evaluate --policy-file "$override" --mode supervised-auto --action git.remote.branch.delete)"
+  assert_decision "$out" ask
+  assert_contains_json_text "$out" '"applied": "ask"'
+}
+
 test_compound_secret_assignment_is_secret_bearing() {
   local out
   out="$(python3 "$POLICY" evaluate --mode unattended-auto --action gh.issue.view --command 'export GITHUB_TOKEN=ghp_abc123' --sandbox-baseline non-default-branch)"
@@ -562,6 +599,8 @@ run_test "protected floor applies at ask level" test_protected_floor_applies_at_
 run_test "action override allows unattended ask" test_action_override_can_allow_unattended_ask
 run_test "action override allows unprotected deny" test_action_override_can_allow_unprotected_deny
 run_test "action override cannot allow destructive deny" test_action_override_cannot_allow_destructive_deny
+run_test "remote branch delete is destructive" test_remote_branch_delete_is_destructive
+run_test "remote branch delete needs explicit destructive rule" test_remote_branch_delete_needs_explicit_destructive_rule
 run_test "action override cannot allow inferred secret deny" test_action_override_cannot_allow_inferred_secret_deny
 run_test "validate valid policy summary" test_validate_valid_policy_summary
 run_test "validate rejects malformed mode policy" test_validate_rejects_malformed_mode_policy

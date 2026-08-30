@@ -98,7 +98,10 @@ KNOWN_ACTIONS: dict[str, dict[str, Any]] = {
     "gh.issue.view": {"classes": ["network-read"], "description": "Read an issue through gh"},
     "ticket.update": {"classes": ["network-read", "git-remote"], "description": "Update a ticket body, state, or assignee through tracker APIs"},
     "tracker.issue.transition": {"classes": ["network-read", "git-remote"], "description": "Move a ticket to another state through tracker APIs"},
-    "git.remote.branch.delete": {"classes": ["git-remote"], "description": "Delete a merged branch from a remote"},
+    "git.remote.branch.delete": {
+        "classes": ["git-remote", "destructive"],
+        "description": "Delete a merged branch from a remote",
+    },
     "gh.pr.create": {"classes": ["git-remote"], "description": "Create a pull request"},
     "gh.pr.edit.label": {"classes": ["git-remote"], "description": "Add or remove a pull request label"},
     "pr.review.reply": {"classes": ["git-remote"], "description": "Post a PR review reply"},

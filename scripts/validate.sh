@@ -128,6 +128,10 @@ bash scripts/test_action_policy.sh
 banner "action-policy: bash scripts/test_action_policy_protocol.sh"
 bash scripts/test_action_policy_protocol.sh
 
+# --- cleanup-protocol -------------------------------------------------------
+banner "cleanup-protocol: bash scripts/test_cleanup_unlanded_check.sh"
+bash scripts/test_cleanup_unlanded_check.sh
+
 # --- release-bump -----------------------------------------------------------
 banner "release-bump: bash scripts/test_bump_version.sh"
 bash scripts/test_bump_version.sh
