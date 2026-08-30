@@ -87,7 +87,8 @@ modes:
 ## Babysit
 
 Babysit monitors the PR loop but does not auto-merge or auto-close. Every
-closeout step requires human approval.
+closeout step requires human approval, including `cleanup`, which inherits
+`closeout.merge.mode: ask` because no `cleanup` key is set.
 
 ```beislid:babysit
 loop:

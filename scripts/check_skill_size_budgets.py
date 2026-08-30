@@ -24,7 +24,12 @@ BUDGETS = {
     "skills/ready-for-review/phase-2-gates.md": 7_000,
     "skills/ready-for-review/phase-3-review.md": 5_000,
     "skills/ready-for-review/phase-4-submit.md": 7_300,
-    "skills/babysit/SKILL.md": 8_000,
+    # babysit/SKILL.md bumped by 1200 bytes for the `cleanup` closeout stage
+    # (config key, workflow step, safety stop, closeout semantics, output
+    # contract); the stage protocol itself is JIT-loaded from
+    # cleanup-protocol.md rather than inlined.
+    "skills/babysit/SKILL.md": 9_200,
+    "skills/babysit/cleanup-protocol.md": 5_000,
     "skills/envelope/SKILL.md": 7_000,
     "skills/envelope/step-1-intake.md": 4_000,
     "skills/envelope/step-2-author.md": 4_000,
@@ -102,6 +107,7 @@ PHASE_AUX_HEADINGS = {
     "skills/implement/workspace-placement-claude.md": "# workspace placement Claude adapter v1",
     "skills/implement/workspace-placement-pi.md": "# workspace placement Pi adapter v1",
     "skills/implement/workspace-placement-generic.md": "# workspace placement generic adapter v1",
+    "skills/babysit/cleanup-protocol.md": "# babysit cleanup protocol v1",
     "skills/review-response/phase-1-detect.md": "# review-response phase 1 detect v1",
     "skills/review-response/phase-2-fix.md": "# review-response phase 2 fix v1",
     "skills/review-response/phase-3-push.md": "# review-response phase 3 push v1",

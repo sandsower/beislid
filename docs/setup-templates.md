@@ -74,13 +74,14 @@ Use this when the team wants the workflow to keep a PR green with minimal drift:
 - AgenticReviewer `review_policy` when medium/high-risk PRs need scarce final AI review
 - `clean_eval` for review handoff
 - `babysit` with gates before push
-- optional `memento` / `retro` closeout policy
+- optional `memento` / `retro` / `cleanup` closeout policy
 
 Starter intent:
 
 - review feedback gets handled through the configured update path.
 - branch readiness is checked before push boundaries.
-- merge, memento, and retro remain policy decisions, not defaults.
+- merge, memento, retro, and cleanup remain policy decisions, not defaults.
+- cleanup follows the merge mode unless it is set explicitly, so enabling auto-merge also enables ticket close, remote-branch delete, and the worktree-ready report.
 
 ## Guardrails
 

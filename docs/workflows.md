@@ -137,10 +137,12 @@ flowchart LR
   E --> B
   C -- "no" --> F{"Checks green<br/>and mergeable?"}
   F -- "no" --> B
-  F -- "yes" --> G["Configured closeout<br/>merge / memento / retro"]
+  F -- "yes" --> G["Configured closeout<br/>merge / memento / retro / cleanup"]
 ```
 
 `babysit` requires goal support. Claude includes `/goal`; Pi users need the `pi-goal` package enabled. Closeout automation is controlled by `beislid:babysit` and action policy, so `auto` still stops on policy denials, unsafe conflicts, red/pending checks, missing credentials, or judgment calls.
+
+The closeout stages run in order: `merge`, `memento`, `retro`, `cleanup`. `cleanup` runs last and only after a successful merge; it follows `closeout.merge.mode` unless given its own mode. It proves no branch content is unlanded, closes the ticket through the configured tracker, deletes the merged remote branch, and reports the worktree path and branch as ready for removal without removing either — the agent is running inside that worktree, so the supervising session removes it.
 
 ## Split-work handoff
 

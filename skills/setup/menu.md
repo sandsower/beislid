@@ -38,7 +38,7 @@ Each item shows a one-line "when this fires" hint (plain English, not phase-numb
 - **Clean evaluator** - *Run PR-readiness gates in a clean worktree or container, or skip that path by policy; artifacts and logs stay with the run.*
 - **Visual surfaces** - *Configure optional Lavish visual-surface routing; repo config is required before workflows proactively suggest, prompt, or auto-open surfaces.*
 - **Workflow signals** - *Configure optional local workflow-state signals, starting with tmux-glance tab markers for semantically instrumented skills.*
-- **Babysit** - *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro closeout automation.*
+- **Babysit** - *Configure `/babysit` goal budget, review-response/gate loop behavior, and optional merge/memento/retro/cleanup closeout automation.*
 - **Fresh-eyes final review** - *Keep the built-in final whole-diff pass, replace it with a command, or explicitly disable it by project policy.*
 - **Ticket updates** - *Post kickoff plans and review-response QA replies back to the ticket tracker; optionally create child tickets for out-of-scope feedback.*
 - **Planning artifacts** - *Write approved structure/spec/design Markdown files through lifecycle actions, with prompt or safe auto-create behavior.*

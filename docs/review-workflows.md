@@ -105,7 +105,7 @@ Use `babysit` when a PR is already open and you want Beislið to keep monitoring
 babysit → review-response loop → configured gates → green PR or configured closeout
 ```
 
-`babysit` requires `/goal` support. Claude includes `/goal`; Pi users need the `pi-goal` package enabled. Closeout actions such as merge, memento capture, and retro are opt-in/config-driven and still respect action policy.
+`babysit` requires `/goal` support. Claude includes `/goal`; Pi users need the `pi-goal` package enabled. Closeout actions such as merge, memento capture, retro, and cleanup are opt-in/config-driven and still respect action policy. Cleanup runs last, only after a successful merge, and reports the worktree and branch for removal rather than removing them itself.
 
 ## Reviewing someone else's PR
 

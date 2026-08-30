@@ -78,6 +78,27 @@
           ],
           "decision": "allow",
           "id": "action-retrowildcardapply"
+        },
+        {
+          "actions": [
+            "ticket.update"
+          ],
+          "decision": "allow",
+          "id": "action-ticketwildcardupdate"
+        },
+        {
+          "actions": [
+            "tracker.issue.transition"
+          ],
+          "decision": "allow",
+          "id": "action-trackerwildcardissuewildcardtransition"
+        },
+        {
+          "actions": [
+            "git.remote.branch.delete"
+          ],
+          "decision": "allow",
+          "id": "action-gitwildcardremotewildcardbranchwildcarddelete"
         }
       ]
     }

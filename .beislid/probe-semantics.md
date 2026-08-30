@@ -22,7 +22,7 @@ If the host has no MCP tool registry mechanism at all, status is `failed` with `
 
 Known multi-tool logical MCP capabilities:
 
-- `ticket_update` (`comment_tool`, optional `issue_tool`)
+- `ticket_update` (`comment_tool`, optional `issue_tool`, optional `close_tool`)
 - future PR review MCP providers, when added to the grammar
 
 ### cli
@@ -42,7 +42,7 @@ Known multi-command logical capabilities:
 - `pr_review_source` (`summary_command`, optional `threads_command`)
 - `pr_review_update` (`reply_command`, optional `rerequest_command`)
 - `fresh_eyes.command` when `beislid:fresh_eyes` uses `type: command`; probe the command's first binary. `enabled: false` has no probe and records an explicit policy value.
-- `ticket_update` when `comment_command` is configured, with optional `issue_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`) is performed by setup/orchestrators before execution.
+- `ticket_update` when `comment_command` is configured, with optional `issue_command` and optional `close_command`. Probe only the binaries; placeholder validation (`{body_file}` / `{title_file}` rather than raw `{body}` / `{title}`, and `{id}` plus optional `{state}` / `{assignee}` for `close_command`) is performed by setup/orchestrators before execution.
 - `lifecycle_actions.<event>` for P0 CLI actions under one event's `actions[]` list. Probe every unique first binary from that event's `type: cli` action commands and record one logical capability. Validate each action's optional `on_failure` as exactly `prompt`, `continue`, or `abort`; omitted means `prompt`. Orchestrators probe only events they execute, e.g. kickoff probes `lifecycle_actions.kickoff_start`, while spec/blueprint/break-spec probe their own planning approval event when it contains CLI actions. Future events must not block current-event execution. Non-CLI providers such as `mcp` are reserved for CLI lifecycle actions; orchestrators must not execute unsupported providers.
 
 ### binary
@@ -182,7 +182,9 @@ The repo's checked-in `WORKFLOW.md` Rondo profile may also carry `step_hints` un
 
 ### babysit validation
 
-`beislid:babysit` is validated, not executed. Doctor checks shape only: optional `goal.token_budget` must be a positive integer-like string with optional `k`/`m` suffix; optional `loop.use_review_response` and `loop.run_configured_gates_before_push` must be booleans; optional `loop.wait_interval_seconds` and `loop.timeout_minutes` must be positive integers; closeout modes must be `off`, `ask`, or `auto`; merge method must be `squash`, `merge`, `rebase`, or `repo-default`; optional `closeout.merge.delete_branch` must be boolean. It should record `probe_kind: validation` and summarize goal budget, loop behavior, and closeout modes. Doctor must not start `/goal`, inspect PRs, run gates, merge, capture memento, or run retro. Missing `babysit` config is valid and means conservative defaults.
+`beislid:babysit` is validated, not executed. Doctor checks shape only: optional `goal.token_budget` must be a positive integer-like string with optional `k`/`m` suffix; optional `loop.use_review_response` and `loop.run_configured_gates_before_push` must be booleans; optional `loop.wait_interval_seconds` and `loop.timeout_minutes` must be positive integers; closeout modes must be `off`, `ask`, or `auto`; merge method must be `squash`, `merge`, `rebase`, or `repo-default`; optional `closeout.merge.delete_branch` must be boolean; optional `closeout.cleanup.mode` must be `off`, `ask`, or `auto`, and an absent `closeout.cleanup.mode` is valid and reported as inheriting the effective `closeout.merge.mode`. It should record `probe_kind: validation` and summarize goal budget, loop behavior, and closeout modes for all four stages. Doctor must not start `/goal`, inspect PRs, run gates, merge, capture memento, run retro, close tickets, delete branches, or run cleanup. Missing `babysit` config is valid and means conservative defaults.
+
+Cleanup's side effects carry the same action-policy classification obligation as merge and memento, and doctor should narrate them rather than exercise them: unlanded-content verification is `read` plus `network-read` for the default-branch fetch; closing and reassigning the ticket through the configured `ticket_update` close channel is `ticket.update` plus `tracker.issue.transition` with classes `network-read` and `git-remote`; deleting the merged remote branch is `git.remote.branch.delete` with classes `git-remote` and `destructive`, so a per-action `allow` cannot downgrade it below the mode's `destructive` rule. Cleanup performs no local deletion — it reports the worktree path and branch for the supervising session to remove.
 
 ### planning/checkpoint lifecycle actions
 

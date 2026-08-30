@@ -18,7 +18,7 @@ require at least one approving review before merge.
 **Expected flow:** `kickoff` (fetches Linear ticket, assigns it) → `blueprint`
 (design with heavy model) → `implement` (standard model, TDD, per-edit gates) →
 `verify` (full gate suite) → `ready-for-review` (PR, clean eval, fresh-eyes) →
-`review-response`/`babysit` (loop until approved) → merge + memento + retro.
+`review-response`/`babysit` (loop until approved) → merge + memento + retro + cleanup.
 
 ## Issue tracker
 
@@ -180,8 +180,9 @@ tier_mode: prefer
 
 ## Action policy
 
-Unattended runs can push, create PRs, reply to reviews, and capture memento
-memories. Closeout merge and retro still run through policy checks.
+Unattended runs can push, create PRs, reply to reviews, capture memento
+memories, and finish the cleanup stage by closing the ticket and deleting the
+merged remote branch. Closeout merge and retro still run through policy checks.
 
 ```beislid:action_policy
 modes:
@@ -192,11 +193,14 @@ modes:
       gh.pr.create: allow
       memento.capture: allow
       retro.run: allow
+      ticket.update: allow
+      tracker.issue.transition: allow
+      git.remote.branch.delete: allow
 ```
 
 ## Babysit
 
-Full babysit loop with auto-closeout for merge, memento, and retro.
+Full babysit loop with auto-closeout for memento and retro. `closeout.cleanup.mode` is left unset on purpose, so cleanup follows `closeout.merge.mode` — `ask` here, and `auto` as soon as step 4 below flips merge to automatic. Cleanup then closes the Linear issue, assigns it to the PR author, deletes the merged remote branch, and reports the worktree path and branch as ready for removal without removing either.
 
 ```beislid:babysit
 loop:
@@ -246,7 +250,10 @@ mode: remind
 3. Tune the model routing overrides: the `skills` lists are Beislið skill
    names; pick the models your team trusts for each tier.
 4. Set `babysit.closeout.merge.mode` to `auto` if you want automatic merge
-   after approval (requires green CI and no open review threads).
+   after approval (requires green CI and no open review threads). Cleanup
+   inherits that mode, so the same switch also closes the ticket and deletes
+   the merged remote branch; set `babysit.closeout.cleanup.mode` explicitly
+   if you want cleanup to stay at `ask` or `off`.
 5. Set `ship_time_artifacts.mode` to `include` if you want ready-for-review
    to call out approved planning artifacts at handoff; leave it at `remind`
    (or omit the block) for the default reminder-only behavior.

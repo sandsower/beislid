@@ -23,7 +23,8 @@
         "pr.merge": "allow",
         "memento.capture": "allow",
         "retro.run": "allow",
-        "retro.apply": "allow"
+        "retro.apply": "allow",
+        "git.remote.branch.delete": "allow"
       }
     },
     "unattended-auto": {

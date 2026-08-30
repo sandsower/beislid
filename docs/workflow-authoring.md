@@ -297,6 +297,7 @@ closeout:
 - `loop.use_review_response: false` if you want babysit to summarize feedback rather than auto-fixing.
 - `closeout.merge.mode: ask` requires explicit approval before merging.
 - `closeout.retro.apply_findings: auto` auto-applies safe workflow recommendations.
+- `closeout.cleanup.mode` is omitted above on purpose: it follows `closeout.merge.mode`, so this config already closes the ticket, deletes the merged remote branch, and reports the worktree as ready for removal after each auto-merge. Set it explicitly only when cleanup should differ from merge.
 
 ### Lifecycle actions
 
@@ -558,6 +559,8 @@ closeout:
   memento:
     mode: ask
   retro:
+    mode: ask
+  cleanup:
     mode: ask
 ```
 ```
